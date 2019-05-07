@@ -4,7 +4,7 @@ The sample code is written in Python, version 2.7.12 was used for testing.
 Assuming Python and pip are already installed, run:
 
 ``` 
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ``` 
 
 
