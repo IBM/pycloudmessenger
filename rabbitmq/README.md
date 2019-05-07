@@ -1,6 +1,6 @@
 # Sample code for RabbitMQ messaging
 
-The sample code is written in Python, version 2.7.12 was used for testing.
+The sample code is written in Python, version 3.6 was used for testing.
 Assuming Python and pip are already installed, run:
 
 ``` 
