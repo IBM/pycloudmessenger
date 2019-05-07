@@ -67,10 +67,7 @@ def main():
     context = castorapi.CastorContext(host, port, user, password, vhost, cert=cert)
 
     try:
-        with castorapi.CastorMessenger(context) as castor:
-            castor.start_subscriber(reply_queue)
-            castor.start_publisher(feed_queue)
-
+        with castorapi.CastorMessenger(context, feed_queue, reply_queue) as castor:
             #List the devices
             LOGGER.info("Requesting sensor listing...")
             message = castor.request_sensor_list()
@@ -84,11 +81,8 @@ def main():
             reply = castor.invoke_service(message)
             values = reply['serviceResponse']['service']['result']['count']
             LOGGER.info("Time series values: %d", values)
-    except KeyboardInterrupt:
-        LOGGER.info("Stopping")
     except Exception as err:
         LOGGER.info("Error %r", err)
-
 
 if __name__ == '__main__':
     main()

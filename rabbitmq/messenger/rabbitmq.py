@@ -20,12 +20,15 @@
  */
 """
 
-import ssl
-from abc import ABC, abstractmethod
+# pylint: disable=R0903, R0913
 
+import ssl
+import logging
+from abc import ABC, abstractmethod
 import pika
 
 __rabbit_helper_version_info__ = ('0', '1', '2')
+LOGGER = logging.getLogger(__package__)
 
 
 class RabbitContext():
@@ -72,7 +75,41 @@ class AbstractRabbitMessenger(ABC):
     def __exit__(self, *args):
         self.stop()
 
+    def declare_queue(self, queue):
+        """
+            Declare a queue, creating if required
+
+            Throws:
+                An exception if connection attempt is not successful
+
+            Returns:
+                None
+        """
+
+        #Will not raise an exception if access rights insufficient on the queue
+        #Exception only raised when channel consume takes place
+        result = self.channel.queue_declare(
+                        queue=queue.name,
+                        exclusive=queue.exclusive,
+                        auto_delete=queue.auto_delete,
+                        durable=queue.durable)
+        #Useful when testing - clear the queue
+        if queue.purge is True:
+            self.channel.queue_purge(queue=queue.name)
+        queue.name = result.method.queue
+        return queue
+
     def establish_connection(self, parameters):
+        """
+            Connect to RabbitMQ service
+
+            Throws:
+                An exception if connection attempt is not successful
+
+            Returns:
+                None
+        """
+
         self.connection = pika.BlockingConnection(parameters)
         self.channel = self.connection.channel()
         #Ensure the consumer only gets 1 unacknowledged message
@@ -80,7 +117,7 @@ class AbstractRabbitMessenger(ABC):
 
     def connect(self, connection_attempts, retry_delay):
         """
-            Connect to RabbitMQ service
+            Setup connection settings to RabbitMQ service
 
             Throws:
                 An exception if connection attempt is not successful
@@ -145,55 +182,24 @@ class AbstractRabbitMessenger(ABC):
     def receive(self, handler, timeout, max_messages):
         pass
 
-    @abstractmethod
-    def start_queue(self, queue):
-        pass
-
 
 class RabbitClient(AbstractRabbitMessenger):
     """
         Communicates with a RabbitMQ service
     """
-    def __init__(self, context, connection_attempts=10, retry_delay=1):
+    def __init__(self, context, queue, connection_attempts=10, retry_delay=1):
         super(RabbitClient, self).__init__(context)
-        self.queue = None
-        self.connect(connection_attempts, retry_delay)
-
-    def start_queue(self, queue):
-        """
-            Declares (and creates) a queue, optionally removing any existing messages
-
-            Throws:
-                Exception if queue cannot be created (access permissions)
-
-            Returns:
-                None
-        """
-        if not queue:
-            return None
-
         #This will force a server generated queue name like 'amq.gen....'
         if not queue.name:
             queue.name = ''
-
-        #Remove trailing/leading whitespace
         queue.name = queue.name.strip()
-
-        #Will not raise an exception if access rights insufficient on the queue
-        #Exception only raised when channel consume takes place
-        result = self.channel.queue_declare(
-                        queue=queue.name,
-                        exclusive=queue.exclusive,
-                        auto_delete=queue.auto_delete,
-                        durable=queue.durable)
-        queue.name = result.method.queue
-
-        #Useful when testing - clear the queue
-        if queue.purge is True:
-            self.channel.queue_purge(queue=queue.name)
-
         self.queue = queue
-        return queue.name
+
+        self.connect(connection_attempts, retry_delay)
+
+    def establish_connection(self, parameters):
+        super(RabbitClient, self).establish_connection(parameters)
+        self.declare_queue(self.queue)
 
     def publish(self, message, queue=None, exchange='', mode=1):
         if queue is None:
@@ -248,7 +254,6 @@ class RabbitDualClient():
             Class initializer
         """
         self.context = context
-        self.subQ = None
         self.subscriber = None
         self.publisher = None
         self.last_recv_msg = None
@@ -263,8 +268,10 @@ class RabbitDualClient():
             Returns:
                 None
         """
-        self.subscriber = client(self.context)
-        self.subQ = self.subscriber.start_queue(queue=queue)
+        self.subscriber = client(self.context, queue)
+
+    def get_subscribe_queue(self):
+        return self.subscriber.queue.name
 
     def start_publisher(self, queue, client=RabbitClient):
         """
@@ -276,8 +283,7 @@ class RabbitDualClient():
             Returns:
                 None
         """
-        self.publisher = client(self.context)
-        self.publisher.start_queue(queue=queue)
+        self.publisher = client(self.context, queue)
 
     def send(self, message):
         """
@@ -326,8 +332,10 @@ class RabbitDualClient():
                 The reply dictionary
         """
         self.last_recv_msg = None
+        LOGGER.info("Sending message: %s", message)
         self.send(message)
 
+        LOGGER.info("Waiting for reply...")
         #Now wait for the reply
         messages = self.subscriber.receive(self.internal_handler, timeout, 1)
         if messages == 0:

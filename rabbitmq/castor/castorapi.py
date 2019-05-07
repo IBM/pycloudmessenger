@@ -20,6 +20,8 @@
  */
 """
 
+# pylint: disable=R0903, R0913
+
 import uuid
 import json
 import logging
@@ -40,43 +42,21 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
     """
         Communicates with a Castor service
     """
-    def __init__(self, context):
+    def __init__(self, context, publish_queue, subscribe_queue):
         """
             Class initializer
         """
         super(CastorMessenger, self).__init__(context)
         self.correlation = 0
         self.client_id = str(uuid.uuid4())
+        self.start_subscriber(queue=rabbitmq.RabbitQueue(subscribe_queue, exclusive=True))
+        self.start_publisher(queue=rabbitmq.RabbitQueue(publish_queue, durable=True))
 
     def __enter__(self):
         return self
 
     def __exit__(self, *args):
         self.stop()
-
-    def start_subscriber(self, queue_name=None):
-        """
-            Connect to Castor service and create a queue
-
-            Throws:
-                An exception if connection attempt is not successful
-
-            Returns:
-                None
-        """
-        super(CastorMessenger, self).start_subscriber(queue=rabbitmq.RabbitQueue(queue_name, exclusive=True))
-
-    def start_publisher(self, queue_name):
-        """
-            Connect to Castor service and create a queue
-
-            Throws:
-                An exception if connection attempt is not successful
-
-            Returns:
-                None
-        """
-        super(CastorMessenger, self).start_publisher(queue=rabbitmq.RabbitQueue(queue_name, durable=True))
 
     def invoke_service(self, message, timeout=30):
         return json.loads(super(CastorMessenger, self).invoke_service(message, timeout))
@@ -93,7 +73,7 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
         """
         self.correlation += 1
         return {
-            'replyTo': self.subQ,
+            'replyTo': self.get_subscribe_queue(),
             'clientID': self.client_id,
             'transient': True,
             'correlationID': self.correlation
