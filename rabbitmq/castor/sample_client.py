@@ -25,6 +25,7 @@
 
 import os
 import logging
+import random
 from . import castorapi
 
 #Set up logger
@@ -69,18 +70,18 @@ def main():
     try:
         with castorapi.CastorMessenger(context, feed_queue, reply_queue) as castor:
             #List the devices
-            LOGGER.info("Requesting sensor listing...")
+            LOGGER.info("Requesting sensor ID listing...")
             message = castor.request_sensor_list()
             reply = castor.invoke_service(message)
-            sensor = reply['serviceResponse']['service']['result']['ts_ids'][0]
-            LOGGER.info("First sensor: %s", sensor)
+            sensor = random.choice(reply['serviceResponse']['service']['result']['ts_ids'])
+            LOGGER.info("\n\nSensor IDs: " + str(reply['serviceResponse']['service']['result']['ts_ids']) + "\n")
 
             #Retrieve some time series
-            LOGGER.info("Requesting time series for sensor '%s'...", sensor)
+            LOGGER.info("Requesting time series for sensor ID '%s'...", sensor)
             message = castor.request_sensor_data(sensor, "2001-07-13T00:00:00+00:00", "2020-08-13T01:00:00+00:00")
             reply = castor.invoke_service(message)
             values = reply['serviceResponse']['service']['result']['count']
-            LOGGER.info("Time series values: %d", values)
+            LOGGER.info("\n\nNumber of Time Series Values: %d", values)
     except Exception as err:
         LOGGER.info("Error %r", err)
 
