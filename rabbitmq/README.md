@@ -2,9 +2,9 @@
 
 Sample [RabbitMQ](https://www.rabbitmq.com/) (AMQP) client that retrieves a sensor device list and a subset of sensor values from Castor.
 
-#### Install
+## Install
 
-##### git
+#### git
 
 [git](https://git-scm.com/) is a free open source distributed version control system used to manage and maintain the 
 `castor-messaging` sample source code.
@@ -20,7 +20,7 @@ git clone https://github.com/IBM/castor-messaging.git
 
 which creates a copy of the sample source code in this repository in a directory named `castor-messaging` on your local machine.
 
-##### Python
+#### Python
 
 This sample code uses [Python](https://www.python.org/). A minimum version of `3.5` is required; version `3.7` is preferred.
 
@@ -39,7 +39,7 @@ Follow [these instructions](https://www.python.org/downloads/) to download and i
 
 
 
-##### Python Packages
+#### Python Packages
 The Python sample code in this repository depends several external packages.
 
 To install these packages on your local machine, execute the following command from within the `castor-messaging/rabbitmq` directory:
@@ -48,7 +48,7 @@ To install these packages on your local machine, execute the following command f
 pip install -r requirements.txt
 ```
 
-#### Configure
+## Configure
 
 RabbitMQ (AMQP) broker connection details, credentials, & certificate are provided by IBM, and are configured on your local machine using environmental variables.
 
