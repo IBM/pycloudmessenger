@@ -311,7 +311,7 @@ class RabbitDualClient():
 
     def internal_handler(self, message):
         """
-            Handler for invoke_service methode
+            Handler for invoke_service method
 
             Throws:
                 Nothing
