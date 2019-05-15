@@ -40,7 +40,7 @@ Follow [these instructions](https://www.python.org/downloads/) to download and i
 
 
 #### Python Packages
-The Python sample code in this repository depends several external packages.
+The Python sample code in this repository depends on several external packages.
 
 To install these packages on your local machine, execute the following command from within the `castor-messaging/rabbitmq` directory:
 
