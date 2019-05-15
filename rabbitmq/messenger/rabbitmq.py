@@ -35,7 +35,7 @@ class RabbitContext():
     """
         Holds connection details for a RabbitMQ service
     """
-    def __init__(self, host, port, user, password, vhost, ssl=True, cert=None):
+    def __init__(self, host: str, port: int, user: str, password: str, vhost: str, ssl=True, cert=None):
         self.host = host
         self.port = port
         self.user = user
@@ -49,7 +49,7 @@ class RabbitQueue():
     """
         Holds configuration details for a RabbitMQ Queue
     """
-    def __init__(self, queue='', auto_delete=False, durable=False, exclusive=False, purge=False):
+    def __init__(self, queue: str='', auto_delete: bool=False, durable: bool=False, exclusive: bool=False, purge: bool=False):
         self.name = queue
         self.durable = durable
         self.exclusive = exclusive
@@ -61,13 +61,23 @@ class AbstractRabbitMessenger(ABC):
     """
         Communicates with a RabbitMQ service
     """
-    def __init__(self, context):
+    def __init__(self, context: RabbitContext):
         self.context = context
+        self.pub_queue = None
+        self.sub_queue = None
         self.inbound = 0
         self.outbound = 0
         self.connection = None
         self.channel = None
         self.cancel_on_close = False
+        self.credentials = pika.PlainCredentials(self.context.user, self.context.pwd)
+        self.ssl_options = {}
+
+        if self.context.ssl is True:
+            self.ssl_options['ssl_version'] = ssl.PROTOCOL_TLSv1_2
+        if self.context.cert is not None:
+            self.ssl_options['ca_certs'] = self.context.cert
+            self.ssl_options['cert_reqs'] = ssl.CERT_REQUIRED
 
     def __enter__(self):
         return self
@@ -75,7 +85,7 @@ class AbstractRabbitMessenger(ABC):
     def __exit__(self, *args):
         self.stop()
 
-    def declare_queue(self, queue):
+    def declare_queue(self, queue: RabbitQueue) -> RabbitQueue:
         """
             Declare a queue, creating if required
 
@@ -99,7 +109,7 @@ class AbstractRabbitMessenger(ABC):
         queue.name = result.method.queue
         return queue
 
-    def establish_connection(self, parameters):
+    def establish_connection(self, parameters: pika.ConnectionParameters):
         """
             Connect to RabbitMQ service
 
@@ -115,7 +125,7 @@ class AbstractRabbitMessenger(ABC):
         #Ensure the consumer only gets 1 unacknowledged message
         self.channel.basic_qos(prefetch_count=1)
 
-    def connect(self, connection_attempts, retry_delay):
+    def connect(self, connection_attempts: int, retry_delay: int):
         """
             Setup connection settings to RabbitMQ service
 
@@ -125,24 +135,14 @@ class AbstractRabbitMessenger(ABC):
             Returns:
                 None
         """
-
-        ssl_options = {}
-
-        if self.context.ssl is True:
-            ssl_options['ssl_version'] = ssl.PROTOCOL_TLSv1_2
-        if self.context.cert is not None:
-            ssl_options['ca_certs'] = self.context.cert
-            ssl_options['cert_reqs'] = ssl.CERT_REQUIRED
-
-        credentials = pika.PlainCredentials(self.context.user, self.context.pwd)
         parameters = pika.ConnectionParameters(
                         self.context.host, self.context.port, self.context.vhost,
-                        credentials, ssl=self.context.ssl, ssl_options=ssl_options,
+                        self.credentials, ssl=self.context.ssl, ssl_options=self.ssl_options,
                         connection_attempts=connection_attempts,
                         retry_delay=retry_delay)
         self.establish_connection(parameters)
 
-    def publish(self, message, queue, exchange='', mode=1):
+    def publish(self, message, queue: str, exchange:str ='', mode: int=1):
         """
             Publish a message to a queue
 
@@ -179,7 +179,11 @@ class AbstractRabbitMessenger(ABC):
             pass
 
     @abstractmethod
-    def receive(self, handler, timeout, max_messages):
+    def receive(self, handler, timeout:int, max_messages:int):
+        pass
+
+    @abstractmethod
+    def start(self):
         pass
 
 
@@ -187,26 +191,38 @@ class RabbitClient(AbstractRabbitMessenger):
     """
         Communicates with a RabbitMQ service
     """
-    def __init__(self, context, queue, connection_attempts=10, retry_delay=1):
-        super(RabbitClient, self).__init__(context)
-        #This will force a server generated queue name like 'amq.gen....'
-        if not queue.name:
-            queue.name = ''
-        queue.name = queue.name.strip()
-        self.queue = queue
+    def start(self, publish: RabbitQueue=None, subscribe: RabbitQueue=None, connection_attempts: int=10, retry_delay: int =1):
+        if publish:
+            self.pub_queue = publish
+
+        if subscribe:
+            self.sub_queue = subscribe
+
+            #This will force a server generated queue name like 'amq.gen....'
+            if not self.sub_queue.name:
+                self.sub_queue.name = ''
+            self.sub_queue.name = self.sub_queue.name.strip()
 
         self.connect(connection_attempts, retry_delay)
 
-    def establish_connection(self, parameters):
-        super(RabbitClient, self).establish_connection(parameters)
-        self.declare_queue(self.queue)
+    def get_subscribe_queue(self):
+        return self.sub_queue.name if self.sub_queue else None
 
-    def publish(self, message, queue=None, exchange='', mode=1):
+    def establish_connection(self, parameters: pika.ConnectionParameters):
+        super(RabbitClient, self).establish_connection(parameters)
+
+        if self.pub_queue:
+            self.declare_queue(self.pub_queue)
+
+        if self.sub_queue:
+            self.declare_queue(self.sub_queue)
+
+    def publish(self, message, queue: RabbitQueue=None, exchange: str='', mode: int=1):
         if queue is None:
-            queue = self.queue
+            queue = self.pub_queue
         super(RabbitClient, self).publish(message, queue.name, exchange, mode)
 
-    def receive(self, handler, timeout=30, max_messages=0):
+    def receive(self, handler=None, timeout: int=30, max_messages: int=0) -> str:
         """
             Start receiving messages, up to max_messages
 
@@ -214,13 +230,14 @@ class RabbitClient(AbstractRabbitMessenger):
                 Exception if consume fails
 
             Returns:
-                The number of messages consumed
+                The last message received
         """
         msgs = 0
+        body = None
 
         for msg in self.channel.consume(
-                self.queue.name,
-                exclusive=self.queue.exclusive,
+                self.sub_queue.name,
+                exclusive=self.sub_queue.exclusive,
                 inactivity_timeout=timeout):
 
             method_frame, properties, body = msg
@@ -229,20 +246,20 @@ class RabbitClient(AbstractRabbitMessenger):
 
             msgs += 1
             self.inbound += 1
+            self.channel.basic_ack(method_frame.delivery_tag)
 
-            #body is of type 'bytes' in Python 3+
-            state = handler(body)
-            if (state is None) or (state is not False):
-                #Only ack message if handler successfully dealt with message
-                #This could fail if the connection was closed by the broker
-                self.channel.basic_ack(method_frame.delivery_tag)
+            if handler:
+                #body is of type 'bytes' in Python 3+
+                state = handler(body)
+            elif not max_messages:
+                break
 
             #Stop consuming if message limit reached
             if msgs == max_messages:
                 break
 
         self.channel.cancel()
-        return msgs
+        return body
 
 
 class RabbitDualClient():
@@ -258,7 +275,7 @@ class RabbitDualClient():
         self.publisher = None
         self.last_recv_msg = None
 
-    def start_subscriber(self, queue, client=RabbitClient):
+    def start_subscriber(self, queue: RabbitQueue, client=RabbitClient):
         """
             Connect to Castor service and create a queue
 
@@ -268,12 +285,13 @@ class RabbitDualClient():
             Returns:
                 None
         """
-        self.subscriber = client(self.context, queue)
+        self.subscriber = client(self.context)
+        self.subscriber.start(subscribe=queue)
 
     def get_subscribe_queue(self):
-        return self.subscriber.queue.name
+        return self.subscriber.get_subscribe_queue()
 
-    def start_publisher(self, queue, client=RabbitClient):
+    def start_publisher(self, queue: RabbitQueue, client=RabbitClient):
         """
             Connect to Castor service and create a queue
 
@@ -283,7 +301,8 @@ class RabbitDualClient():
             Returns:
                 None
         """
-        self.publisher = client(self.context, queue)
+        self.publisher = client(self.context)
+        self.publisher.start(publish=queue)
 
     def send(self, message):
         """
@@ -297,7 +316,7 @@ class RabbitDualClient():
         """
         self.publisher.publish(message)
 
-    def receive(self, handler, timeout, max_messages):
+    def receive(self, handler, timeout:int, max_messages:int):
         """
             Receive messages from Castor service
 
@@ -321,7 +340,7 @@ class RabbitDualClient():
         """
         self.last_recv_msg = message
 
-    def invoke_service(self, message, timeout=30):
+    def invoke_service(self, message, timeout: int=30):
         """
             Publish a message and receive a reply
 
@@ -332,7 +351,7 @@ class RabbitDualClient():
                 The reply dictionary
         """
         self.last_recv_msg = None
-        LOGGER.info("Sending message: %s", message)
+        LOGGER.info(f"Sending message: {message}")
         self.send(message)
 
         LOGGER.info("Waiting for reply...")
