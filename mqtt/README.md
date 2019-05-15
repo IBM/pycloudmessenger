@@ -108,7 +108,9 @@ python -m mqtt_client --broker=broker-config.json --dir=./ --pattern=*.csv --sta
 #### Command Line Arguments
 
 `--broker`: 
-A JSON broker configuration file that contains all the required information to connect to the IBM Service Platform MQTT Broker. This file will be supplied to you by IBM and its permission should be `read-only`.
+Path to the configuration file that contains all the required information to connect to the IBM Cloud MQTT Broker. 
+This file will be supplied to you by IBM and its permission should be `read-only`. 
+Store the broker configuration file and the MQTT broker certificate provided by IBM in the `castor-messaging/mqtt` directory.
 
 `--dir`: 
 The directory where the CSV files for processing are located.

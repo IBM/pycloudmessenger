@@ -50,7 +50,10 @@ pip install -r requirements.txt
 
 ## Configure
 
-RabbitMQ (AMQP) broker connection details, credentials, & certificate are provided by IBM, and are configured on your local machine using environmental variables.
+RabbitMQ (AMQP) broker connection details, credentials, & broker certificate are provided by IBM, and are configured on 
+your local machine using environmental variables.
+
+Store the broker certificate in the `castor-messaging/rabbitmq` directory.
 
 On a Linux or Mac OS X command line `export` the following environmental variables:
 
