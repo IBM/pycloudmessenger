@@ -1,0 +1,14 @@
+{
+  "sensor_id": 0,
+  "timestamp": 1,
+  "value_column_names": [
+    "CONDUCTIVITY",
+    "TEMPERATURE",
+    "DEPTH"
+  ],
+  "value_column_idxs": [
+    2,
+    3,
+    4
+  ]
+}
