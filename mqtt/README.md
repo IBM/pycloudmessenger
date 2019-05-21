@@ -96,7 +96,7 @@ If your CSV file:
  
  update the `sensor_id_idx`, `timestamp_idx`, `value_column_names`, and `value_column_idxs` fields in [`csv_config.json`](https://github.com/IBM/castor-messaging/blob/master/mqtt/csv_config.json) to conform to your CSV file's format.
  
- For example, [`csv_config_composite.json`](https://github.com/IBM/castor-messaging/blob/master/mqtt/csv_config.json)
+ For example, [`csv_config_composite.json`](https://github.com/IBM/castor-messaging/blob/master/mqtt/csv_config_composite.json)
  is configured to parse the [`sample_composite.csv`](https://github.com/IBM/castor-messaging/blob/master/mqtt/sample_composite.csv)
  containing multiple sensor values per row.
  
