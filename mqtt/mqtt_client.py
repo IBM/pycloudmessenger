@@ -49,28 +49,20 @@ def logger(verbose=False):
 
 
 class DataParser():
-    def __init__(self, client, flavour, batch, max_lines, split):
+    def __init__(self, client, flavour, batch, max_lines, split, csv_config):
         self.client = client
         self.flavour = flavour
         self.batch = batch
         self.max_lines = max_lines
         self.split = split
+        self.csv_config = csv_config
         self.header = None
         self.finished = False
         self.start = None
         self.device = None
         self.last_processed_line = 0
-        #Update your date format as appropriate
-        self.date_format = '%Y/%m/%d %H:%M:%S'
-        self.date_format = '%Y-%m-%d %H:%M:%S'
-        #If your date format is different, please change, for example
-        #01/09/2015 00:00 requires the following change
-        #self.date_format = '%d/%m/%Y %H:%M'
-        #Update your timezone as appropriate
-        self.timezone = 'Europe/Zurich'
-        #If your timestamp is already UTC the following line is appropriate
-        #self.timezone = 'UTC'
-
+        self.date_format = self.csv_config['timestamp_format']
+        self.timezone = self.csv_config['timestamp_timezone']
 
     def anonymize(self, row):
         #Funtion to anoymize a row
@@ -90,11 +82,24 @@ class DataParser():
         #Note: the observed_timestamp field should be iso8601 UTC prior to submission
         #The following code assumes a local timestamp and converts to UTC
 
-        timestamp = self.client.utc_offset(values[1], self.timezone, self.date_format)
+        timestamp = self.client.utc_offset(values[self.csv_config['timestamp_idx']], self.timezone, self.date_format)
         timestamp = datetime.datetime.strptime(timestamp, self.date_format).replace(tzinfo=tzutc()).isoformat()
 
         data = []
-        data.append({"observed_timestamp": timestamp, "device_id": values[0], "value": values[2]})
+
+        # Simple CSV file:
+        if len(self.csv_config['value_column_names']) == 1:
+            data.append({"observed_timestamp" : timestamp,
+                         "device_id"          : values[self.csv_config['sensor_id_idx']],
+                         "value"              : values[self.csv_config['value_column_idxs'][0]]})
+
+        # Composite CSV file; append value_column_name to sensor_id :
+        else:
+            for i in range(len(self.csv_config['value_column_names'])):
+                data.append({"observed_timestamp": timestamp,
+                             "device_id"         : values[self.csv_config['sensor_id_idx']] + '-' + self.csv_config['value_column_names'][i],
+                             "value"             : values[self.csv_config['value_column_idxs'][i]]})
+
         self.last_processed_line = line
         return data
 
@@ -153,6 +158,22 @@ class DataParser():
 def sort_key(to_sort):
     return str(os.path.getmtime(to_sort)) + '::' + to_sort.lower()
 
+def parse_csv_config(csv_config_file):
+
+    csv_config = json.load(csv_config_file)
+
+    expected_keys = ['sensor_id_idx', 'timestamp_idx', 'value_column_names', 'value_column_idxs']
+    for key in expected_keys:
+        if csv_config.get(key) is None:
+            raise KeyError('CSV configuration file missing expected key: ' + key)
+
+    if len(csv_config['value_column_names']) < 1:
+        raise KeyError("CSV configuration file must define one or more 'value_column_names'")
+
+    if len(csv_config['value_column_names']) != len(csv_config['value_column_names']):
+        raise KeyError("CSV configuration file must define an equal number of 'value_column_names' and 'value_column_idxs'")
+
+    return csv_config
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description='submit data to ingestion service')
@@ -164,10 +185,12 @@ def main(argv=None):
                         required=True, help='file filter')
     parser.add_argument('--state', action='store', dest='state',
                         required=True, help='state file')
-    parser.add_argument('--flavour', action='store', dest='flavour',
-                        required=True, help='file format style')
+    parser.add_argument('--csv_config_path', action='store', dest='csv_config_path',
+                        required=False, default='csv_config.json', help='Path to CSV configuration JSON file')
     parser.add_argument('--batch', action='store', dest='batch',
                         required=True, help='batch x messages')
+    parser.add_argument('--flavour', default=1, action='store', dest='flavour',
+                        required=False, help='file format style')
     parser.add_argument('--max', action='store', dest='max_lines',
                         required=False, default=100000, help='process max lines')
     parser.add_argument('--split', action='store', dest='split',
@@ -200,6 +223,14 @@ def main(argv=None):
         state['line'] = 0
 
     try:
+        with open(args.csv_config_path) as csv_config_file:
+            csv_config = parse_csv_config(csv_config_file)
+            logger().info("Loading CSV column config file: " + args.csv_config_path)
+    except:
+        logger().info("No CSV config file found; quitting...")
+        quit()
+
+    try:
         args.state = os.path.abspath(args.state)
         os.chdir(args.dir)
 
@@ -220,7 +251,7 @@ def main(argv=None):
 
             try:
                 #Now lets upload our meter data
-                parser = DataParser(client, int(args.flavour), int(args.batch), int(args.max_lines), int(args.split))
+                parser = DataParser(client, int(args.flavour), int(args.batch), int(args.max_lines), int(args.split), csv_config)
                 line, count = parser.publish(fname, line)
                 if line in (0, state['line']):
                     logger().info("No additional data at : %s:%d", fname, state['line'])
