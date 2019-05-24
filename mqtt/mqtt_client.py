@@ -94,7 +94,6 @@ class DataParser():
 
         data = []
 
-
         # Simple CSV file:
         if len(self.csv_config['value_column_names']) == 1:
             if values[self.csv_config['value_column_idxs'][0]]:
@@ -109,8 +108,6 @@ class DataParser():
                     data.append({"observed_timestamp": timestamp,
                                  "device_id"         : values[self.csv_config['sensor_id_idx']] + '-' + self.csv_config['value_column_names'][i],
                                  "value"             : values[self.csv_config['value_column_idxs'][i]]})
-                else:
-                    print("NaN value...")
 
         self.last_processed_line = line
         return data
