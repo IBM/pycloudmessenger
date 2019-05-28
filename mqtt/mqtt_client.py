@@ -82,23 +82,32 @@ class DataParser():
         #Note: the observed_timestamp field should be iso8601 UTC prior to submission
         #The following code assumes a local timestamp and converts to UTC
 
-        timestamp = self.client.utc_offset(values[self.csv_config['timestamp_idx']], self.timezone, self.date_format)
+        # Concat multi-column timestamp with a space:
+        if type(self.csv_config['timestamp_idx']) is list:
+            timestamp_str = values[self.csv_config['timestamp_idx'][0]] + ' ' + values[self.csv_config['timestamp_idx'][1]]
+        # Single-column timestamp:
+        else:
+            timestamp_str = values[self.csv_config['timestamp_idx']]
+
+        timestamp = self.client.utc_offset(timestamp_str, self.timezone, self.date_format)
         timestamp = datetime.datetime.strptime(timestamp, self.date_format).replace(tzinfo=tzutc()).isoformat()
 
         data = []
 
         # Simple CSV file:
         if len(self.csv_config['value_column_names']) == 1:
-            data.append({"observed_timestamp" : timestamp,
-                         "device_id"          : values[self.csv_config['sensor_id_idx']],
-                         "value"              : values[self.csv_config['value_column_idxs'][0]]})
+            if values[self.csv_config['value_column_idxs'][0]]:
+                data.append({"observed_timestamp" : timestamp,
+                             "device_id"          : values[self.csv_config['sensor_id_idx']],
+                             "value"              : values[self.csv_config['value_column_idxs'][0]]})
 
         # Composite CSV file; append value_column_name to sensor_id :
         else:
             for i in range(len(self.csv_config['value_column_names'])):
-                data.append({"observed_timestamp": timestamp,
-                             "device_id"         : values[self.csv_config['sensor_id_idx']] + '-' + self.csv_config['value_column_names'][i],
-                             "value"             : values[self.csv_config['value_column_idxs'][i]]})
+                if values[self.csv_config['value_column_idxs'][i]]:
+                    data.append({"observed_timestamp": timestamp,
+                                 "device_id"         : values[self.csv_config['sensor_id_idx']] + '-' + self.csv_config['value_column_names'][i],
+                                 "value"             : values[self.csv_config['value_column_idxs'][i]]})
 
         self.last_processed_line = line
         return data
@@ -107,7 +116,8 @@ class DataParser():
     def read_row(self, filename):
         #Open csv file and yield a new row on each call
 
-        with open(filename, 'r') as csvfile:
+        # Handle CSV files starting with Unicode 'byte order mark' (BOM) with 'utf-8-sig' encoding.
+        with open(filename, 'r', encoding='utf-8-sig') as csvfile:
             csvreader = csv.reader((line.replace('\0', '') for line in csvfile), delimiter=',', quotechar='"')
 
             for row in csvreader:
@@ -204,6 +214,7 @@ def main(argv=None):
 
     logger(args.verbose)
     logger().info("=============================Starting==============================")
+    logger().info("Version: 1.2")
 
     try:
         #Connect to the broker
