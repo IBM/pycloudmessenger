@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='pycloudmessenger',
@@ -7,7 +7,7 @@ setup(
     author='Mark Purcell',
     author_email='markpurcell@ie.ibm.com,mkpurcell@yahoo.com',
     license='MIT',
-    packages=['pycloudmessenger'],
+    packages=find_packages('.'),
     install_requires=[
         'pika==0.13.0'
     ],
