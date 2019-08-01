@@ -5,7 +5,7 @@ Sample [RabbitMQ](https://www.rabbitmq.com/) (AMQP) client that retrieves a sens
 ## Install
 The Python sample code in this repository depends on several external packages.
 
-To install these packages on your local machine, execute the following command from within the `cloud-messaging/rabbitmq` directory:
+To install these packages on your local machine, execute the following command from within the `pycloudmessenger/rabbitmq` directory:
 
 ```
 pip install -r requirements.txt
@@ -16,7 +16,7 @@ pip install -r requirements.txt
 RabbitMQ (AMQP) broker connection details, credentials, & broker certificate are provided by IBM, and are configured on 
 your local machine using environmental variables.
 
-Store the broker certificate in the `cloud-messaging/rabbitmq` directory.
+Store the broker certificate in the `pycloudmessenger/rabbitmq` directory.
 
 On a Linux or Mac OS X command line `export` the following environmental variables:
 
@@ -44,7 +44,7 @@ set PUBLISH_QUEUE=CASTOR/v1/Request
 
 ## Run
 
-To retrieve a list of sensor IDs and a subset of sensor values from Castor, execute the following command from within the `cloud-messaging/rabbitmq` directory:
+To retrieve a list of sensor IDs and a subset of sensor values from Castor, execute the following command from within the `pycloudmessenger/rabbitmq` directory:
 
 ```
 python -m castor.sample_client

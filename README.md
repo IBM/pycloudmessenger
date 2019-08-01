@@ -1,4 +1,4 @@
-## cloud-messaging
+## pycloudmessenger
 The purpose of this project is to provide sample code for interacting with various messaging based cloud patforms provided by IBM Research Ireland.
 
 
@@ -15,10 +15,10 @@ Follow [these instructions](https://git-scm.com/book/en/v2/Getting-Started-Insta
 After [git](https://git-scm.com/) is installed, run the following command:
 
 ```
-git clone https://github.com/IBM/cloud-messaging.git
+git clone https://github.com/IBM/pycloudmessenger.git
 ```
 
-which creates a copy of the sample source code in this repository in a directory named `cloud-messaging` on your local machine.
+which creates a copy of the sample source code in this repository in a directory named `pycloudmessenger` on your local machine.
 
 #### Python
 
