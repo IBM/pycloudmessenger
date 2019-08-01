@@ -1,5 +1,5 @@
 ## pycloudmessenger
-The purpose of this project is to provide sample code for interacting with various messaging based cloud patforms provided by IBM Research Ireland.
+The purpose of this project is to provide sample code for interacting with various messaging based cloud platforms provided by IBM Research Ireland.
 
 
 ## Install
