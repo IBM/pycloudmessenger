@@ -7,7 +7,7 @@ setup(
     author='Mark Purcell',
     author_email='markpurcell@ie.ibm.com,mkpurcell@yahoo.com',
     license='MIT',
-    packages=['rabbitmq, mqtt'],
+    packages=setuptools.find_packages(),
     install_requires=[
         'pika==0.13.0'
     ],
