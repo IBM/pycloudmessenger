@@ -4,46 +4,9 @@ Sample [MQTT](http://mqtt.org/) client that parses sensor device ID, timestamp, 
 and publishes to a remote [MQTT](http://mqtt.org/) broker specified by a [JSON](https://www.json.org/) configuration file.
 
 ## Install
+The Python sample code in this directory depends on several external packages.
 
-#### git
-
-[git](https://git-scm.com/) is a free open source distributed version control system used to manage and maintain the 
-`castor-messaging` sample source code.
-
-Follow [these instructions](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) to install 
-[git](https://git-scm.com/) on your local machine.
-
-After [git](https://git-scm.com/) is installed, run the following command:
-
-```
-git clone https://github.com/IBM/castor-messaging.git
-```
-
-which creates a copy of the sample source code in this repository in a directory named `castor-messaging` on your local machine.
-
-#### Python
-
-This sample code uses [Python](https://www.python.org/). A minimum version of `3.5` is required; version `3.7` is preferred.
-
-###### Linux
-Python is typically pre-installed on Linux. Execute the following command to determine what version is installed:
-
-```
-python -V 
-```
-
-If the version of Python installed on your Linux machine is less than `3.5`, update Python using your Linux distribution's package manager. 
-
-###### Windows & Mac OS X
-
-Follow [these instructions](https://www.python.org/downloads/) to download and install Python on Windows and Mac OS X. 
-
-
-
-#### Python Packages
-The Python sample code in this repository depends on several external packages.
-
-To install these packages on your local machine, execute the following command from within the `castor-messaging/mqtt` directory:
+To install these packages on your local machine, execute the following command from within the `cloud-messaging/mqtt` directory:
 
 ```
 pip install -r requirements.txt
@@ -68,36 +31,36 @@ be converted to UTC prior to submission to Castor.
 
 #### Timestamp Format
 
-The sample code provided is [currently configured](https://github.com/IBM/castor-messaging/blob/master/mqtt/csv_config.json) 
+The sample code provided is [currently configured](https://github.com/IBM/cloud-messaging/blob/master/mqtt/csv_config.json) 
 to parse timestamps in `sample.csv` of the following format: `2018-12-31 22:39:50`.
 
-To change this timestamp format, update the `timestamp_format` value in the [`csv_config.json`](https://github.com/IBM/castor-messaging/blob/master/mqtt/csv_config.json) 
+To change this timestamp format, update the `timestamp_format` value in the [`csv_config.json`](https://github.com/IBM/cloud-messaging/blob/master/mqtt/csv_config.json) 
 to match your CSV file's timestamp format. [See here for an in-depth description of Python's `datetime` parsing syntax](https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior).
 
 #### Timestamp Time Zone
 
-The sample code provided is [currently configured](https://github.com/IBM/castor-messaging/blob/master/mqtt/csv_config.json) to treat timestamps in `sample.csv` as local times in the following time zone: `Europe/Zurich`.
+The sample code provided is [currently configured](https://github.com/IBM/cloud-messaging/blob/master/mqtt/csv_config.json) to treat timestamps in `sample.csv` as local times in the following time zone: `Europe/Zurich`.
 
-To change the local time zone, update the `timestamp_timezone` value in the [`csv_config.json`](https://github.com/IBM/castor-messaging/blob/master/mqtt/csv_config.json)
+To change the local time zone, update the `timestamp_timezone` value in the [`csv_config.json`](https://github.com/IBM/cloud-messaging/blob/master/mqtt/csv_config.json)
 to match your CSV file's timestamp time zone. [See here for a list of time zone names](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones). For example, if the timestamps in the CSV represent local times in Norway, use: `Europe/Oslo`, or for Nova Scotia, use: `America/Halifax`.
 
 #### Multiple Values & Column Ordering
 
-The sample code provided is [currently configured](https://github.com/IBM/castor-messaging/blob/master/mqtt/csv_config.json) to parse the three-column [`sample.csv`](https://github.com/IBM/castor-messaging/blob/master/mqtt/sample.csv) file where:
- - the first column contains the sensor device ID (configured by `sensor_id_idx` in [`csv_config.json`](https://github.com/IBM/castor-messaging/blob/master/mqtt/csv_config.json)),
- - the second column contains the local timestamp (configured by `timestamp_idx` in [`csv_config.json`](https://github.com/IBM/castor-messaging/blob/master/mqtt/csv_config.json)), and
- - the third column contains the value (configured by `value_column_names` & `value_column_idxs` in [`csv_config.json`](https://github.com/IBM/castor-messaging/blob/master/mqtt/csv_config.json)).
+The sample code provided is [currently configured](https://github.com/IBM/cloud-messaging/blob/master/mqtt/csv_config.json) to parse the three-column [`sample.csv`](https://github.com/IBM/cloud-messaging/blob/master/mqtt/sample.csv) file where:
+ - the first column contains the sensor device ID (configured by `sensor_id_idx` in [`csv_config.json`](https://github.com/IBM/cloud-messaging/blob/master/mqtt/csv_config.json)),
+ - the second column contains the local timestamp (configured by `timestamp_idx` in [`csv_config.json`](https://github.com/IBM/cloud-messaging/blob/master/mqtt/csv_config.json)), and
+ - the third column contains the value (configured by `value_column_names` & `value_column_idxs` in [`csv_config.json`](https://github.com/IBM/cloud-messaging/blob/master/mqtt/csv_config.json)).
  
  **NB:** Python uses zero-based indexing - the first CSV column is referenced using index `0`, the second column using index `1`, and so on.
  
 If your CSV file:
- - contains multiple sensor values per row, for example, a CDT sensor measuring conductivity, temperature, and depth similar to [`sample_composite.csv`](https://github.com/IBM/castor-messaging/blob/master/mqtt/sample_composite.csv), and/or
- - has column ordering that differs from that described above for [`sample.csv`](https://github.com/IBM/castor-messaging/blob/master/mqtt/sample.csv)
+ - contains multiple sensor values per row, for example, a CDT sensor measuring conductivity, temperature, and depth similar to [`sample_composite.csv`](https://github.com/IBM/cloud-messaging/blob/master/mqtt/sample_composite.csv), and/or
+ - has column ordering that differs from that described above for [`sample.csv`](https://github.com/IBM/cloud-messaging/blob/master/mqtt/sample.csv)
  
- update the `sensor_id_idx`, `timestamp_idx`, `value_column_names`, and `value_column_idxs` fields in [`csv_config.json`](https://github.com/IBM/castor-messaging/blob/master/mqtt/csv_config.json) to conform to your CSV file's format.
+ update the `sensor_id_idx`, `timestamp_idx`, `value_column_names`, and `value_column_idxs` fields in [`csv_config.json`](https://github.com/IBM/cloud-messaging/blob/master/mqtt/csv_config.json) to conform to your CSV file's format.
  
- For example, [`csv_config_composite.json`](https://github.com/IBM/castor-messaging/blob/master/mqtt/csv_config_composite.json)
- is configured to parse the [`sample_composite.csv`](https://github.com/IBM/castor-messaging/blob/master/mqtt/sample_composite.csv)
+ For example, [`csv_config_composite.json`](https://github.com/IBM/cloud-messaging/blob/master/mqtt/csv_config_composite.json)
+ is configured to parse the [`sample_composite.csv`](https://github.com/IBM/cloud-messaging/blob/master/mqtt/sample_composite.csv)
  containing multiple sensor values per row.
  
 **NB:** CSV file headers, if present, should be removed from  files before submitting sensor device data to Castor. 
@@ -105,7 +68,7 @@ If your CSV file:
 ## Run 
 
 To submit sensor data to Castor, update the command line arguments, and execute the following command from 
-within the `castor-messaging/mqtt` directory:
+within the `cloud-messaging/mqtt` directory:
 
 ```
 python -m mqtt_client --broker=broker-config.json --dir=./ --pattern=sample.csv --state=state-sample.json --batch=10 
@@ -116,7 +79,7 @@ python -m mqtt_client --broker=broker-config.json --dir=./ --pattern=sample.csv 
 `--broker`: 
 Path to the configuration file that contains all the required information to connect to the IBM Cloud MQTT Broker. 
 This file will be supplied to you by IBM and its permission should be `read-only`. 
-Store the broker configuration file and the MQTT broker certificate provided by IBM in the `castor-messaging/mqtt` directory.
+Store the broker configuration file and the MQTT broker certificate provided by IBM in the `cloud-messaging/mqtt` directory.
 
 `--dir`: 
 The directory where the CSV files for processing are located.
