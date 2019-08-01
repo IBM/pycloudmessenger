@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name='cloud-messaging',
+    name='ibm-cloud-messaging',
     version='0.1.0',
     description='Package for interacting with messaging based cloud services from IBM Research Ireland',
     author='Mark Purcell',
