@@ -1,5 +1,5 @@
-## castor-messaging
-The purpose of this project is to provide sample code for interacting with the IBM Research Castor platform.
+## cloud-messaging
+The purpose of this project is to provide sample code for interacting with various messaging based cloud patforms provided by IBM Research Ireland.
 
 ## References 
 
