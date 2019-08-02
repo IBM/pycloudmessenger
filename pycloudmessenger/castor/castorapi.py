@@ -25,7 +25,7 @@
 import uuid
 import json
 import logging
-from messenger import rabbitmq
+import pycloudmessenger.rabbitmq as rabbitmq
 
 logging.getLogger("pika").setLevel(logging.WARNING)
 
@@ -34,21 +34,25 @@ class CastorContext(rabbitmq.RabbitContext):
     """
         Holds connection details for a Castor service
     """
-    def __init__(self, host, port, user, password, vhost, cert):
-        super(CastorContext, self).__init__(host, port, user, password, vhost, cert=cert)
+    def __init__(self, cred_file: str, user: str = None, password: str = None, tls: bool = True):
+        super(CastorContext, self).__init__(cred_file, user, password, tls)
 
 
 class CastorMessenger(rabbitmq.RabbitDualClient):
     """
         Communicates with a Castor service
     """
-    def __init__(self, context, publish_queue, subscribe_queue):
+    def __init__(self, context, publish_queue: str = None, subscribe_queue: str = None):
         """
             Class initializer
         """
         super(CastorMessenger, self).__init__(context)
         self.correlation = 0
         self.client_id = str(uuid.uuid4())
+
+        if not publish_queue:
+            publish_queue = context.feeds()
+
         self.start_subscriber(queue=rabbitmq.RabbitQueue(subscribe_queue, exclusive=True))
         self.start_publisher(queue=rabbitmq.RabbitQueue(publish_queue, durable=True))
 

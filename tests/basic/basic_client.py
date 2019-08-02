@@ -24,9 +24,10 @@
 # pylint: disable=C0301, W0703
 
 import os
+import argparse
 import logging
 import json
-from messenger import rabbitmq
+import pycloudmessenger.rabbitmq as rabbitmq
 
 #Set up logger
 logging.basicConfig(
@@ -36,21 +37,6 @@ logging.basicConfig(
 
 LOGGER = logging.getLogger(__package__)
 logging.getLogger("pika").setLevel(logging.WARNING)
-
-
-def getenv(var, default=None):
-    """ fetch environment variable,
-        throws:
-            exception if value and default are None
-        returns:
-            environment value
-    """
-    value = os.getenv(var, default)
-    if not value:
-        if not default:
-            raise Exception(var + " environment variable must have a value")
-        value = default
-    return value
 
 
 class ServerMessageHandler():
@@ -63,35 +49,33 @@ class ServerMessageHandler():
 
 
 def main():
-    host = getenv('RABBIT_BROKER')
-    port = int(getenv('RABBIT_PORT'))
-    user = getenv('RABBIT_USER')
-    password = getenv('RABBIT_PWD')
-    vhost = getenv('RABBIT_VHOST')
-    cert = getenv('CERT', 'cert.pem')
-    feed_queue = getenv('PUBLISH_QUEUE')
-    reply_queue = getenv('SUBSCRIBE_QUEUE', ' ')
+    parser = argparse.ArgumentParser(description='Messaging Client')
+    parser.add_argument('--credentials', required=True)
+    parser.add_argument('--feed_queue', required=True)
+    parser.add_argument('--reply_queue', required=True)
+    parser.add_argument('--broker_user', help='Defaults to credentials file')
+    parser.add_argument('--broker_password', help='Defaults to credentials file')
+    cmdline = parser.parse_args()
 
     LOGGER.info("Starting...")
-
-    context = rabbitmq.RabbitContext(host, port, user, password, vhost, cert=cert)
+    context = rabbitmq.RabbitContext(cmdline.credentials, cmdline.broker_user, cmdline.broker_password)
 
     try:
         with rabbitmq.RabbitClient(context) as client:
-            client.start(publish=rabbitmq.RabbitQueue(feed_queue, purge=True), subscribe=rabbitmq.RabbitQueue(reply_queue))
+            client.start(publish=rabbitmq.RabbitQueue(cmdline.feed_queue, purge=True), subscribe=rabbitmq.RabbitQueue(cmdline.reply_queue))
             message = {'action': 'Outbound', 'payload': 'some data'}
             LOGGER.info(f'sending {message}')
             client.publish(json.dumps(message))
 
             with rabbitmq.RabbitClient(context) as server:
-                server.start(subscribe=rabbitmq.RabbitQueue(feed_queue))
+                server.start(subscribe=rabbitmq.RabbitQueue(cmdline.feed_queue))
 
                 mh = ServerMessageHandler()
                 server.receive(mh.handler, max_messages=1)
 
                 #And send a reply to the client
                 reply = {'action': 'Inbound', 'reply': 'the reply'}
-                server.publish(json.dumps(reply), rabbitmq.RabbitQueue(reply_queue))
+                server.publish(json.dumps(reply), rabbitmq.RabbitQueue(cmdline.reply_queue))
 
             #Now catch the reply in the client
             message = client.receive()

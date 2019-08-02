@@ -24,9 +24,10 @@
 # pylint: disable=C0301, W0703
 
 import os
+import argparse
 import logging
 import random
-from . import castorapi
+import pycloudmessenger.castor.castorapi as castorapi
 
 #Set up logger
 logging.basicConfig(
@@ -37,38 +38,20 @@ logging.basicConfig(
 LOGGER = logging.getLogger(__package__)
 
 
-def getenv(var, default=None):
-    """ fetch environment variable,
-        throws:
-            exception if value and default are None
-        returns:
-            environment value
-    """
-    value = os.getenv(var, default)
-    if not value:
-        if not default:
-            raise Exception(var + " environment variable must have a value")
-        value = default
-    return value
-
-
 def main():
-    """main"""
-    host = getenv('RABBIT_BROKER')
-    port = int(getenv('RABBIT_PORT'))
-    user = getenv('RABBIT_USER')
-    password = getenv('RABBIT_PWD')
-    vhost = getenv('RABBIT_VHOST')
-    cert = getenv('CERT', 'cert.pem')
-    feed_queue = getenv('PUBLISH_QUEUE')
-    reply_queue = getenv('SUBSCRIBE_QUEUE', ' ')
+    parser = argparse.ArgumentParser(description='Messaging Client')
+    parser.add_argument('--credentials', required=True)
+    parser.add_argument('--feed_queue', help='Defaults to credentials file')
+    parser.add_argument('--reply_queue', help='Defaults to auto-generated')
+    parser.add_argument('--broker_user', help='Defaults to credentials file')
+    parser.add_argument('--broker_password', help='Defaults to credentials file')
+    cmdline = parser.parse_args()
 
     LOGGER.info("Starting...")
-
-    context = castorapi.CastorContext(host, port, user, password, vhost, cert=cert)
+    context = castorapi.CastorContext(cmdline.credentials, cmdline.broker_user, cmdline.broker_password)
 
     try:
-        with castorapi.CastorMessenger(context, feed_queue, reply_queue) as castor:
+        with castorapi.CastorMessenger(context, cmdline.feed_queue, cmdline.reply_queue) as castor:
             #List the devices
             LOGGER.info("Requesting sensor ID listing...")
             message = castor.request_sensor_list()

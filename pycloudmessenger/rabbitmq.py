@@ -22,8 +22,12 @@
 
 # pylint: disable=R0903, R0913
 
+import sys
+import os
 import ssl
 import logging
+import json
+import base64
 from abc import ABC, abstractmethod
 import pika
 
@@ -35,21 +39,70 @@ class RabbitContext():
     """
         Holds connection details for a RabbitMQ service
     """
-    def __init__(self, host: str, port: int, user: str, password: str, vhost: str, ssl=True, cert=None):
-        self.host = host
-        self.port = port
-        self.user = user
-        self.pwd = password
-        self.vhost = vhost
-        self.ssl = ssl
-        self.cert = cert
+    def __init__(self, cred_file: str, user: str = None, password: str = None, tls: bool = True):
+        with open(cred_file) as creds:
+            self.args = json.load(creds)
+
+        #Obtain the directory for cred_file and its filename
+        fullpath = os.path.realpath(cred_file)
+        directory, filename = os.path.split(fullpath)
+        partfile, partext = os.path.splitext(filename)
+
+        if 'broker' in self.args:
+            self.args['broker_host'] = self.args.pop('broker')
+            self.args['broker_port'] = self.args.pop('port')
+            self.args['broker_vhost'] = self.args.pop('vhost')
+            self.args['broker_user'] = self.args.pop('client_user')
+            self.args['broker_password'] = self.args.pop('client_pwd')
+            self.args['broker_cert_b64'] = self.args.pop('cert_b64')
+            self.args['broker_pem'] = partfile + '.pem'
+        else:
+            self.args['broker_user'] = user if user else self.args.pop('broker_guest_user')
+            self.args['broker_password'] = password if password else self.args.pop('broker_guest_password')
+
+        self.args['broker_tls'] = tls
+        self.args['broker_pem_path'] = os.path.join(directory, self.args['broker_pem'])
+
+        #Now convert the b64 string to a PEM file
+        pem = base64.b64decode(self.args['broker_cert_b64']).decode('utf-8')
+        with open(self.args['broker_pem_path'] , 'w') as pem_file:
+            pem_file.write(pem)
+
+        if 'broker_timeout' not in self.args:
+            self.args['broker_timeout'] = 60
+
+
+    def get(self, key):
+        try:
+            return self.args[key]
+        except:
+            return None
+
+    def user(self):
+        return self.get('broker_user')
+    def pwd(self):
+        return self.get('broker_password')
+    def host(self):
+        return self.get('broker_host')
+    def port(self):
+        return self.get('broker_port')
+    def vhost(self):
+        return self.get('broker_vhost')
+    def cert(self):
+        return self.get('broker_pem_path')
+    def ssl(self):
+        return self.get('broker_tls')
+    def feeds(self):
+        return self.get('broker_request_queue')
+    def replies(self):
+        return self.get('broker_response_queue')
 
 
 class RabbitQueue():
     """
         Holds configuration details for a RabbitMQ Queue
     """
-    def __init__(self, queue: str='', auto_delete: bool=False, durable: bool=False, exclusive: bool=False, purge: bool=False):
+    def __init__(self, queue: str = '', auto_delete: bool = False, durable: bool = False, exclusive: bool = False, purge: bool = False):
         self.name = queue
         self.durable = durable
         self.exclusive = exclusive
@@ -70,13 +123,13 @@ class AbstractRabbitMessenger(ABC):
         self.connection = None
         self.channel = None
         self.cancel_on_close = False
-        self.credentials = pika.PlainCredentials(self.context.user, self.context.pwd)
+        self.credentials = pika.PlainCredentials(self.context.user(), self.context.pwd())
         self.ssl_options = {}
 
-        if self.context.ssl is True:
+        if self.context.ssl():
             self.ssl_options['ssl_version'] = ssl.PROTOCOL_TLSv1_2
-        if self.context.cert is not None:
-            self.ssl_options['ca_certs'] = self.context.cert
+        if self.context.cert():
+            self.ssl_options['ca_certs'] = self.context.cert()
             self.ssl_options['cert_reqs'] = ssl.CERT_REQUIRED
 
     def __enter__(self):
@@ -136,13 +189,13 @@ class AbstractRabbitMessenger(ABC):
                 None
         """
         parameters = pika.ConnectionParameters(
-                        self.context.host, self.context.port, self.context.vhost,
-                        self.credentials, ssl=self.context.ssl, ssl_options=self.ssl_options,
+                        self.context.host(), self.context.port(), self.context.vhost(),
+                        self.credentials, ssl=self.context.ssl(), ssl_options=self.ssl_options,
                         connection_attempts=connection_attempts,
                         retry_delay=retry_delay)
         self.establish_connection(parameters)
 
-    def publish(self, message, queue: str, exchange:str ='', mode: int=1):
+    def publish(self, message, queue: str, exchange: str = '', mode: int = 1):
         """
             Publish a message to a queue
 
@@ -179,7 +232,7 @@ class AbstractRabbitMessenger(ABC):
             pass
 
     @abstractmethod
-    def receive(self, handler, timeout:int, max_messages:int):
+    def receive(self, handler, timeout: int, max_messages: int):
         pass
 
     @abstractmethod
@@ -191,7 +244,7 @@ class RabbitClient(AbstractRabbitMessenger):
     """
         Communicates with a RabbitMQ service
     """
-    def start(self, publish: RabbitQueue=None, subscribe: RabbitQueue=None, connection_attempts: int=10, retry_delay: int =1):
+    def start(self, publish: RabbitQueue = None, subscribe: RabbitQueue = None, connection_attempts: int = 10, retry_delay: int = 1):
         if publish:
             self.pub_queue = publish
 
@@ -217,12 +270,12 @@ class RabbitClient(AbstractRabbitMessenger):
         if self.sub_queue:
             self.declare_queue(self.sub_queue)
 
-    def publish(self, message, queue: RabbitQueue=None, exchange: str='', mode: int=1):
+    def publish(self, message, queue: RabbitQueue = None, exchange: str = '', mode: int = 1):
         if queue is None:
             queue = self.pub_queue
         super(RabbitClient, self).publish(message, queue.name, exchange, mode)
 
-    def receive(self, handler=None, timeout: int=30, max_messages: int=0) -> str:
+    def receive(self, handler=None, timeout: int = 30, max_messages: int = 0) -> str:
         """
             Start receiving messages, up to max_messages
 
@@ -316,7 +369,7 @@ class RabbitDualClient():
         """
         self.publisher.publish(message)
 
-    def receive(self, handler, timeout:int, max_messages:int):
+    def receive(self, handler, timeout: int, max_messages: int):
         """
             Receive messages from Castor service
 
@@ -340,7 +393,7 @@ class RabbitDualClient():
         """
         self.last_recv_msg = message
 
-    def invoke_service(self, message, timeout: int=30):
+    def invoke_service(self, message, timeout: int = 30):
         """
             Publish a message and receive a reply
 
