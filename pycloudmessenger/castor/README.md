@@ -13,8 +13,7 @@ pip install -r requirements.txt
 
 ## Configure
 
-RabbitMQ (AMQP) broker connection details, credentials, & broker certificate are provided by IBM, and are configured on 
-your local machine using environmental variables.
+RabbitMQ (AMQP) broker connection details, credentials, & broker certificate are provided by IBM.
 
 ## Run Castor Sample Application
 
