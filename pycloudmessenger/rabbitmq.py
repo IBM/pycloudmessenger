@@ -43,7 +43,7 @@ class RabbitContext():
         self.args = None
 
     @classmethod
-    def from_args(self, host: str, port: int, vhost: str, user: str, password: str, cert_file: str, timeout: int = 60, tls: bool = True):
+    def from_args(self, host: str, port: int, vhost: str, user: str, password: str, cert_file: str = None, timeout: int = 60, tls: bool = True):
         args = {}
         args['broker_host'] = host
         args['broker_port'] = port
