@@ -34,8 +34,6 @@ class CastorContext(rabbitmq.RabbitContext):
     """
         Holds connection details for a Castor service
     """
-    def __init__(self, cred_file: str, user: str = None, password: str = None, tls: bool = True):
-        super(CastorContext, self).__init__(cred_file, user, password, tls)
 
 
 class CastorMessenger(rabbitmq.RabbitDualClient):

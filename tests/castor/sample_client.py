@@ -48,7 +48,7 @@ def main():
     cmdline = parser.parse_args()
 
     LOGGER.info("Starting...")
-    context = castorapi.CastorContext(cmdline.credentials, cmdline.broker_user, cmdline.broker_password)
+    context = castorapi.CastorContext.from_credentials_file(cmdline.credentials, cmdline.broker_user, cmdline.broker_password)
 
     try:
         with castorapi.CastorMessenger(context, cmdline.feed_queue, cmdline.reply_queue) as castor:

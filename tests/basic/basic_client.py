@@ -58,7 +58,7 @@ def main():
     cmdline = parser.parse_args()
 
     LOGGER.info("Starting...")
-    context = rabbitmq.RabbitContext(cmdline.credentials, cmdline.broker_user, cmdline.broker_password)
+    context = rabbitmq.RabbitContext.from_credentials_file(cmdline.credentials, cmdline.broker_user, cmdline.broker_password)
 
     try:
         with rabbitmq.RabbitClient(context) as client:
