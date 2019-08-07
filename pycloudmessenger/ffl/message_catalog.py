@@ -48,48 +48,42 @@ class MessageCatalog():
         }
         return message, message['serviceRequest']['service']['args']
 
-    '''
-        Users
-    '''
-    def msg_users(self):
+    def msg_user_create(self, user_name):
         template, args = self.msg_template()
-        args.append({'cmd':'get_users'})
+        args.append({'cmd':'user_create', 'params': [user_name]})
         return template
 
-    def msg_create_user(self, user_name):
+    def msg_user_assignments(self, user_name):
         template, args = self.msg_template()
-        args.append({'cmd':'create_user', 'params': [user_name]})
+        args.append({'cmd':'user_assignments', 'params': [user_name]})
         return template
 
-    '''
-        Tasks
-    '''
-    def msg_tasks(self):
+    def msg_task_listing(self):
         template, args = self.msg_template()
-        args.append({'cmd':'get_tasks'})
+        args.append({'cmd':'task_listing'})
         return template
 
-    def msg_create_task(self, task_name: str, algorithm: str, quorum: int, adhoc: dict):
+    def msg_task_create(self, task_name: str, user_name: str, algorithm: str, quorum: int, adhoc: dict):
         template, args = self.msg_template()
-        args.append({'cmd':'create_task', 'params': [task_name, algorithm, quorum, adhoc]})
+        args.append({'cmd':'task_create', 'params': [task_name, user_name, algorithm, quorum, adhoc]})
         return template
 
-    def msg_update_task(self, task_name: str, algorithm: str, quorum: int, adhoc: dict, status: str):
+    def msg_task_update(self, task_name: str, algorithm: str, quorum: int, adhoc: dict, status: str):
         template, args = self.msg_template()
-        args.append({'cmd':'update_task', 'params': [task_name, algorithm, quorum, adhoc, status]})
+        args.append({'cmd':'task_update', 'params': [task_name, algorithm, quorum, adhoc, status]})
         return template
 
-    '''
-        Participants
-    '''
-    def msg_participants(self):
+    def msg_task_info(self, task_name: str):
         template, args = self.msg_template()
-        args.append({'cmd':'get_participants'})
+        args.append({'cmd':'task_info', 'params': [task_name]})
         return template
 
-    def msg_task_participants(self, task_name: str):
+    def msg_task_assignments(self, task_name: str, user_name: str):
         template, args = self.msg_template()
-        args.append({'cmd':'get_task_participants', 'params': [task_name]})
+        args.append({'cmd':'task_assignments', 'params': [task_name, user_name]})
         return template
 
-
+    def msg_task_join(self, task_name: str, user_name: str):
+        template, args = self.msg_template()
+        args.append({'cmd':'task_join', 'params': [task_name, user_name]})
+        return template

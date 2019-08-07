@@ -69,35 +69,52 @@ class Messenger(rabbitmq.RabbitDualClient):
         self.stop()
 
     def _invoke_service(self, message: dict) -> dict:
-        return serializer.Serializer.deserialize(super(Messenger, self).invoke_service(serializer.Serializer.serialize(message), self.timeout))
+        result = serializer.Serializer.deserialize(super(Messenger, self).invoke_service(serializer.Serializer.serialize(message), self.timeout))
+        if 'error' in result:
+            raise Exception(result['error'])
+
+        if 'calls' not in result:
+            raise Exception(f"Malformed object: {result['error']}")
+
+        results = result['calls'][0]['count'] #calls[0] will always succeed
+        return result['calls'][0]['data'] if results else None
 
 
     ######## Public methods
 
-    def get_users(self) -> dict:
-        message = self.catalog.msg_users()
+    def user_create(self, user_name) -> dict:
+        message = self.catalog.msg_user_create(user_name)
         return self._invoke_service(message)
 
-    def create_user(self, user_name) -> dict:
-        message = self.catalog.msg_create_user(user_name)
+    def user_assignments(self) -> dict:
+        message = self.catalog.msg_user_assignments(self.context.user())
         return self._invoke_service(message)
 
-    def get_tasks(self) -> dict:
-        message = self.catalog.msg_tasks()
+    def task_listing(self) -> dict:
+        message = self.catalog.msg_task_listing()
         return self._invoke_service(message)
 
-    def create_task(self, task_name: str, algorithm: str, quorum: int, adhoc: dict) -> dict:
-        message = self.catalog.msg_create_task(task_name, algorithm, quorum, adhoc)
+    def task_create(self, task_name: str, algorithm: str, quorum: int, adhoc: dict) -> dict:
+        message = self.catalog.msg_task_create(task_name, self.context.user(), algorithm, quorum, adhoc)
         return self._invoke_service(message)
 
-    def update_task(self, task_name: str, algorithm: str, quorum: int, adhoc: dict, status: str) -> dict:
-        message = self.catalog.msg_update_user(task_name, algorithm, quorum, adhoc, status)
+    def task_update(self, task_name: str, algorithm: str, quorum: int, adhoc: dict, status: str) -> dict:
+        message = self.catalog.msg_task_update(task_name, algorithm, quorum, adhoc, status)
         return self._invoke_service(message)
 
-    def get_participants(self) -> dict:
-        message = self.catalog.msg_participants()
+    def task_info(self, task_name: str) -> dict:
+        message = self.catalog.msg_task_info(task_name)
         return self._invoke_service(message)
 
-    def get_task_participants(self, task_name: str) -> dict:
-        message = self.catalog.msg_task_participants(task_name)
+    def task_assignments(self, task_name: str) -> dict:
+        message = self.catalog.msg_task_assignments(task_name, self.context.user())
         return self._invoke_service(message)
+
+    def task_join(self, task_name: str) -> dict:
+        message = self.catalog.msg_task_join(task_name, self.context.user())
+        return self._invoke_service(message)
+
+    def task_result(self, task_name: str, b64_result: str = None) -> dict:
+        message = self.catalog.msg_task_result(task_name, self.context.user(), b64_result)
+        return self._invoke_service(message)
+

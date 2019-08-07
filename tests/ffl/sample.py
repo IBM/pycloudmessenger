@@ -52,11 +52,12 @@ def main():
 
     try:
         with fflapi.Messenger(context, cmdline.feed_queue, cmdline.reply_queue) as ffl:
-            result = ffl.get_users()
+            result = ffl.task_listing()
             LOGGER.info(f"Received: {result}")
-            result = ffl.get_tasks()
+            LOGGER.info(f"Received: {result[0]['TASK_NAME']}")
+            result = ffl.task_info(result[0]['TASK_NAME'])
             LOGGER.info(f"Received: {result}")
-            result = ffl.get_participants()
+            result = ffl.user_assignments()
             LOGGER.info(f"Received: {result}")
     except Exception as err:
         LOGGER.info("Error %r", err)
