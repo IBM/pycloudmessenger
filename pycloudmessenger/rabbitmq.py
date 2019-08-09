@@ -48,7 +48,7 @@ class RabbitContext():
         args['broker_host'] = host
         args['broker_port'] = port
         args['broker_vhost'] = vhost
-        args['broker_user'] = use
+        args['broker_user'] = user
         args['broker_password'] = password
         args['broker_tls'] = tls
         args['broker_pem_path'] = cert_file
