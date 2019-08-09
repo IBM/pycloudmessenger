@@ -7,7 +7,7 @@ The purpose of this project is to provide sample code for interacting with vario
 #### git
 
 [git](https://git-scm.com/) is a free open source distributed version control system used to manage and maintain the 
-`castor-messaging` sample source code.
+`pycloudmessenger` sample source code.
 
 Follow [these instructions](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) to install 
 [git](https://git-scm.com/) on your local machine.
