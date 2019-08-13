@@ -84,7 +84,7 @@ class RabbitContext():
         cfg = ['broker_host', 'broker_port', 'broker_vhost',
                'broker_user', 'broker_password', 'broker_cert_b64', 'broker_pem']
         for key in cfg:
-            if args.get(key) is None:
+            if not args.get(key):
                 raise Exception(f'{key} is missing from RabbitContext initialisation.')
 
         args['broker_tls'] = tls
@@ -134,13 +134,21 @@ class RabbitQueue():
     """
         Holds configuration details for a RabbitMQ Queue
     """
-    def __init__(self, queue: str = '', auto_delete: bool = False, durable: bool = False, exclusive: bool = False, purge: bool = False, prefetch: int = 1):
-        self.name = queue
+    def __init__(self, queue: str = None, auto_delete: bool = False, durable: bool = False, purge: bool = False, prefetch: int = 1):
         self.durable = durable
-        self.exclusive = exclusive
         self.auto_delete = auto_delete
         self.purge = purge
         self.prefetch = prefetch
+
+        #If no queue specified, create a temporary, exclusive queue
+        #This will force a server generated queue name like 'amq.gen....'
+        if queue:
+            self.name = queue
+            self.exclusive = False
+        else:
+            self.name = ''
+            self.exclusive = True
+        self.name = self.name.strip()
 
 
 class AbstractRabbitMessenger(ABC):
@@ -182,17 +190,19 @@ class AbstractRabbitMessenger(ABC):
                 None
         """
 
-        #Will not raise an exception if access rights insufficient on the queue
-        #Exception only raised when channel consume takes place
-        result = self.channel.queue_declare(
-                        queue=queue.name,
-                        exclusive=queue.exclusive,
-                        auto_delete=queue.auto_delete,
-                        durable=queue.durable)
+        if queue.exclusive or queue.durable:
+            #Will not raise an exception if access rights insufficient on the queue
+            #Exception only raised when channel consume takes place
+            result = self.channel.queue_declare(
+                            queue=queue.name,
+                            exclusive=queue.exclusive,
+                            auto_delete=queue.auto_delete,
+                            durable=queue.durable)
+            queue.name = result.method.queue
+
         #Useful when testing - clear the queue
-        if queue.purge is True:
+        if queue.purge:
             self.channel.queue_purge(queue=queue.name)
-        queue.name = result.method.queue
         return queue
 
     def establish_connection(self, parameters: pika.ConnectionParameters):
@@ -253,11 +263,11 @@ class AbstractRabbitMessenger(ABC):
                 None
         """
         try:
-            if self.channel is not None:
-                if self.cancel_on_close is True:
+            if self.channel:
+                if self.cancel_on_close:
                     self.channel.cancel()
                 self.channel.close()
-            if self.connection is not None:
+            if self.connection:
                 self.connection.close()
         except:
             pass
@@ -282,11 +292,6 @@ class RabbitClient(AbstractRabbitMessenger):
         if subscribe:
             self.sub_queue = subscribe
 
-            #This will force a server generated queue name like 'amq.gen....'
-            if not self.sub_queue.name:
-                self.sub_queue.name = ''
-            self.sub_queue.name = self.sub_queue.name.strip()
-
         self.connect(connection_attempts, retry_delay)
 
     def get_subscribe_queue(self):
@@ -300,11 +305,11 @@ class RabbitClient(AbstractRabbitMessenger):
 
         if self.sub_queue:
             self.declare_queue(self.sub_queue)
-            #Ensure the consumer only gets 1 unacknowledged message
+            #Ensure the consumer only gets 'prefetch' unacknowledged message
             self.channel.basic_qos(prefetch_count=self.sub_queue.prefetch)
 
     def publish(self, message, queue: RabbitQueue = None, exchange: str = '', mode: int = 1):
-        if queue is None:
+        if not queue:
             queue = self.pub_queue
         super(RabbitClient, self).publish(message, queue.name, exchange, mode)
 

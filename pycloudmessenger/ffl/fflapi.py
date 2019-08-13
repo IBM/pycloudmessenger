@@ -53,11 +53,8 @@ class Messenger(rabbitmq.RabbitDualClient):
         if not publish_queue:
             publish_queue = context.feeds()
 
-        #If no subscribe queue, create a temporary, auto-delete queue
-        exclusive = False if subscribe_queue else True
-
-        self.start_subscriber(queue=rabbitmq.RabbitQueue(subscribe_queue, exclusive=exclusive))
-        self.start_publisher(queue=rabbitmq.RabbitQueue(publish_queue, durable=True))
+        self.start_subscriber(queue=rabbitmq.RabbitQueue(subscribe_queue))
+        self.start_publisher(queue=rabbitmq.RabbitQueue(publish_queue))
 
         #Initialise the catalog with the target subscribe queue
         self.catalog = catalog.MessageCatalog(self.get_subscribe_queue())

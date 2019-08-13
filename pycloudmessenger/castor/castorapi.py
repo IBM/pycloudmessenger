@@ -51,8 +51,8 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
         if not publish_queue:
             publish_queue = context.feeds()
 
-        self.start_subscriber(queue=rabbitmq.RabbitQueue(subscribe_queue, exclusive=True))
-        self.start_publisher(queue=rabbitmq.RabbitQueue(publish_queue, durable=True))
+        self.start_subscriber(queue=rabbitmq.RabbitQueue(subscribe_queue))
+        self.start_publisher(queue=rabbitmq.RabbitQueue(publish_queue))
 
     def __enter__(self):
         return self
