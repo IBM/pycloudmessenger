@@ -45,7 +45,7 @@ class RabbitContext():
         if 'broker_timeout' not in args:
             self.args['broker_timeout'] = 60
         if 'broker_tls' not in args:
-            args['broker_tls'] = True
+            self.args['broker_tls'] = True
 
     @classmethod
     def from_args(self, host: str, port: int, vhost: str, user: str, password: str, cert_file: str = None, timeout: int = 60, tls: bool = True):
