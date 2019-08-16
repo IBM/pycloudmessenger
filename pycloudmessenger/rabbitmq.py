@@ -39,8 +39,13 @@ class RabbitContext():
     """
         Holds connection details for a RabbitMQ service
     """
-    def __init__(self):
-        self.args = None
+    def __init__(self, args):
+        self.args = args
+
+        if 'broker_timeout' not in args:
+            self.args['broker_timeout'] = 60
+        if 'broker_tls' not in args:
+            args['broker_tls'] = True
 
     @classmethod
     def from_args(self, host: str, port: int, vhost: str, user: str, password: str, cert_file: str = None, timeout: int = 60, tls: bool = True):
@@ -53,8 +58,7 @@ class RabbitContext():
         args['broker_tls'] = tls
         args['broker_pem_path'] = cert_file
         args['broker_timeout'] = timeout
-        ctx = RabbitContext()
-        ctx.args = args
+        ctx = RabbitContext(args)
         return ctx
 
     @classmethod
@@ -95,11 +99,7 @@ class RabbitContext():
         with open(args['broker_pem_path'] , 'w') as pem_file:
             pem_file.write(pem)
 
-        if 'broker_timeout' not in args:
-            args['broker_timeout'] = 60
-
-        ctx = RabbitContext()
-        ctx.args = args
+        ctx = RabbitContext(args)
         return ctx
 
     def get(self, key: str):
