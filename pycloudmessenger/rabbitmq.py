@@ -22,11 +22,11 @@
 
 # pylint: disable=R0903, R0913
 
-import sys
 import os
 import ssl
 import logging
 import json
+import tempfile
 import base64
 from abc import ABC, abstractmethod
 import pika
@@ -39,37 +39,55 @@ class RabbitContext():
     """
         Holds connection details for a RabbitMQ service
     """
-    def __init__(self, args):
-        self.args = args
+    def __init__(self, args: dict, user: str = None, password: str = None):
+        self.cert_file = None
+        self.args = args.copy()
 
+        #First set up some defaults
         if 'broker_timeout' not in args:
             self.args['broker_timeout'] = 60
-        if 'broker_tls' not in args:
-            self.args['broker_tls'] = True
 
-    @classmethod
-    def from_args(self, host: str, port: int, vhost: str, user: str, password: str, cert_file: str = None, timeout: int = 60, tls: bool = True):
-        args = {}
-        args['broker_host'] = host
-        args['broker_port'] = port
-        args['broker_vhost'] = vhost
-        args['broker_user'] = user
-        args['broker_password'] = password
-        args['broker_tls'] = tls
-        args['broker_pem_path'] = cert_file
-        args['broker_timeout'] = timeout
-        ctx = RabbitContext(args)
-        return ctx
+        self.args['broker_user'] = user if user else self.arg_value(args, ['broker_user', 'broker_guest_user', 'client_user'])
+        self.args['broker_password'] = password if password else self.arg_value(args, ['broker_password', 'broker_guest_password', 'client_pwd'])
+
+        if 'broker_cert_b64' in args:
+            #Convert the b64 cert string to a local PEM file
+            fd, self.cert_file = tempfile.mkstemp()
+
+            pem = base64.b64decode(args['broker_cert_b64']).decode('utf-8')
+            with open(self.cert_file, 'w') as pem_file:
+                pem_file.write(pem)
+
+            os.close(fd)
+            self.args['broker_pem_path'] = self.cert_file
+            self.args['broker_tls'] = True
+        else:
+            self.args['broker_tls'] = False
+
+        #Now check that all required fields are present
+        cfg = ['broker_host', 'broker_port', 'broker_vhost',
+               'broker_user', 'broker_password']
+        for key in cfg:
+            if not self.args.get(key):
+                raise Exception(f'{key} is missing from RabbitContext initialisation.')
+
+    def destroy(self):
+        try:
+            os.unlink(self.cert_file)
+        except:
+            pass
+
+    def arg_value(self, args, possibilities):
+        for p in possibilities:
+            val = args.get(p)
+            if val:
+                return val
+        raise Exception(f'{possibilities} missing from arguments.')
 
     @classmethod
     def from_credentials_file(self, cred_file: str, user: str = None, password: str = None, tls: bool = True):
         with open(cred_file) as creds:
             args = json.load(creds)
-
-        #Obtain the directory for cred_file and its filename
-        fullpath = os.path.realpath(cred_file)
-        directory, filename = os.path.split(fullpath)
-        partfile, partext = os.path.splitext(filename)
 
         #First, we need to support legacy credential formats
         if 'broker' in args:
@@ -79,28 +97,11 @@ class RabbitContext():
             args['broker_user'] = args.pop('client_user')
             args['broker_password'] = args.pop('client_pwd')
             args['broker_cert_b64'] = args.pop('cert_b64')
-            args['broker_pem'] = partfile + '.pem'
-        else:
-            args['broker_user'] = user if user else args.pop('broker_guest_user')
-            args['broker_password'] = password if password else args.pop('broker_guest_password')
+        #else:
+        #    args['broker_user'] = user if user else args.pop('broker_guest_user')
+        #    args['broker_password'] = password if password else args.pop('broker_guest_password')
 
-        #Now check that all required fields are present
-        cfg = ['broker_host', 'broker_port', 'broker_vhost',
-               'broker_user', 'broker_password', 'broker_cert_b64', 'broker_pem']
-        for key in cfg:
-            if not args.get(key):
-                raise Exception(f'{key} is missing from RabbitContext initialisation.')
-
-        args['broker_tls'] = tls
-        args['broker_pem_path'] = os.path.join(directory, args['broker_pem'])
-
-        #Convert the b64 cert string to a local PEM file
-        pem = base64.b64decode(args['broker_cert_b64']).decode('utf-8')
-        with open(args['broker_pem_path'] , 'w') as pem_file:
-            pem_file.write(pem)
-
-        ctx = RabbitContext(args)
-        return ctx
+        return RabbitContext(args, user, password)
 
     def get(self, key: str):
         try:
@@ -194,10 +195,10 @@ class AbstractRabbitMessenger(ABC):
             #Will not raise an exception if access rights insufficient on the queue
             #Exception only raised when channel consume takes place
             result = self.channel.queue_declare(
-                            queue=queue.name,
-                            exclusive=queue.exclusive,
-                            auto_delete=queue.auto_delete,
-                            durable=queue.durable)
+                    queue=queue.name,
+                    exclusive=queue.exclusive,
+                    auto_delete=queue.auto_delete,
+                    durable=queue.durable)
             queue.name = result.method.queue
 
         #Useful when testing - clear the queue
@@ -263,6 +264,8 @@ class AbstractRabbitMessenger(ABC):
                 None
         """
         try:
+            self.context.destroy()
+
             if self.channel:
                 if self.cancel_on_close:
                     self.channel.cancel()
@@ -277,7 +280,7 @@ class AbstractRabbitMessenger(ABC):
         pass
 
     @abstractmethod
-    def start(self):
+    def start(self, publish: RabbitQueue = None, subscribe: RabbitQueue = None, connection_attempts: int = 10, retry_delay: int = 1):
         pass
 
 
