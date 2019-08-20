@@ -71,6 +71,9 @@ class RabbitContext():
             if not self.args.get(key):
                 raise Exception(f'{key} is missing from RabbitContext initialisation.')
 
+    def __str__(self):
+        return f'{self.args},{self.cert_file}'
+
     def destroy(self):
         try:
             os.unlink(self.cert_file)
@@ -85,7 +88,7 @@ class RabbitContext():
         raise Exception(f'{possibilities} missing from arguments.')
 
     @classmethod
-    def from_credentials_file(self, cred_file: str, user: str = None, password: str = None, tls: bool = True):
+    def from_credentials_file(self, cred_file: str, user: str = None, password: str = None):
         with open(cred_file) as creds:
             args = json.load(creds)
 
