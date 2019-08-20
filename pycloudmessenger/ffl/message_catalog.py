@@ -48,12 +48,12 @@ class MessageCatalog():
         }
         return message, message['serviceRequest']['service']['args']
 
-    def msg_user_create(self, user_name):
+    def msg_user_create(self, user_name: str, password: str):
         template, args = self.msg_template()
-        args.append({'cmd':'user_create', 'params': [user_name]})
+        args.append({'cmd':'user_create', 'params': [user_name, password]})
         return template
 
-    def msg_user_assignments(self, user_name):
+    def msg_user_assignments(self, user_name: str):
         template, args = self.msg_template()
         args.append({'cmd':'user_assignments', 'params': [user_name]})
         return template

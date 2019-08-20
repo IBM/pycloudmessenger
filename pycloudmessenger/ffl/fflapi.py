@@ -79,8 +79,8 @@ class Messenger(rabbitmq.RabbitDualClient):
 
     ######## Public methods
 
-    def user_create(self, user_name) -> dict:
-        message = self.catalog.msg_user_create(user_name)
+    def user_create(self, user_name: str, password: str) -> dict:
+        message = self.catalog.msg_user_create(user_name, password)
         return self._invoke_service(message)
 
     def user_assignments(self) -> dict:
