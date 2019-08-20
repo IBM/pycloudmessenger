@@ -454,7 +454,7 @@ class RabbitDualClient():
         LOGGER.info("Waiting for reply...")
         #Now wait for the reply
         messages = self.subscriber.receive(self.internal_handler, timeout, 1)
-        if messages == 0:
+        if not messages:
             raise Exception('Timed out waiting for reply.')
         return self.last_recv_msg
 

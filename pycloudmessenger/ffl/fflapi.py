@@ -66,7 +66,12 @@ class Messenger(rabbitmq.RabbitDualClient):
         self.stop()
 
     def _invoke_service(self, message: dict) -> dict:
-        result = serializer.Serializer.deserialize(super(Messenger, self).invoke_service(serializer.Serializer.serialize(message), self.timeout))
+        result = super(Messenger, self).invoke_service(serializer.Serializer.serialize(message), self.timeout)
+        if not result:
+            raise Exception(f"Malformed object: None")
+
+        result = serializer.Serializer.deserialize(result)
+
         if 'error' in result:
             raise Exception(result['error'])
 
