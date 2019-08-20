@@ -28,11 +28,33 @@ import logging
 import json
 import tempfile
 import base64
+import weakref
 from abc import ABC, abstractmethod
 import pika
 
 __rabbit_helper_version_info__ = ('0', '1', '2')
 LOGGER = logging.getLogger(__package__)
+
+
+class Certificate():
+    def __init__(self, b64string: str):
+        self.fd, self.file = tempfile.mkstemp()
+        os.close(self.fd)
+
+        #Convert the b64 cert string to a local PEM file
+        pem = base64.b64decode(b64string).decode('utf-8')
+        with open(self.file, 'w') as pem_file:
+            pem_file.write(pem)
+
+        #Ensure the file is deleted
+        self._finalizer = weakref.finalize(self, os.unlink, self.file)
+
+    def remove(self):
+        self._finalizer()
+
+    @property
+    def removed(self):
+        return not self._finalizer.alive
 
 
 class RabbitContext():
@@ -44,22 +66,15 @@ class RabbitContext():
         self.args = args.copy()
 
         #First set up some defaults
-        if 'broker_timeout' not in args:
+        if 'broker_timeout' not in self.args:
             self.args['broker_timeout'] = 60
 
-        self.args['broker_user'] = user if user else self.arg_value(args, ['broker_user', 'broker_guest_user', 'client_user'])
-        self.args['broker_password'] = password if password else self.arg_value(args, ['broker_password', 'broker_guest_password', 'client_pwd'])
+        self.args['broker_user'] = user if user else self.arg_value(self.args, ['broker_user', 'broker_guest_user', 'client_user'])
+        self.args['broker_password'] = password if password else self.arg_value(self.args, ['broker_password', 'broker_guest_password', 'client_pwd'])
 
-        if 'broker_cert_b64' in args:
-            #Convert the b64 cert string to a local PEM file
-            fd, self.cert_file = tempfile.mkstemp()
-
-            pem = base64.b64decode(args['broker_cert_b64']).decode('utf-8')
-            with open(self.cert_file, 'w') as pem_file:
-                pem_file.write(pem)
-
-            os.close(fd)
-            self.args['broker_pem_path'] = self.cert_file
+        if 'broker_cert_b64' in self.args:
+            self.cert_file = Certificate(args['broker_cert_b64'])
+            self.args['broker_pem_path'] = self.cert_file.file
             self.args['broker_tls'] = True
         else:
             self.args['broker_tls'] = False
@@ -72,13 +87,7 @@ class RabbitContext():
                 raise Exception(f'{key} is missing from RabbitContext initialisation.')
 
     def __str__(self):
-        return f'{self.args},{self.cert_file}'
-
-    def destroy(self):
-        try:
-            os.unlink(self.cert_file)
-        except:
-            pass
+        return self.args
 
     def arg_value(self, args, possibilities):
         for p in possibilities:
@@ -100,9 +109,6 @@ class RabbitContext():
             args['broker_user'] = args.pop('client_user')
             args['broker_password'] = args.pop('client_pwd')
             args['broker_cert_b64'] = args.pop('cert_b64')
-        #else:
-        #    args['broker_user'] = user if user else args.pop('broker_guest_user')
-        #    args['broker_password'] = password if password else args.pop('broker_guest_password')
 
         return RabbitContext(args, user, password)
 
@@ -267,8 +273,6 @@ class AbstractRabbitMessenger(ABC):
                 None
         """
         try:
-            self.context.destroy()
-
             if self.channel:
                 if self.cancel_on_close:
                     self.channel.cancel()
