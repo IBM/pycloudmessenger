@@ -8,6 +8,7 @@ setup(
     author_email='markpurcell@ie.ibm.com,mkpurcell@yahoo.com',
     license='Apache 2.0',
     packages=find_packages('.'),
+    python_requires='>=3.6',
     install_requires=[
         'pika==0.13.0'
     ],
