@@ -87,3 +87,8 @@ class MessageCatalog():
         template, args = self.msg_template()
         args.append({'cmd':'task_join', 'params': [task_name, user_name]})
         return template
+
+    def msg_task_quit(self, task_name: str, user_name: str):
+        template, args = self.msg_template()
+        args.append({'cmd':'task_quit', 'params': [task_name, user_name]})
+        return template

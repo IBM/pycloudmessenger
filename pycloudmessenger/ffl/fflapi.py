@@ -116,6 +116,10 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_task_join(task_name, self.context.user())
         return self._invoke_service(message)
 
+    def task_quit(self, task_name: str):
+        message = self.catalog.msg_task_quit(task_name, self.context.user())
+        return self._invoke_service(message)
+
     def task_result(self, task_name: str, b64_result: str = None) -> dict:
         message = self.catalog.msg_task_result(task_name, self.context.user(), b64_result)
         return self._invoke_service(message)
