@@ -336,30 +336,35 @@ class RabbitClient(AbstractRabbitMessenger):
         msgs = 0
         body = None
 
-        for msg in self.channel.consume(
-                self.sub_queue.name,
-                exclusive=self.sub_queue.exclusive,
-                inactivity_timeout=timeout):
+        try:
+            for msg in self.channel.consume(
+                    self.sub_queue.name,
+                    exclusive=self.sub_queue.exclusive,
+                    inactivity_timeout=timeout):
 
-            method_frame, properties, body = msg
-            if not method_frame:
-                break
+                method_frame, properties, body = msg
+                if not method_frame and not properties and not body:
+                    raise Exception("Operation timeout reached.")
 
-            msgs += 1
-            self.inbound += 1
-            self.channel.basic_ack(method_frame.delivery_tag)
+                msgs += 1
+                self.inbound += 1
+                self.channel.basic_ack(method_frame.delivery_tag)
 
-            if handler:
-                #body is of type 'bytes' in Python 3+
-                state = handler(body)
-            elif not max_messages:
-                break
+                if handler:
+                    #body is of type 'bytes' in Python 3+
+                    state = handler(body)
+                elif not max_messages:
+                    break
 
-            #Stop consuming if message limit reached
-            if msgs == max_messages:
-                break
+                #Stop consuming if message limit reached
+                if msgs == max_messages:
+                    break
+        finally:
+            self.channel.cancel()
 
-        self.channel.cancel()
+        if not msgs:
+            raise Exception('Consumer cancelled prior to timeout.')
+
         return body
 
 
@@ -384,7 +389,7 @@ class RabbitDualClient():
                 An exception if connection attempt is not successful
 
             Returns:
-                None
+                Nothing
         """
         self.subscriber = client(self.context)
         self.subscriber.start(subscribe=queue)
@@ -400,7 +405,7 @@ class RabbitDualClient():
                 An exception if connection attempt is not successful
 
             Returns:
-                None
+                Nothing
         """
         self.publisher = client(self.context)
         self.publisher.start(publish=queue)
@@ -413,7 +418,7 @@ class RabbitDualClient():
                 An exception if publish is not successful
 
             Returns:
-                None
+                Nothing
         """
         self.publisher.publish(message)
 
@@ -425,7 +430,7 @@ class RabbitDualClient():
                 An exception if receive is not successful
 
             Returns:
-                None
+                Nothing
         """
         self.subscriber.receive(handler, timeout, max_messages)
 
@@ -437,7 +442,7 @@ class RabbitDualClient():
                 Nothing
 
             Returns:
-                None
+                Nothing
         """
         self.last_recv_msg = message
 
@@ -446,7 +451,7 @@ class RabbitDualClient():
             Publish a message and receive a reply
 
             Throws:
-                An exception if not successful
+                An exception if not successful or timedout
 
             Returns:
                 The reply dictionary
@@ -457,9 +462,7 @@ class RabbitDualClient():
 
         LOGGER.info("Waiting for reply...")
         #Now wait for the reply
-        messages = self.subscriber.receive(self.internal_handler, timeout, 1)
-        if not messages:
-            raise Exception('Timed out waiting for reply.')
+        self.subscriber.receive(self.internal_handler, timeout, 1)
         return self.last_recv_msg
 
     def stop(self):
@@ -470,7 +473,7 @@ class RabbitDualClient():
                 An exception if not successful
 
             Returns:
-                None
+                Nothing
         """
         self.subscriber.stop()
         self.publisher.stop()
