@@ -204,10 +204,10 @@ class AbstractRabbitMessenger(ABC):
             #Will not raise an exception if access rights insufficient on the queue
             #Exception only raised when channel consume takes place
             result = self.channel.queue_declare(
-                    queue=queue.name,
-                    exclusive=queue.exclusive,
-                    auto_delete=queue.auto_delete,
-                    durable=queue.durable)
+                queue=queue.name,
+                exclusive=queue.exclusive,
+                auto_delete=queue.auto_delete,
+                durable=queue.durable)
             queue.name = result.method.queue
 
         #Useful when testing - clear the queue
@@ -359,6 +359,8 @@ class RabbitClient(AbstractRabbitMessenger):
                 #Stop consuming if message limit reached
                 if msgs == max_messages:
                     break
+        except pika.exceptions.AMQPError as exc:
+            LOGGER.error(exc)
         finally:
             self.channel.cancel()
 
@@ -410,7 +412,7 @@ class RabbitDualClient():
         self.publisher = client(self.context)
         self.publisher.start(publish=queue)
 
-    def send(self, message):
+    def send(self, message, queue: RabbitQueue = None):
         """
             Publish a message to Castor service
 
@@ -420,7 +422,7 @@ class RabbitDualClient():
             Returns:
                 Nothing
         """
-        self.publisher.publish(message)
+        self.publisher.publish(message, queue)
 
     def receive(self, handler, timeout: int, max_messages: int):
         """
