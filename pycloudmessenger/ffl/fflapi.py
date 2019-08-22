@@ -65,6 +65,9 @@ class Messenger(rabbitmq.RabbitDualClient):
     def __exit__(self, *args):
         self.stop()
 
+    def _send(self, message: dict, queue: str = None):
+        super(Messenger, self).send(serializer.Serializer.serialize(message), queue=rabbitmq.RabbitQueue(queue))
+
     def _invoke_service(self, message: dict) -> dict:
         result = super(Messenger, self).invoke_service(serializer.Serializer.serialize(message), self.timeout)
         if not result:
@@ -120,7 +123,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_task_quit(task_name, self.context.user())
         return self._invoke_service(message)
 
-    def task_result(self, task_name: str, b64_result: str = None) -> dict:
-        message = self.catalog.msg_task_result(task_name, self.context.user(), b64_result)
+    def task_start(self, task_name: str, model: dict = None) -> dict:
+        message = self.catalog.msg_task_start(task_name, self.context.user(), model)
         return self._invoke_service(message)
 

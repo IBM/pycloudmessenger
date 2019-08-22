@@ -92,3 +92,8 @@ class MessageCatalog():
         template, args = self.msg_template()
         args.append({'cmd':'task_quit', 'params': [task_name, user_name]})
         return template
+
+    def msg_task_start(self, task_name: str, user_name: str, model: dict = None):
+        template, args = self.msg_template()
+        args.append({'cmd':'task_start', 'params': [task_name, user_name, model]})
+        return template
