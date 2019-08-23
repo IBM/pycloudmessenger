@@ -68,6 +68,12 @@ class Messenger(rabbitmq.RabbitDualClient):
     def _send(self, message: dict, queue: str = None):
         super(Messenger, self).send(serializer.Serializer.serialize(message), queue=rabbitmq.RabbitQueue(queue))
 
+    def _receive(self, timeout: int = 0) -> dict:
+        if not timeout:
+            timeout = self.timeout
+        super(Messenger, self).receive(self.internal_handler, timeout, 1)
+        return serializer.Serializer.deserialize(self.last_recv_msg)
+
     def _invoke_service(self, message: dict) -> dict:
         result = super(Messenger, self).invoke_service(serializer.Serializer.serialize(message), self.timeout)
         if not result:
@@ -83,7 +89,6 @@ class Messenger(rabbitmq.RabbitDualClient):
 
         results = result['calls'][0]['count'] #calls[0] will always succeed
         return result['calls'][0]['data'] if results else None
-
 
     ######## Public methods
 
@@ -126,4 +131,8 @@ class Messenger(rabbitmq.RabbitDualClient):
     def task_start(self, task_name: str, model: dict = None) -> dict:
         message = self.catalog.msg_task_start(task_name, self.context.user(), model)
         return self._invoke_service(message)
+
+    def task_assignment_wait(self, timeout: int = 0):
+        message = self._receive(timeout)
+        return message
 
