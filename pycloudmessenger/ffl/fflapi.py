@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #author mark_purcell@ie.ibm.com
 
 """FFL protocol handler.
@@ -18,6 +18,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+Please note that the following code was developed for the project MUSKETEER in DRL funded by the European Union
+under the Horizon 2020 Program.
 """
 
 # pylint: disable=R0903, R0913
@@ -57,7 +60,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         self.start_publisher(queue=rabbitmq.RabbitQueue(publish_queue))
 
         #Initialise the catalog with the target subscribe queue
-        self.catalog = catalog.MessageCatalog(self.get_subscribe_queue())
+        self.catalog = catalog.MessageCatalog(context.user(), self.get_subscribe_queue())
 
     def __enter__(self):
         return self
@@ -66,15 +69,30 @@ class Messenger(rabbitmq.RabbitDualClient):
         self.stop()
 
     def _send(self, message: dict, queue: str = None):
+        '''
+        Send a message and return immediately
+        Throws: An exception on failure
+        Returns: dict
+        '''
         super(Messenger, self).send(serializer.Serializer.serialize(message), queue=rabbitmq.RabbitQueue(queue))
 
     def _receive(self, timeout: int = 0) -> dict:
+        '''
+        Wait for timeout seconds for a message to arrive
+        Throws: An exception on failure
+        Returns: dict
+        '''
         if not timeout:
             timeout = self.timeout
         super(Messenger, self).receive(self.internal_handler, timeout, 1)
         return serializer.Serializer.deserialize(self.last_recv_msg)
 
     def _invoke_service(self, message: dict) -> dict:
+        '''
+        Send a message and wait for a reply
+        Throws: An exception on failure
+        Returns: dict
+        '''
         result = super(Messenger, self).invoke_service(serializer.Serializer.serialize(message), self.timeout)
         if not result:
             raise Exception(f"Malformed object: None")
@@ -93,46 +111,109 @@ class Messenger(rabbitmq.RabbitDualClient):
     ######## Public methods
 
     def user_create(self, user_name: str, password: str, organisation: str) -> dict:
+        '''
+        Register as a new user on the platformr
+        Throws: An exception on failure
+        Returns: dict
+        '''
         message = self.catalog.msg_user_create(user_name, password, organisation)
         return self._invoke_service(message)
 
     def user_assignments(self) -> dict:
-        message = self.catalog.msg_user_assignments(self.context.user())
+        '''
+        Return all tasks joined by the current user
+        Throws: An exception on failure
+        Returns: dict
+        '''
+        message = self.catalog.msg_user_assignments()
         return self._invoke_service(message)
 
     def task_listing(self) -> dict:
+        '''
+        Return a list of all tasks available
+        Throws: An exception on failure
+        Returns: dict
+        '''
         message = self.catalog.msg_task_listing()
         return self._invoke_service(message)
 
     def task_create(self, task_name: str, algorithm: str, quorum: int, adhoc: dict) -> dict:
-        message = self.catalog.msg_task_create(task_name, self.context.user(), algorithm, quorum, adhoc)
+        '''
+        A new task created by the current user
+        Throws: An exception on failure
+        Returns: dict
+        '''
+        message = self.catalog.msg_task_create(task_name, algorithm, quorum, adhoc)
         return self._invoke_service(message)
 
     def task_update(self, task_name: str, algorithm: str, quorum: int, adhoc: dict, status: str) -> dict:
+        '''
+        Change task details
+        Throws: An exception on failure
+        Returns: dict
+        '''
         message = self.catalog.msg_task_update(task_name, algorithm, quorum, adhoc, status)
         return self._invoke_service(message)
 
     def task_info(self, task_name: str) -> dict:
+        '''
+        Return info on a task
+        Throws: An exception on failure
+        Returns: dict
+        '''
         message = self.catalog.msg_task_info(task_name)
         return self._invoke_service(message)
 
     def task_assignments(self, task_name: str) -> dict:
-        message = self.catalog.msg_task_assignments(task_name, self.context.user())
+        '''
+        Return all assignments for the owned task
+        Throws: An exception on failure
+        Returns: dict
+        '''
+        message = self.catalog.msg_task_assignments(task_name)
         return self._invoke_service(message)
 
     def task_join(self, task_name: str) -> dict:
-        message = self.catalog.msg_task_join(task_name, self.context.user())
+        '''
+        As a potential task participant, try to join the task
+        Throws: An exception on failure
+        Returns: dict
+        '''
+        message = self.catalog.msg_task_join(task_name)
         return self._invoke_service(message)
 
     def task_quit(self, task_name: str):
-        message = self.catalog.msg_task_quit(task_name, self.context.user())
+        '''
+        As a task participant, leave the task
+        Throws: An exception on failure
+        Returns: dict
+        '''
+        message = self.catalog.msg_task_quit(task_name)
         return self._invoke_service(message)
 
     def task_start(self, task_name: str, model: dict = None) -> dict:
-        message = self.catalog.msg_task_start(task_name, self.context.user(), model)
+        '''
+        As a task owner, start the task
+        Throws: An exception on failure
+        Returns: dict
+        '''
+        message = self.catalog.msg_task_start(task_name, model)
         return self._invoke_service(message)
 
-    def task_assignment_wait(self, timeout: int = 0):
+    def task_assignment_update(self, task_name: str, status: str, model: dict = None) -> dict:
+        '''
+        Sends an update, including a model dict
+        Throws: An exception on failure
+        Returns: dict
+        '''
+        message = self.catalog.msg_task_assignment_update(task_name, status, model)
+        return self._invoke_service(message)
+
+    def task_assignment_wait(self, timeout: int = 0) -> dict:
+        '''
+        Wait for a message, until timeout seconds
+        Throws: An exception on failure
+        Returns: dict
+        '''
         message = self._receive(timeout)
         return message
-
