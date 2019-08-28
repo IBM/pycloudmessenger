@@ -53,9 +53,9 @@ class MessageCatalog():
         }
         return message, message['serviceRequest']['service']['args']
 
-    def msg_user_create(self, password: str, organisation: str) -> dict:
+    def msg_user_create(self, username: str, password: str, organisation: str) -> dict:
         template, args = self.msg_template()
-        args.append({'cmd':'user_create', 'params': [self.user_name, password, organisation]})
+        args.append({'cmd':'user_create', 'params': [username, password, organisation]})
         return template
 
     def msg_user_assignments(self) -> dict:
