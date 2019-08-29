@@ -39,6 +39,13 @@ class Context(rabbitmq.RabbitContext):
     """
 
 
+class TimedOutException(rabbitmq.RabbitTimedOutException):
+    pass
+
+class ConsumerException(rabbitmq.RabbitConsumerException):
+    pass
+
+
 class Messenger(rabbitmq.RabbitDualClient):
     """
         Communicates with an FFL service
@@ -84,7 +91,13 @@ class Messenger(rabbitmq.RabbitDualClient):
         '''
         if not timeout:
             timeout = self.timeout
-        super(Messenger, self).receive(self.internal_handler, timeout, 1)
+
+        try:
+            super(Messenger, self).receive(self.internal_handler, timeout, 1)
+        except rabbitmq.RabbitTimedOutException as exc:
+            raise TimedOutException(exc) from exc
+        except rabbitmq.RabbitConsumerException as exc:
+            raise ConsumerException(exc) from exc
         return serializer.Serializer.deserialize(self.last_recv_msg)
 
     def _invoke_service(self, message: dict) -> dict:
@@ -93,10 +106,18 @@ class Messenger(rabbitmq.RabbitDualClient):
         Throws: An exception on failure
         Returns: dict
         '''
-        result = super(Messenger, self).invoke_service(serializer.Serializer.serialize(message), self.timeout)
+
+        result = None
+
+        try:
+            result = super(Messenger, self).invoke_service(serializer.Serializer.serialize(message), self.timeout)
+        except rabbitmq.RabbitTimedOutException as exc:
+            raise TimedOutException(exc) from exc
+        except rabbitmq.RabbitConsumerException as exc:
+            raise ConsumerException(exc) from exc
+
         if not result:
             raise Exception(f"Malformed object: None")
-
         result = serializer.Serializer.deserialize(result)
 
         if 'error' in result:
@@ -198,6 +219,15 @@ class Messenger(rabbitmq.RabbitDualClient):
         Returns: dict
         '''
         message = self.catalog.msg_task_start(task_name, model)
+        return self._invoke_service(message)
+
+    def task_stop(self, task_name: str) -> dict:
+        '''
+        As a task owner, stop the task
+        Throws: An exception on failure
+        Returns: dict
+        '''
+        message = self.catalog.msg_task_stop(task_name)
         return self._invoke_service(message)
 
     def task_assignment_update(self, task_name: str, status: str, model: dict = None) -> dict:

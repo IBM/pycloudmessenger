@@ -67,7 +67,7 @@ class RabbitContext():
 
         #First set up some defaults
         if 'broker_timeout' not in self.args:
-            self.args['broker_timeout'] = 60
+            self.args['broker_timeout'] = 60.0
 
         self.args['broker_user'] = user if user else self.arg_value(self.args, ['broker_user', 'broker_guest_user', 'client_user'])
         self.args['broker_password'] = password if password else self.arg_value(self.args, ['broker_password', 'broker_guest_password', 'client_pwd'])

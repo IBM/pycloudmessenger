@@ -103,6 +103,11 @@ class MessageCatalog():
         args.append({'cmd':'task_start', 'params': [task_name, self.user_name, model]})
         return template
 
+    def msg_task_stop(self, task_name: str) -> dict:
+        template, args = self.msg_template()
+        args.append({'cmd':'task_stop', 'params': [task_name, self.user_name]})
+        return template
+
     def msg_task_assignment_update(self, task_name: str, status: str, model: dict = None) -> dict:
         template, args = self.msg_template()
         args.append({'cmd':'task_assignment_update', 'params': [task_name, self.user_name, status, model]})
