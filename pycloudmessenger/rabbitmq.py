@@ -291,6 +291,13 @@ class AbstractRabbitMessenger(ABC):
         pass
 
 
+class RabbitTimedOutException(Exception):
+    pass
+
+class RabbitConsumerException(Exception):
+    pass
+
+
 class RabbitClient(AbstractRabbitMessenger):
     """
         Communicates with a RabbitMQ service
@@ -344,7 +351,7 @@ class RabbitClient(AbstractRabbitMessenger):
 
                 method_frame, properties, body = msg
                 if not method_frame and not properties and not body:
-                    raise Exception("Operation timeout reached.")
+                    raise RabbitTimedOutException("Operation timeout reached.")
 
                 msgs += 1
                 self.inbound += 1
@@ -365,7 +372,7 @@ class RabbitClient(AbstractRabbitMessenger):
             self.channel.cancel()
 
         if not msgs:
-            raise Exception('Consumer cancelled prior to timeout.')
+            raise RabbitConsumerException('Consumer cancelled prior to timeout.')
 
         return body
 
