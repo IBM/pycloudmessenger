@@ -80,7 +80,7 @@ class MessageCatalog():
 
     def msg_task_info(self, task_name: str) -> dict:
         template, args = self.msg_template()
-        args.append({'cmd':'task_info', 'params': [task_name]})
+        args.append({'cmd':'task_info', 'params': [task_name, self.user_name]})
         return template
 
     def msg_task_assignments(self, task_name: str) -> dict:
