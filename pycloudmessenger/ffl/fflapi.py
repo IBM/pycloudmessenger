@@ -124,7 +124,7 @@ class Messenger(rabbitmq.RabbitDualClient):
             raise Exception(result['error'])
 
         if 'calls' not in result:
-            raise Exception(f"Malformed object: {result['error']}")
+            raise Exception(f"Malformed object: {result}")
 
         results = result['calls'][0]['count'] #calls[0] will always succeed
         return result['calls'][0]['data'] if results else None
