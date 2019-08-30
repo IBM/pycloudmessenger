@@ -34,16 +34,16 @@ class MessageCatalog():
         else:
             self.reply_to = {}
 
-    def requestor(self):
+    def requestor(self, want_reply: bool):
         self.correlation += 1
-        req = self.reply_to
+        req = self.reply_to if want_reply else {}
         req.update({'correlationID': self.correlation})
         return req
 
-    def msg_template(self, service_name: str = 'AccessManager'):
+    def msg_template(self, service_name: str = 'AccessManager', want_reply: bool = True):
         message = {
             'serviceRequest': {
-                'requestor': self.requestor(),
+                'requestor': self.requestor(want_reply),
                 'service': {
                     'name': service_name,
                     'args': [
@@ -108,7 +108,7 @@ class MessageCatalog():
         args.append({'cmd':'task_stop', 'params': [task_name, self.user_name]})
         return template
 
-    def msg_task_assignment_update(self, task_name: str, status: str, model: dict = None) -> dict:
-        template, args = self.msg_template()
+    def msg_task_assignment_update(self, task_name: str, status: str, model: dict = None, want_reply: bool = True):
+        template, args = self.msg_template(want_reply=want_reply)
         args.append({'cmd':'task_assignment_update', 'params': [task_name, self.user_name, status, model]})
         return template

@@ -81,7 +81,8 @@ class Messenger(rabbitmq.RabbitDualClient):
         Throws: An exception on failure
         Returns: dict
         '''
-        super(Messenger, self).send(serializer.Serializer.serialize(message), queue=rabbitmq.RabbitQueue(queue))
+        pub_queue = rabbitmq.RabbitQueue(queue) if queue else None
+        super(Messenger, self).send(serializer.Serializer.serialize(message), pub_queue)
 
     def _receive(self, timeout: int = 0) -> dict:
         '''
@@ -230,14 +231,14 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_task_stop(task_name)
         return self._invoke_service(message)
 
-    def task_assignment_update(self, task_name: str, status: str, model: dict = None) -> dict:
+    def task_assignment_update(self, task_name: str, status: str, model: dict = None):
         '''
-        Sends an update, including a model dict
+        Sends an update, including a model dict, no reply wanted
         Throws: An exception on failure
-        Returns: dict
+        Returns: Nothing
         '''
-        message = self.catalog.msg_task_assignment_update(task_name, status, model)
-        return self._invoke_service(message)
+        message = self.catalog.msg_task_assignment_update(task_name, status, model, want_reply=False)
+        self._send(message)
 
     def task_assignment_wait(self, timeout: int = 0) -> dict:
         '''
@@ -245,5 +246,4 @@ class Messenger(rabbitmq.RabbitDualClient):
         Throws: An exception on failure
         Returns: dict
         '''
-        message = self._receive(timeout)
-        return message
+        return self._receive(timeout)
