@@ -167,7 +167,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_task_create(task_name, algorithm, quorum, adhoc)
         return self._invoke_service(message)
 
-    def task_update(self, task_name: str, algorithm: str = None, quorum: int = -1, adhoc: dict = None, status: str) -> dict:
+    def task_update(self, task_name: str, status: str, algorithm: str = None, quorum: int = -1, adhoc: dict = None) -> dict:
         '''
         Change task details
         Throws: An exception on failure
