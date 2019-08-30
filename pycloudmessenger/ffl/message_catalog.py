@@ -75,7 +75,7 @@ class MessageCatalog():
 
     def msg_task_update(self, task_name: str, algorithm: str, quorum: int, adhoc: dict, status: str) -> dict:
         template, args = self.msg_template()
-        args.append({'cmd':'task_update', 'params': [task_name, algorithm, quorum, adhoc, status]})
+        args.append({'cmd':'task_update', 'params': [task_name, self.user_name, algorithm, quorum, adhoc, status]})
         return template
 
     def msg_task_info(self, task_name: str) -> dict:
