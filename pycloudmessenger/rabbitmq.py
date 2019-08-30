@@ -466,12 +466,13 @@ class RabbitDualClient():
                 The reply dictionary
         """
         self.last_recv_msg = None
-        LOGGER.info(f"Sending message: {message}")
+        LOGGER.debug(f"Sending message: {message}")
         self.send(message)
 
-        LOGGER.info("Waiting for reply...")
+        LOGGER.debug("Waiting for reply...")
         #Now wait for the reply
         self.subscriber.receive(self.internal_handler, timeout, 1)
+        LOGGER.debug(f"Received: {self.last_recv_msg}")
         return self.last_recv_msg
 
     def stop(self):
