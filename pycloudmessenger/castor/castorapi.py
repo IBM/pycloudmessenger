@@ -23,9 +23,9 @@
 # pylint: disable=R0903, R0913
 
 import uuid
-import json
 import logging
 import pycloudmessenger.rabbitmq as rabbitmq
+import pycloudmessenger.serializer as serializer
 
 logging.getLogger("pika").setLevel(logging.WARNING)
 
@@ -34,6 +34,12 @@ class CastorContext(rabbitmq.RabbitContext):
     """
         Holds connection details for a Castor service
     """
+
+class TimedOutException(rabbitmq.RabbitTimedOutException):
+    '''Over-ride exception'''
+
+class ConsumerException(rabbitmq.RabbitConsumerException):
+    '''Over-ride exception'''
 
 
 class CastorMessenger(rabbitmq.RabbitDualClient):
@@ -60,10 +66,29 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
     def __exit__(self, *args):
         self.stop()
 
-    def invoke_service(self, message, timeout=30):
-        return json.loads(super(CastorMessenger, self).invoke_service(message, timeout))
+    def _msg_template(self, service_name: str = 'TimeseriesService'):
+        """
+            Format message template - internal only
 
-    def requestor(self):
+            Throws:
+                Nothing
+
+            Returns:
+                The requestor sub-info
+        """
+        message = {
+            'serviceRequest': {
+                'requestor': self._requestor(),
+                'service': {
+                    'name': service_name,
+                    'args': {
+                    }
+                }
+            }
+        }
+        return message, message['serviceRequest']['service']['args']
+
+    def _requestor(self):
         """
             Format message for requestor information - internal only
 
@@ -74,12 +99,32 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
                 The requestor sub-info
         """
         self.correlation += 1
-        return {
-            'replyTo': self.get_subscribe_queue(),
-            'clientID': self.client_id,
-            'transient': True,
-            'correlationID': self.correlation
-        }
+        req = {'replyTo': self.get_subscribe_queue()}
+        req.update({'correlationID': self.correlation,
+                    'clientID': self.client_id, 'transient': True})
+        return req
+
+    def invoke_service(self, message, timeout=60):
+        try:
+            message = serializer.Serializer.serialize(message)
+            result = super(CastorMessenger, self).invoke_service(message, timeout)
+        except rabbitmq.RabbitTimedOutException as exc:
+            raise TimedOutException(exc) from exc
+        except rabbitmq.RabbitConsumerException as exc:
+            raise ConsumerException(exc) from exc
+
+        if not result:
+            raise Exception(f"Malformed object: None")
+        result = serializer.Serializer.deserialize(result)
+
+        if 'status' not in result['serviceResponse']['service']:
+            raise Exception(f"Malformed object: {result}")
+        status = result['serviceResponse']['service']['status']
+        if status != 200:
+            msg = f"({status}): {result['serviceResponse']['service']['result']}"
+            raise Exception(msg)
+
+        return result['serviceResponse']['service']['result']
 
     def request_sensor_data(self, meter, from_date, to_date):
         """
@@ -89,23 +134,12 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
                 An exception if not successful
 
             Returns:
-                The message to send as a json string
+                Dict - The message to send
         """
-        req = self.requestor()
-        return json.dumps({
-            'serviceRequest': {
-                'requestor': req,
-                'service': {
-                    'name': 'TimeseriesService',
-                    'args': {
-                        'cmd': 'ts/get_timeseries_values',
-                        'device_id': meter,
-                        'from': from_date,
-                        'to': to_date
-                    }
-                }
-            }
-        })
+        template, args = self._msg_template()
+        args.update({'cmd':'ts/get_timeseries_values', 'device_id': meter,
+                     'from': from_date, 'to': to_date})
+        return template
 
     def request_sensor_list(self):
         """
@@ -115,17 +149,96 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
                 An exception if not successful
 
             Returns:
-                The message to send as a json string
+                Dict - The message to send
         """
-        req = self.requestor()
-        return json.dumps({
-            'serviceRequest': {
-                'requestor': req,
-                'service': {
-                    'name': 'TimeseriesService',
-                    'args': {
-                        'cmd': 'ts/get_time_series'
-                    }
-                }
-            }
-        })
+        template, args = self._msg_template()
+        args.update({'cmd':'ts/get_time_series'})
+        return template
+
+    def store_time_series(self, values):
+        """
+            Format message for storing sensor observations
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        """
+        template, args = self._msg_template()
+        args.update({'cmd':'ts/store_timeseries_values', 'values': values})
+        return template
+
+    def average_time_series(self, meter, from_date, to_date):
+        """
+            Format message for averaging sensor observations
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        """
+        template, args = self._msg_template()
+        args.update({'cmd':'ts/average_timeseries_values', 'device_id': meter,
+                     'from': from_date, 'to': to_date})
+        return template
+
+    def register_model(self, model_name, entity_name, signal_name):
+        """
+            Format message for registering an external model
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        """
+        template, args = self._msg_template()
+        args.update({'cmd':'register_model', 'model_name': model_name,
+                     'entity': entity_name, 'signal': signal_name})
+        return template
+
+    def request_model_time_series(self, model_name, entity_name, signal_name):
+        """
+            Format message for retrieving a models timeseries is
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        """
+        template, args = self._msg_template()
+        args.update({'cmd':'get_model_time_series',
+                     'model_name': model_name, 'entity': entity_name,
+                     'signal': signal_name})
+        return template
+
+    def key_value_service(self, cmd, keys):
+        """
+            Format message for interacting with the key/value service
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        """
+        template, args = self._msg_template('KeyValueService')
+        args.update({'cmd': cmd, 'keys': keys})
+        return template
+
+    def weather_service_hourly(self, api_key, lat, lng):
+        """
+            Format message for interacting with the weather service
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        """
+        template, args = self._msg_template('WeatherService-TwoDayHourlyForecast-External')
+        args.update({'apiKey': api_key, 'latitude': lat, 'longitude': lng})
+        return template
