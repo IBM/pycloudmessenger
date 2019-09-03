@@ -60,7 +60,7 @@ def main():
             result = ffl.user_assignments()
             LOGGER.info(f"Received: {result}")
     except Exception as err:
-        LOGGER.info("Error %r", err)
+        LOGGER.error(err)
         raise err
 
 if __name__ == '__main__':

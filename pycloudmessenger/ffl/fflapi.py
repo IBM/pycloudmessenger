@@ -19,15 +19,15 @@
  * limitations under the License.
  */
 
-Please note that the following code was developed for the project MUSKETEER in DRL funded by the European Union
-under the Horizon 2020 Program.
+Please note that the following code was developed for the project MUSKETEER
+in DRL funded by the European Union under the Horizon 2020 Program.
 """
 
 # pylint: disable=R0903, R0913
 
 import logging
 import pycloudmessenger.rabbitmq as rabbitmq
-import pycloudmessenger.ffl.serializer as serializer
+import pycloudmessenger.serializer as serializer
 import pycloudmessenger.ffl.message_catalog as catalog
 
 logging.getLogger("pika").setLevel(logging.WARNING)
@@ -40,10 +40,10 @@ class Context(rabbitmq.RabbitContext):
 
 
 class TimedOutException(rabbitmq.RabbitTimedOutException):
-    pass
+    '''Over-ride exception'''
 
 class ConsumerException(rabbitmq.RabbitConsumerException):
-    pass
+    '''Over-ride exception'''
 
 
 class Messenger(rabbitmq.RabbitDualClient):
@@ -111,7 +111,8 @@ class Messenger(rabbitmq.RabbitDualClient):
         result = None
 
         try:
-            result = super(Messenger, self).invoke_service(serializer.Serializer.serialize(message), self.timeout)
+            message = serializer.Serializer.serialize(message)
+            result = super(Messenger, self).invoke_service(message)
         except rabbitmq.RabbitTimedOutException as exc:
             raise TimedOutException(exc) from exc
         except rabbitmq.RabbitConsumerException as exc:
@@ -168,7 +169,8 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_task_create(task_name, algorithm, quorum, adhoc)
         return self._invoke_service(message)
 
-    def task_update(self, task_name: str, status: str, algorithm: str = None, quorum: int = -1, adhoc: dict = None) -> dict:
+    def task_update(self, task_name: str, status: str, algorithm: str = None,
+                    quorum: int = -1, adhoc: dict = None) -> dict:
         '''
         Change task details
         Throws: An exception on failure
@@ -237,7 +239,8 @@ class Messenger(rabbitmq.RabbitDualClient):
         Throws: An exception on failure
         Returns: Nothing
         '''
-        message = self.catalog.msg_task_assignment_update(task_name, status, model, want_reply=False)
+        message = self.catalog.msg_task_assignment_update(task_name, status,
+                                                          model, want_reply=False)
         self._send(message)
 
     def task_assignment_wait(self, timeout: int = 0) -> dict:

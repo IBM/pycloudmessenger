@@ -19,8 +19,8 @@
  * limitations under the License.
  */
 
-Please note that the following code was developed for the project MUSKETEER in DRL funded by the European Union
-under the Horizon 2020 Program.
+Please note that the following code was developed for the project MUSKETEER
+in DRL funded by the European Union under the Horizon 2020 Program.
 """
 
 # pylint: disable=W1203
@@ -29,10 +29,14 @@ import json
 
 
 class Serializer:
+    '''Basic json serialization'''
+
     @staticmethod
-    def serialize(message):
+    def serialize(message: dict) -> str:
+        '''Convert message to serializable format'''
         return json.dumps(message)
 
     @staticmethod
-    def deserialize(message):
+    def deserialize(message) -> dict:
+        '''Convert serialized message to dict'''
         return json.loads(message)
