@@ -101,7 +101,7 @@ class Messenger(rabbitmq.RabbitDualClient):
             raise ConsumerException(exc) from exc
         return serializer.Serializer.deserialize(self.last_recv_msg)
 
-    def _invoke_service(self, message: dict) -> dict:
+    def _invoke_service(self, message: dict, timeout: int = 0) -> dict:
         '''
         Send a message and wait for a reply
         Throws: An exception on failure
@@ -109,10 +109,12 @@ class Messenger(rabbitmq.RabbitDualClient):
         '''
 
         result = None
+        if not timeout:
+            timeout = self.timeout
 
         try:
             message = serializer.Serializer.serialize(message)
-            result = super(Messenger, self).invoke_service(message)
+            result = super(Messenger, self).invoke_service(message, timeout)
         except rabbitmq.RabbitTimedOutException as exc:
             raise TimedOutException(exc) from exc
         except rabbitmq.RabbitConsumerException as exc:
