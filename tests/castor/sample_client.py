@@ -42,6 +42,7 @@ def main():
     parser.add_argument('--reply_queue', help='Defaults to auto-generated')
     parser.add_argument('--broker_user', help='Defaults to credentials file')
     parser.add_argument('--broker_password', help='Defaults to credentials file')
+    parser.add_argument('--register_model', default=False, help='Boolean setting for registering models')
     cmdline = parser.parse_args()
 
     LOGGER.info("Starting...")
@@ -63,12 +64,13 @@ def main():
             values = reply['count']
             LOGGER.info("Number of Time Series Values: %d", values)
 
-            #Register external model
-            LOGGER.info("Registering model...")
-            message = castor.register_model('my-new-model1', '1', 'ENERGY_LOAD')
-            reply = castor.invoke_service(message)
-            ts_id = reply['ts_id']
-            LOGGER.info("Time Series: %s", ts_id)
+            if cmdline.register_model:
+                #Register external model
+                LOGGER.info("Registering model...")
+                message = castor.register_model('my-new-model1', 'target_entity', 'target_signal')
+                reply = castor.invoke_service(message)
+                ts_id = reply['ts_id']
+                LOGGER.info("Time Series: %s", ts_id)
     except Exception as err:
         LOGGER.error(err)
         raise err
