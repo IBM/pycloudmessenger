@@ -169,7 +169,8 @@ class Messenger(rabbitmq.RabbitDualClient):
         Returns: dict
         '''
         message = self.catalog.msg_task_create(task_name, algorithm, quorum, adhoc)
-        return self._invoke_service(message)
+        message = self._invoke_service(message)
+        return message[0]
 
     def task_update(self, task_name: str, status: str, algorithm: str = None,
                     quorum: int = -1, adhoc: dict = None) -> dict:
@@ -188,7 +189,8 @@ class Messenger(rabbitmq.RabbitDualClient):
         Returns: dict
         '''
         message = self.catalog.msg_task_info(task_name)
-        return self._invoke_service(message)
+        message = self._invoke_service(message)
+        return message[0]
 
     def task_assignments(self, task_name: str) -> dict:
         '''
@@ -206,7 +208,8 @@ class Messenger(rabbitmq.RabbitDualClient):
         Returns: dict
         '''
         message = self.catalog.msg_task_join(task_name)
-        return self._invoke_service(message)
+        message = self._invoke_service(message)
+        return message[0]
 
     def task_quit(self, task_name: str):
         '''
