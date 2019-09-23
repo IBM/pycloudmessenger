@@ -201,7 +201,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_task_assignments(task_name)
         return self._invoke_service(message)
 
-    def task_join(self, task_name: str) -> dict:
+    def task_assignment_join(self, task_name: str) -> dict:
         '''
         As a potential task participant, try to join the task
         Throws: An exception on failure
