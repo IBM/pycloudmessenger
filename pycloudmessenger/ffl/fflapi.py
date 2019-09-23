@@ -153,6 +153,43 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_user_assignments()
         return self._invoke_service(message)
 
+    def task_assignment_join(self, task_name: str) -> dict:
+        '''
+        As a potential task participant, try to join the task
+        Throws: An exception on failure
+        Returns: dict
+        '''
+        message = self.catalog.msg_task_join(task_name)
+        message = self._invoke_service(message)
+        return message[0]
+
+    def task_assignment_update(self, task_name: str, status: str, model: dict = None):
+        '''
+        Sends an update, including a model dict, no reply wanted
+        Throws: An exception on failure
+        Returns: Nothing
+        '''
+        message = self.catalog.msg_task_assignment_update(task_name, status,
+                                                          model, want_reply=False)
+        self._send(message)
+
+    def task_assignment_wait(self, timeout: int = 0) -> dict:
+        '''
+        Wait for a message, until timeout seconds
+        Throws: An exception on failure
+        Returns: dict
+        '''
+        return self._receive(timeout)
+
+    def task_assignments(self, task_name: str) -> dict:
+        '''
+        Return all assignments for the owned task
+        Throws: An exception on failure
+        Returns: dict
+        '''
+        message = self.catalog.msg_task_assignments(task_name)
+        return self._invoke_service(message)
+
     def task_listing(self) -> dict:
         '''
         Return a list of all tasks available
@@ -192,25 +229,6 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self._invoke_service(message)
         return message[0]
 
-    def task_assignments(self, task_name: str) -> dict:
-        '''
-        Return all assignments for the owned task
-        Throws: An exception on failure
-        Returns: dict
-        '''
-        message = self.catalog.msg_task_assignments(task_name)
-        return self._invoke_service(message)
-
-    def task_assignment_join(self, task_name: str) -> dict:
-        '''
-        As a potential task participant, try to join the task
-        Throws: An exception on failure
-        Returns: dict
-        '''
-        message = self.catalog.msg_task_join(task_name)
-        message = self._invoke_service(message)
-        return message[0]
-
     def task_quit(self, task_name: str):
         '''
         As a task participant, leave the task
@@ -237,21 +255,3 @@ class Messenger(rabbitmq.RabbitDualClient):
         '''
         message = self.catalog.msg_task_stop(task_name)
         return self._invoke_service(message)
-
-    def task_assignment_update(self, task_name: str, status: str, model: dict = None):
-        '''
-        Sends an update, including a model dict, no reply wanted
-        Throws: An exception on failure
-        Returns: Nothing
-        '''
-        message = self.catalog.msg_task_assignment_update(task_name, status,
-                                                          model, want_reply=False)
-        self._send(message)
-
-    def task_assignment_wait(self, timeout: int = 0) -> dict:
-        '''
-        Wait for a message, until timeout seconds
-        Throws: An exception on failure
-        Returns: dict
-        '''
-        return self._receive(timeout)
