@@ -53,6 +53,16 @@ class MessageCatalog():
         }
         return message, message['serviceRequest']['service']['args']
 
+    def msg_bin_uploader(self, username: str) -> dict:
+        template, args = self._msg_template(service_name='BinService')
+        args.append({'cmd': 'uploader', 'params': [username]})
+        return template
+
+    def msg_bin_downloader(self, username: str) -> dict:
+        template, args = self._msg_template(service_name='BinService')
+        args.append({'cmd': 'downloader', 'params': [username]})
+        return template
+
     def msg_user_create(self, username: str, password: str, organisation: str) -> dict:
         template, args = self._msg_template()
         args.append({'cmd':'user_create', 'params': [username, password, organisation]})
