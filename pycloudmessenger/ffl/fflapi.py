@@ -26,6 +26,8 @@ in DRL funded by the European Union under the Horizon 2020 Program.
 # pylint: disable=R0903, R0913
 
 import logging
+import requests
+
 import pycloudmessenger.rabbitmq as rabbitmq
 import pycloudmessenger.serializer as serializer
 import pycloudmessenger.ffl.message_catalog as catalog
@@ -169,8 +171,28 @@ class Messenger(rabbitmq.RabbitDualClient):
         Throws: An exception on failure
         Returns: Nothing
         '''
-        message = self.catalog.msg_task_assignment_update(task_name, status,
-                                                          model, want_reply=False)
+
+        if model is not None:
+            message = self.catalog.msg_bin_uploader()
+            upload_info = self._invoke_service(message)
+            response = requests.post(
+                upload_info['url'],
+                files={'file': str(model)},
+                data=upload_info['fields'],
+                headers=None)
+
+            if not response.ok:
+                raise Exception('response: %d' % response.status_code)
+
+            message = self.catalog.msg_bin_downloader(upload_info['fields']['key'])
+            download_info = self._invoke_service(message)
+
+        message = self.catalog.msg_task_assignment_update(
+            task_name,
+            status,
+            {'url': download_info},
+            want_reply=False)
+
         self._send(message)
 
     def task_assignment_wait(self, timeout: int = 0) -> dict:
