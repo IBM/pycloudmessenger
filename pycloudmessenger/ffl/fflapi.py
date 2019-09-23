@@ -172,6 +172,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         Returns: Nothing
         '''
 
+        msg = {}
         if model is not None:
             message = self.catalog.msg_bin_uploader()
             upload_info = self._invoke_service(message)
@@ -187,10 +188,12 @@ class Messenger(rabbitmq.RabbitDualClient):
             message = self.catalog.msg_bin_downloader(upload_info['fields']['key'])
             download_info = self._invoke_service(message)
 
+            msg = {'url': download_info}
+
         message = self.catalog.msg_task_assignment_update(
             task_name,
             status,
-            {'url': download_info},
+            msg,
             want_reply=False)
 
         self._send(message)
