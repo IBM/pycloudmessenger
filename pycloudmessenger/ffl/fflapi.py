@@ -25,6 +25,7 @@ in DRL funded by the European Union under the Horizon 2020 Program.
 
 # pylint: disable=R0903, R0913
 
+import json
 import logging
 import requests
 
@@ -135,6 +136,38 @@ class Messenger(rabbitmq.RabbitDualClient):
         results = result['calls'][0]['count'] #calls[0] will always succeed
         return result['calls'][0]['data'] if results else None
 
+    def _dispatch_model(self, model: dict = None):
+        '''
+        Dispatch a model and determine its download location
+        Throws: An exception on failure
+        Returns: dict
+        '''
+
+        if not model:
+            return {}
+
+        #First, obtain the upload location/keys
+        message = self.catalog.msg_bin_uploader()
+        upload_info = self._invoke_service(message)
+
+        #And then perform the upload
+        response = requests.post(
+                        upload_info['url'],
+                        files={'file': json.dumps(model)},
+                        data=upload_info['fields'],
+                        headers=None)
+
+        if not response.ok:
+            raise Exception(f'Upload Error: {response.status_code}')
+
+        if 'key' not in upload_info['fields']:
+            raise Exception('Malformed URL.')
+
+        #Now obtain the download location/keys
+        message = self.catalog.msg_bin_downloader(upload_info['fields']['key'])
+        download_info = self._invoke_service(message)
+        return {'url': download_info}
+
     ######## Public methods
 
     def user_create(self, user_name: str, password: str, organisation: str) -> dict:
@@ -172,30 +205,10 @@ class Messenger(rabbitmq.RabbitDualClient):
         Returns: Nothing
         '''
 
-        msg = {}
-        if model is not None:
-            message = self.catalog.msg_bin_uploader()
-            upload_info = self._invoke_service(message)
-            response = requests.post(
-                upload_info['url'],
-                files={'file': str(model)},
-                data=upload_info['fields'],
-                headers=None)
-
-            if not response.ok:
-                raise Exception('response: %d' % response.status_code)
-
-            message = self.catalog.msg_bin_downloader(upload_info['fields']['key'])
-            download_info = self._invoke_service(message)
-
-            msg = {'url': download_info}
+        model_message = self._dispatch_model(model)
 
         message = self.catalog.msg_task_assignment_update(
-            task_name,
-            status,
-            msg,
-            want_reply=False)
-
+                        task_name, status, model_message, want_reply=False)
         self._send(message)
 
     def task_assignment_wait(self, timeout: int = 0) -> dict:
@@ -269,7 +282,8 @@ class Messenger(rabbitmq.RabbitDualClient):
         Throws: An exception on failure
         Returns: dict
         '''
-        message = self.catalog.msg_task_start(task_name, model)
+        model_message = self._dispatch_model(model)
+        message = self.catalog.msg_task_start(task_name, model_message)
         return self._invoke_service(message)
 
     def task_stop(self, task_name: str) -> dict:
