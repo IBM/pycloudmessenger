@@ -327,7 +327,7 @@ class Participant(Messenger):
         if 'url' not in msg['params']:
             raise Exception(f"Malformed object: {msg['params']}")
 
-        self.model_files.append(utils.DownloadedModel(msg['params']['url']))
+        self.model_files.append(utils.FileDownloader(msg['params']['url']))
         return {'model': self.model_files[-1].name()}
 
 
