@@ -419,7 +419,7 @@ class RabbitDualClient():
         self.publisher = client(self.context)
         self.publisher.start(publish=queue)
 
-    def send(self, message, queue: RabbitQueue = None):
+    def send_message(self, message, queue: RabbitQueue = None):
         """
             Publish a message to Castor service
 
@@ -431,7 +431,7 @@ class RabbitDualClient():
         """
         self.publisher.publish(message, queue)
 
-    def receive(self, handler, timeout: int, max_messages: int):
+    def receive_message(self, handler, timeout: int, max_messages: int):
         """
             Receive messages from Castor service
 
@@ -467,11 +467,11 @@ class RabbitDualClient():
         """
         self.last_recv_msg = None
         LOGGER.debug(f"Sending message: {message}")
-        self.send(message)
+        self.send_message(message)
 
         LOGGER.debug("Waiting for reply...")
         #Now wait for the reply
-        self.subscriber.receive(self.internal_handler, timeout, 1)
+        self.subscriber.receive_message(self.internal_handler, timeout, 1)
         LOGGER.debug(f"Received: {self.last_recv_msg}")
         return self.last_recv_msg
 

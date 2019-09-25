@@ -28,7 +28,7 @@ in DRL funded by the European Union under the Horizon 2020 Program.
 import json
 import logging
 import requests
-
+import pycloudmessenger.utils as utils
 import pycloudmessenger.rabbitmq as rabbitmq
 import pycloudmessenger.serializer as serializer
 import pycloudmessenger.ffl.message_catalog as catalog
@@ -85,7 +85,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         Returns: dict
         '''
         pub_queue = rabbitmq.RabbitQueue(queue) if queue else None
-        super(Messenger, self).send(serializer.Serializer.serialize(message), pub_queue)
+        super(Messenger, self).send_message(serializer.Serializer.serialize(message), pub_queue)
 
     def _receive(self, timeout: int = 0) -> dict:
         '''
@@ -97,7 +97,7 @@ class Messenger(rabbitmq.RabbitDualClient):
             timeout = self.timeout
 
         try:
-            super(Messenger, self).receive(self.internal_handler, timeout, 1)
+            super(Messenger, self).receive_message(self.internal_handler, timeout, 1)
         except rabbitmq.RabbitTimedOutException as exc:
             raise TimedOutException(exc) from exc
         except rabbitmq.RabbitConsumerException as exc:
@@ -208,7 +208,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         model_message = self._dispatch_model(model)
 
         message = self.catalog.msg_task_assignment_update(
-                        task_name, status, model_message, want_reply=False)
+                        task_name, status, model_message)
         self._send(message)
 
     def task_assignment_wait(self, timeout: int = 0) -> dict:
@@ -276,15 +276,15 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_task_quit(task_name)
         return self._invoke_service(message)
 
-    def task_start(self, task_name: str, model: dict = None) -> dict:
+    def task_start(self, task_name: str, model: dict = None) -> None:
         '''
         As a task owner, start the task
         Throws: An exception on failure
-        Returns: dict
+        Returns: Nothing
         '''
         model_message = self._dispatch_model(model)
         message = self.catalog.msg_task_start(task_name, model_message)
-        return self._invoke_service(message)
+        self._send(message)
 
     def task_stop(self, task_name: str) -> dict:
         '''
@@ -294,3 +294,53 @@ class Messenger(rabbitmq.RabbitDualClient):
         '''
         message = self.catalog.msg_task_stop(task_name)
         return self._invoke_service(message)
+
+
+######## Participant specific
+
+class Participant(Messenger):
+    def __init__(self, context: Context, task_name: str,
+                 subscribe_queue: str = None):
+        super(Participant, self).__init__(context, subscribe_queue=subscribe_queue)
+        self.task_name = task_name
+        self.model_files = []
+
+    def send(self, status: str, model: dict = None) -> None:
+        '''
+        Sends an update, including a model dict
+        Throws: An exception on failure
+        Returns: Nothing
+        '''
+        self.model_files.clear()
+        self.task_assignment_update(self.task_name, status, model)
+
+    def receive(self, timeout: int = 0) -> dict:
+        '''
+        Wait for a message, until timeout seconds
+        Throws: An exception on failure
+        Returns: dict
+        '''
+        msg = self.task_assignment_wait(timeout)
+        if 'params' not in msg:
+            raise Exception(f"Malformed object: {msg}")
+
+        if 'url' not in msg['params']:
+            raise Exception(f"Malformed object: {msg['params']}")
+
+        self.model_files.append(utils.DownloadedModel(msg['params']['url']))
+        return {'model': self.model_files[-1].name()}
+
+
+######## Aggregator specific
+
+class Aggregator(Participant):
+    def send(self, model: dict = None) -> dict:
+        '''
+        As a task owner, start the task
+        Throws: An exception on failure
+        Returns: Nothing
+        '''
+        self.model_files.clear()
+        self.task_start(self.task_name, model)
+
+
