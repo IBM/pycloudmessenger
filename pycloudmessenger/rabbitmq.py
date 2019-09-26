@@ -455,7 +455,7 @@ class RabbitDualClient():
 
     def stop(self):
         """
-            Close connection to Castor service
+            Close connection to service
 
             Throws:
                 An exception if not successful
