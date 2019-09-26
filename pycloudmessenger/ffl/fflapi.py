@@ -62,12 +62,16 @@ class Messenger(rabbitmq.RabbitDualClient):
         #Keep a copy here - lots of re-use
         self.timeout = context.timeout()
 
-        #Publish not over-ridden so use context version
-        if not publish_queue:
+        if publish_queue:
+            queue = rabbitmq.RabbitQueue(publish_queue)
+        else:
+            #Publish not over-ridden so use context version
             publish_queue = context.feeds()
+            #And force declaration of this queue
+            queue = rabbitmq.RabbitQueue(context.feeds(), durable=True)
 
         self.start_subscriber(queue=rabbitmq.RabbitQueue(subscribe_queue))
-        self.start_publisher(queue=rabbitmq.RabbitQueue(publish_queue))
+        self.start_publisher(queue=queue)
 
         #Initialise the catalog with the target subscribe queue
         self.catalog = catalog.MessageCatalog(context.user(), self.get_subscribe_queue())
@@ -321,15 +325,14 @@ class Participant(Messenger):
         Returns: dict
         '''
         msg = self.task_assignment_wait(timeout)
-        if 'params' not in msg:
-            raise Exception(f"Malformed object: {msg}")
 
-        if 'url' not in msg['params']:
-            raise Exception(f"Malformed object: {msg['params']}")
-
-        self.model_files.append(utils.FileDownloader(msg['params']['url']))
-        return {'model': self.model_files[-1].name()}
-
+        if 'type' in msg:
+            if msg['type'] == 'start':
+                if 'params' in msg and 'url' in msg['params']:
+                    self.model_files.append(utils.FileDownloader(msg['params']['url']))    
+                    return {'model': self.model_files[-1].name()}
+            return None
+        raise Exception(f"Malformed object: {msg}")
 
 ######## Aggregator specific
 
@@ -343,4 +346,51 @@ class Aggregator(Participant):
         self.model_files.clear()
         self.task_start(self.task_name, model)
 
+
+'''
+POM - privacy operation mode - is this a widely understood term in ffl
+Project - ffl uses project, we currently use task
+
+
+Proposal:
+    Task/assignments
+    Project/tasks
+
+Participant classes:
+    Joinee
+        - project_join
+
+    Creator:
+        - project_create
+
+    StarParticipant
+        - task_wait x 1 per epoch
+        - send_model x 1 per epoch
+        = 2 comms calls per epoch
+
+    RingParticipant:
+        - task_wait x 1 per epoch
+        - send_model x 1 per epoch
+        = 2 comms calls per epoch
+
+    StarAggregator:
+        - quorum_wait x 1
+        - task_start x 1 per epoch
+        - model_wait x quorum per epoch
+        = quorum + 1 comms calls per epoch + 1
+
+    RingAggregator:
+        - quorum_wait x 1
+        - project_start x 1 per epoch
+        - model_wait x 1 (when ring complete) 
+        = 2 comms calls per epoch + 1
+
+
+NOTE:
+task_wait waits for a message from the ADMIN_SERVICE not the AGGREGATOR
+send_model sends a message to the ADMIN SERVICE not the AGGREGATOR
+
+task_start sends a message to the ADMIN SERVICE not to PARTICIPANTS
+model_wait waits for a message from the ADMIN_SERVICE not from PARTICIPANTS
+'''
 

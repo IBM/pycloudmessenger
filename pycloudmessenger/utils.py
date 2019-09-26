@@ -36,12 +36,13 @@ class TempFile():
         Download a file from a url
     """
 
-    def __init__(self):
+    def __init__(self, auto_delete: bool = True):
         self.descriptor, self.filename = tempfile.mkstemp()
         os.close(self.descriptor)
 
         #Ensure the file is deleted
-        self._finalizer = weakref.finalize(self, os.unlink, self.filename)
+        fn_clean = os.unlink if auto_delete else lambda *args: None
+        self._finalizer = weakref.finalize(self, fn_clean, self.filename)
 
     def name(self):
         return self.filename
@@ -63,7 +64,7 @@ class FileDownloader(TempFile):
         if filename:
             self.filename = filename
         else:
-            super().__init__()
+            super().__init__(auto_delete=False)
 
         with requests.get(url, stream=True) as request:
             with open(self.filename, 'wb') as new_file:
