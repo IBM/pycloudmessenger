@@ -53,25 +53,25 @@ class Messenger(rabbitmq.RabbitDualClient):
     """
         Communicates with an FFL service
     """
-    def __init__(self, context: Context, publish_queue: str = None, subscribe_queue: str = None):
+    def __init__(self, context: Context, 
+                 publish_queue: str = None, subscribe_queue: str = None,
+                 max_msg_size: int = 2*1024*1024):
         """
             Class initializer
         """
         super(Messenger, self).__init__(context)
 
+        self.max_msg_size = max_msg_size
+
         #Keep a copy here - lots of re-use
         self.timeout = context.timeout()
 
-        if publish_queue:
-            queue = rabbitmq.RabbitQueue(publish_queue)
-        else:
+        if not publish_queue:
             #Publish not over-ridden so use context version
             publish_queue = context.feeds()
-            #And force declaration of this queue
-            queue = rabbitmq.RabbitQueue(context.feeds(), durable=True)
 
         self.start_subscriber(queue=rabbitmq.RabbitQueue(subscribe_queue))
-        self.start_publisher(queue=queue)
+        self.start_publisher(queue=rabbitmq.RabbitQueue(publish_queue))
 
         #Initialise the catalog with the target subscribe queue
         self.catalog = catalog.MessageCatalog(context.user(), self.get_subscribe_queue())
@@ -89,7 +89,10 @@ class Messenger(rabbitmq.RabbitDualClient):
         Returns: dict
         '''
         pub_queue = rabbitmq.RabbitQueue(queue) if queue else None
-        super(Messenger, self).send_message(serializer.Serializer.serialize(message), pub_queue)
+        message = serializer.Serializer.serialize(message)
+        if len(message) > self.max_msg_size:
+            raise BufferError(f"Messenger: payload too large: {len(message)}.")
+        super(Messenger, self).send_message(message, pub_queue)
 
     def _receive(self, timeout: int = 0) -> dict:
         '''
@@ -121,6 +124,8 @@ class Messenger(rabbitmq.RabbitDualClient):
 
         try:
             message = serializer.Serializer.serialize(message)
+            if len(message) > self.max_msg_size:
+                raise BufferError(f"Messenger: payload too large: {len(message)}.")
             result = super(Messenger, self).invoke_service(message, timeout)
         except rabbitmq.RabbitTimedOutException as exc:
             raise TimedOutException(exc) from exc
@@ -180,6 +185,10 @@ class Messenger(rabbitmq.RabbitDualClient):
         Throws: An exception on failure
         Returns: dict
         '''
+
+        if not username or not password:
+            raise Exception("Please provide non-empty credentials.")
+
         message = self.catalog.msg_user_create(user_name, password, organisation)
         return self._invoke_service(message)
 
@@ -214,14 +223,6 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_task_assignment_update(
                         task_name, status, model_message)
         self._send(message)
-
-    def task_assignment_wait(self, timeout: int = 0) -> dict:
-        '''
-        Wait for a message, until timeout seconds
-        Throws: An exception on failure
-        Returns: dict
-        '''
-        return self._receive(timeout)
 
     def task_assignments(self, task_name: str) -> dict:
         '''
@@ -302,13 +303,31 @@ class Messenger(rabbitmq.RabbitDualClient):
 
 ######## Participant specific
 
-class Participant(Messenger):
-    def __init__(self, context: Context, task_name: str,
+class BasicParticipant(Messenger):
+    def __init__(self, context: Context, task_name: str = None,
                  subscribe_queue: str = None):
-        super(Participant, self).__init__(context, subscribe_queue=subscribe_queue)
+        if not task_name:
+            raise Exception(f"Task name must not be empty.")
+
+        super().__init__(context, subscribe_queue=subscribe_queue)
         self.task_name = task_name
         self.model_files = []
 
+    def download(self, msg, flavour):
+        if 'notification' not in msg:
+            raise Exception(f"Malformed object: {msg}")
+
+        if 'type' not in msg['notification']:
+            raise Exception(f"Malformed object: {msg['notification']}")
+
+        if msg['notification']['type'] == flavour:
+            if 'params' in msg and 'url' in msg['params']:
+                self.model_files.append(utils.FileDownloader(msg['params']['url']))
+                return {'model': self.model_files[-1].name()}
+        return None
+
+
+class Participant(BasicParticipant):
     def send(self, status: str, model: dict = None) -> None:
         '''
         Sends an update, including a model dict
@@ -324,27 +343,45 @@ class Participant(Messenger):
         Throws: An exception on failure
         Returns: dict
         '''
-        msg = self.task_assignment_wait(timeout)
-
-        if 'type' in msg:
-            if msg['type'] == 'start':
-                if 'params' in msg and 'url' in msg['params']:
-                    self.model_files.append(utils.FileDownloader(msg['params']['url']))    
-                    return {'model': self.model_files[-1].name()}
-            return None
-        raise Exception(f"Malformed object: {msg}")
+        msg = self._receive(timeout)
+        return self.download(msg, 'start')
 
 ######## Aggregator specific
 
-class Aggregator(Participant):
-    def send(self, model: dict = None) -> dict:
+class Aggregator(BasicParticipant):
+    def send(self, model: dict = None) -> None:
         '''
         As a task owner, start the task
         Throws: An exception on failure
         Returns: Nothing
         '''
         self.model_files.clear()
-        self.task_start(self.task_name, model)
+
+        model_message = self._dispatch_model(model)
+        message = self.catalog.msg_task_start(self.task_name, model_message)
+        self._send(message)
+
+    def receive(self, timeout: int = 0) -> dict:
+        '''
+        Wait for a message, until timeout seconds
+        Throws: An exception on failure
+        Returns: dict
+        '''
+        msg = self._receive(timeout)
+        return self.download(msg, 'assignment')
+
+
+class User(BasicParticipant):
+    def create_task(self, algorithm: str, quorum: int, adhoc: dict) -> dict:
+        return self.task_create(self.task_name, algorithm, quorum, adhoc)
+
+    def stop_task(self) -> dict:
+        return self.task_stop(self.task_name)
+
+    def join_task(self) -> dict:
+        return self.task_assignment_join(self.task_name)
+
+
 
 
 '''

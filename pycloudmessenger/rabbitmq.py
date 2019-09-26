@@ -52,7 +52,7 @@ class RabbitContext():
 
         if 'broker_cert_b64' in self.args:
             self.cert_file = utils.Certificate(args['broker_cert_b64'])
-            self.args['broker_pem_path'] = self.cert_file.file
+            self.args['broker_pem_path'] = self.cert_file.filename
             self.args['broker_tls'] = True
         else:
             self.args['broker_tls'] = False
@@ -449,7 +449,7 @@ class RabbitDualClient():
 
         LOGGER.debug("Waiting for reply...")
         #Now wait for the reply
-        self.subscriber.receive_message(self.internal_handler, timeout, 1)
+        self.subscriber.receive(self.internal_handler, timeout, 1)
         LOGGER.debug(f"Received: {self.last_recv_msg}")
         return self.last_recv_msg
 
