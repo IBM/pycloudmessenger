@@ -53,14 +53,16 @@ class Messenger(rabbitmq.RabbitDualClient):
     """
         Communicates with an FFL service
     """
-    def __init__(self, context: Context, 
-                 publish_queue: str = None, subscribe_queue: str = None,
-                 max_msg_size: int = 2*1024*1024):
+    def __init__(self, context: Context, publish_queue: str = None, subscribe_queue: str = None, max_msg_size: int = 2*1024*1024):
         """
             Class initializer
         """
         super(Messenger, self).__init__(context)
 
+        #List of messages/models downloaded
+        self.model_files = []
+
+        #Max size of a message for dispatch
         self.max_msg_size = max_msg_size
 
         #Keep a copy here - lots of re-use
@@ -177,6 +179,20 @@ class Messenger(rabbitmq.RabbitDualClient):
         download_info = self._invoke_service(message)
         return {'url': download_info}
 
+    def _download(self, msg, flavour):
+        if 'notification' not in msg:
+            raise Exception(f"Malformed object: {msg}")
+
+        if 'type' not in msg['notification']:
+            raise Exception(f"Malformed object: {msg['notification']}")
+
+        if msg['notification']['type'] == flavour:
+            if 'params' in msg and 'url' in msg['params']:
+                self.model_files.append(utils.FileDownloader(msg['params']['url']))
+                return {'model': self.model_files[-1].name()}
+        return None
+
+
     ######## Public methods
 
     def user_create(self, user_name: str, password: str, organisation: str) -> dict:
@@ -185,10 +201,6 @@ class Messenger(rabbitmq.RabbitDualClient):
         Throws: An exception on failure
         Returns: dict
         '''
-
-        if not user_name or not password:
-            raise Exception("Please provide non-empty credentials.")
-
         message = self.catalog.msg_user_create(user_name, password, organisation)
         return self._invoke_service(message)
 
@@ -223,6 +235,14 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_task_assignment_update(
                         task_name, status, model_message)
         self._send(message)
+
+    def task_assignment_wait(self, timeout: int = 0) -> dict:
+        '''
+        Wait for a message, until timeout seconds
+        Throws: An exception on failure
+        Returns: dict
+        '''
+        return self._receive(timeout)
 
     def task_assignments(self, task_name: str) -> dict:
         '''
@@ -298,91 +318,104 @@ class Messenger(rabbitmq.RabbitDualClient):
         Returns: dict
         '''
         message = self.catalog.msg_task_stop(task_name)
-        return self._invoke_service(message)
+        self._send(message)
+        #return self._invoke_service(message)
 
 
 ######## Participant specific
 
-class BasicParticipant(Messenger):
+class BasicParticipant():
     def __init__(self, context: Context, task_name: str = None,
                  subscribe_queue: str = None):
-        if not task_name:
-            raise Exception(f"Task name must not be empty.")
-
-        super().__init__(context, subscribe_queue=subscribe_queue)
+        self.context = context
         self.task_name = task_name
-        self.model_files = []
+        self.subscribe_queue = subscribe_queue
 
-    def download(self, msg, flavour):
-        if 'notification' not in msg:
-            raise Exception(f"Malformed object: {msg}")
+    def __enter__(self):
+        return self.connect()
 
-        if 'type' not in msg['notification']:
-            raise Exception(f"Malformed object: {msg['notification']}")
+    def __exit__(self, *args):
+        self.close()
 
-        if msg['notification']['type'] == flavour:
-            if 'params' in msg and 'url' in msg['params']:
-                self.model_files.append(utils.FileDownloader(msg['params']['url']))
-                return {'model': self.model_files[-1].name()}
-        return None
+    def _get_messenger(self):
+        pass
+
+    def connect(self):
+        self.messenger = self._get_messenger()
+        return self
+
+    def close(self) -> None:
+        self.messenger.stop()
+        self.messenger = None
+
+    def send(self, model: dict = None) -> None:
+        self.messenger.send(self.task_name, model)
+
+    def receive(self, timeout: int = 0) -> dict:
+        return self.messenger.receive(timeout)
 
 
 class Participant(BasicParticipant):
+    class InnerMessenger(Messenger):
+        def send(self, task_name, status: str, model: dict = None) -> None:
+            self.model_files.clear()
+            self.task_assignment_update(task_name, status, model)
+
+        def receive(self, timeout: int = 0) -> dict:
+            msg = self._receive(timeout)
+            return self._download(msg, 'start')
+
+    def _get_messenger(self):
+        return Participant.InnerMessenger(self.context, subscribe_queue=self.subscribe_queue)
+
     def send(self, status: str, model: dict = None) -> None:
-        '''
-        Sends an update, including a model dict
-        Throws: An exception on failure
-        Returns: Nothing
-        '''
-        self.model_files.clear()
-        self.task_assignment_update(self.task_name, status, model)
+        self.messenger.send(self.task_name, status, model)
 
-    def receive(self, timeout: int = 0) -> dict:
-        '''
-        Wait for a message, until timeout seconds
-        Throws: An exception on failure
-        Returns: dict
-        '''
-        msg = self._receive(timeout)
-        return self.download(msg, 'start')
+    def leave_task(self):
+        return self.messenger.task_quit(self.task_name)
 
-######## Aggregator specific
 
 class Aggregator(BasicParticipant):
-    def send(self, model: dict = None) -> None:
-        '''
-        As a task owner, start the task
-        Throws: An exception on failure
-        Returns: Nothing
-        '''
-        self.model_files.clear()
+    class InnerMessenger(Messenger):
+        def send(self, task_name: str, model: dict = None) -> dict:
+            self.model_files.clear()
 
-        model_message = self._dispatch_model(model)
-        message = self.catalog.msg_task_start(self.task_name, model_message)
-        self._send(message)
+            model_message = self._dispatch_model(model)
+            message = self.catalog.msg_task_start(task_name, model_message)
+            self._send(message)
 
-    def receive(self, timeout: int = 0) -> dict:
-        '''
-        Wait for a message, until timeout seconds
-        Throws: An exception on failure
-        Returns: dict
-        '''
-        msg = self._receive(timeout)
-        return self.download(msg, 'assignment')
+        def receive(self, timeout: int = 0) -> dict:
+            return self._receive(timeout)
+
+    def _get_messenger(self):
+        return Aggregator.InnerMessenger(self.context, subscribe_queue=self.subscribe_queue)
+
+    def task_assignments(self, task_name: str) -> dict:
+        return self.messenger.task_assignments(self.task_name)
+
+    def task_update(self, status: str, algorithm: str = None,
+                    quorum: int = -1, adhoc: dict = None) -> dict:
+        return self.messenger.task_update(self.task_name, status, algorithm, quorum, adhoc)
+
+    def stop_task(self) -> dict:
+        self.messenger.task_stop(self.task_name)
 
 
 class User(BasicParticipant):
-    def create_task(self, algorithm: str, quorum: int, adhoc: dict) -> dict:
-        return self.task_create(self.task_name, algorithm, quorum, adhoc)
+    def _get_messenger(self):
+        return Messenger(self.context, subscribe_queue=self.subscribe_queue)
 
-    def stop_task(self) -> dict:
-        return self.task_stop(self.task_name)
+    def create_user(self, user_name: str, password: str, organisation: str) -> dict:
+        return self.messenger.user_create(user_name, password, organisation)
+
+    def create_task(self, algorithm: str, quorum: int, adhoc: dict) -> dict:
+        return self.messenger.task_create(self.task_name, algorithm, quorum, adhoc)
 
     def join_task(self) -> dict:
-        return self.task_assignment_join(self.task_name)
+        return self.messenger.task_assignment_join(self.task_name)
 
-
-
+    def task_info(self) -> dict:
+        return self.messenger.task_info(self.task_name)
 
 '''
 POM - privacy operation mode - is this a widely understood term in ffl
@@ -430,4 +463,3 @@ send_model sends a message to the ADMIN SERVICE not the AGGREGATOR
 task_start sends a message to the ADMIN SERVICE not to PARTICIPANTS
 model_wait waits for a message from the ADMIN_SERVICE not from PARTICIPANTS
 '''
-
