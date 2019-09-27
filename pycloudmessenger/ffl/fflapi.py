@@ -186,7 +186,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         Returns: dict
         '''
 
-        if not username or not password:
+        if not user_name or not password:
             raise Exception("Please provide non-empty credentials.")
 
         message = self.catalog.msg_user_create(user_name, password, organisation)
