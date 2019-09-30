@@ -84,16 +84,17 @@ class Messenger(rabbitmq.RabbitDualClient):
     def __exit__(self, *args):
         self.stop()
 
-    def _send(self, message: dict, queue: str = None):
+    def _send(self, message: dict, queue: str = None) -> dict:
         '''
         Send a message and return immediately
         Throws: An exception on failure
         Returns: dict
         '''
-        pub_queue = rabbitmq.RabbitQueue(queue) if queue else None
         message = serializer.Serializer.serialize(message)
         if len(message) > self.max_msg_size:
             raise BufferError(f"Messenger: payload too large: {len(message)}.")
+
+        pub_queue = rabbitmq.RabbitQueue(queue) if queue else None
         super(Messenger, self).send_message(message, pub_queue)
 
     def _receive(self, timeout: int = 0) -> dict:
@@ -147,7 +148,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         results = result['calls'][0]['count'] #calls[0] will always succeed
         return result['calls'][0]['data'] if results else None
 
-    def _dispatch_model(self, model: dict = None):
+    def _dispatch_model(self, model: dict = None) -> dict:
         '''
         Dispatch a model and determine its download location
         Throws: An exception on failure
@@ -179,7 +180,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         download_info = self._invoke_service(message)
         return {'url': download_info}
 
-    def _download(self, msg, flavour):
+    def _download(self, msg, flavour) -> dict:
         if 'notification' not in msg:
             raise Exception(f"Malformed object: {msg}")
 
@@ -223,7 +224,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self._invoke_service(message)
         return message[0]
 
-    def task_assignment_update(self, task_name: str, status: str, model: dict = None):
+    def task_assignment_update(self, task_name: str, status: str, model: dict = None) -> None:
         '''
         Sends an update, including a model dict, no reply wanted
         Throws: An exception on failure
@@ -292,7 +293,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self._invoke_service(message)
         return message[0]
 
-    def task_quit(self, task_name: str):
+    def task_quit(self, task_name: str) -> dict:
         '''
         As a task participant, leave the task
         Throws: An exception on failure
@@ -311,7 +312,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_task_start(task_name, model_message)
         self._send(message)
 
-    def task_stop(self, task_name: str) -> dict:
+    def task_stop(self, task_name: str) -> None:
         '''
         As a task owner, stop the task
         Throws: An exception on failure
@@ -324,12 +325,23 @@ class Messenger(rabbitmq.RabbitDualClient):
 
 ######## Participant specific
 
-class BasicParticipant():
-    def __init__(self, context: Context, task_name: str = None,
-                 subscribe_queue: str = None):
+class Task():
+    def __init__(self, context: Context, task_name: str, queue: str = None):
+        if not context:
+            raise Exception('Credentials must be specified.')
+
+        if not task_name:
+            raise Exception('Task name must be specified.')
+
         self.context = context
         self.task_name = task_name
-        self.subscribe_queue = subscribe_queue
+        self.queue = queue
+
+
+class BasicParticipant():
+    def __init__(self, task: Task):
+        self.messenger = None
+        self.task = task
 
     def __enter__(self):
         return self.connect()
@@ -337,7 +349,7 @@ class BasicParticipant():
     def __exit__(self, *args):
         self.close()
 
-    def _get_messenger(self):
+    def _get_messenger(self) -> Messenger:
         pass
 
     def connect(self):
@@ -349,10 +361,11 @@ class BasicParticipant():
         self.messenger = None
 
     def send(self, model: dict = None) -> None:
-        self.messenger.send(self.task_name, model)
+        self.messenger.send(self.task.task_name, model)
 
     def receive(self, timeout: int = 0) -> dict:
         return self.messenger.receive(timeout)
+
 
 
 class Participant(BasicParticipant):
@@ -365,19 +378,21 @@ class Participant(BasicParticipant):
             msg = self._receive(timeout)
             return self._download(msg, 'start')
 
-    def _get_messenger(self):
-        return Participant.InnerMessenger(self.context, subscribe_queue=self.subscribe_queue)
+    def _get_messenger(self) -> Messenger:
+        return Participant.InnerMessenger(
+            self.task.context, subscribe_queue=self.task.queue
+        )
 
     def send(self, status: str, model: dict = None) -> None:
-        self.messenger.send(self.task_name, status, model)
+        self.messenger.send(self.task.task_name, status, model)
 
     def leave_task(self):
-        return self.messenger.task_quit(self.task_name)
+        return self.messenger.task_quit(self.task.task_name)
 
 
 class Aggregator(BasicParticipant):
     class InnerMessenger(Messenger):
-        def send(self, task_name: str, model: dict = None) -> dict:
+        def send(self, task_name: str, model: dict = None) -> None:
             self.model_files.clear()
 
             model_message = self._dispatch_model(model)
@@ -387,35 +402,39 @@ class Aggregator(BasicParticipant):
         def receive(self, timeout: int = 0) -> dict:
             return self._receive(timeout)
 
-    def _get_messenger(self):
-        return Aggregator.InnerMessenger(self.context, subscribe_queue=self.subscribe_queue)
+    def _get_messenger(self) -> Messenger:
+        return Aggregator.InnerMessenger(
+            self.task.context, subscribe_queue=self.task.queue
+        )
 
-    def task_assignments(self, task_name: str) -> dict:
-        return self.messenger.task_assignments(self.task_name)
+    def task_assignments(self) -> dict:
+        return self.messenger.task_assignments(self.task.task_name)
 
     def task_update(self, status: str, algorithm: str = None,
                     quorum: int = -1, adhoc: dict = None) -> dict:
-        return self.messenger.task_update(self.task_name, status, algorithm, quorum, adhoc)
+        return self.messenger.task_update(self.task.task_name, status, algorithm, quorum, adhoc)
 
-    def stop_task(self) -> dict:
-        self.messenger.task_stop(self.task_name)
+    def stop_task(self) -> None:
+        self.messenger.task_stop(self.task.task_name)
 
 
 class User(BasicParticipant):
-    def _get_messenger(self):
-        return Messenger(self.context, subscribe_queue=self.subscribe_queue)
+    def _get_messenger(self) -> Messenger:
+        return Messenger(
+            self.task.context, subscribe_queue=self.task.queue
+        )
 
     def create_user(self, user_name: str, password: str, organisation: str) -> dict:
         return self.messenger.user_create(user_name, password, organisation)
 
     def create_task(self, algorithm: str, quorum: int, adhoc: dict) -> dict:
-        return self.messenger.task_create(self.task_name, algorithm, quorum, adhoc)
+        return self.messenger.task_create(self.task.task_name, algorithm, quorum, adhoc)
 
     def join_task(self) -> dict:
-        return self.messenger.task_assignment_join(self.task_name)
+        return self.messenger.task_assignment_join(self.task.task_name)
 
     def task_info(self) -> dict:
-        return self.messenger.task_info(self.task_name)
+        return self.messenger.task_info(self.task.task_name)
 
 '''
 POM - privacy operation mode - is this a widely understood term in ffl
