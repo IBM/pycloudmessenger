@@ -325,20 +325,17 @@ class Messenger(rabbitmq.RabbitDualClient):
 
 ######## Participant specific
 
-class Task():
-    def __init__(self, context: Context, task_name: str, queue: str = None):
+class BasicParticipant():
+    def __init__(self, context: Context, task_name: str = None,
+                 queue: str = None):
+        self.messenger = None
+
         if not context:
             raise Exception('Credentials must be specified.')
 
         self.context = context
         self.task_name = task_name
         self.queue = queue
-
-
-class BasicParticipant():
-    def __init__(self, task: Task):
-        self.messenger = None
-        self.task = task
 
     def __enter__(self):
         return self.connect()
@@ -358,7 +355,7 @@ class BasicParticipant():
         self.messenger = None
 
     def send(self, model: dict = None) -> None:
-        self.messenger.send(self.task.task_name, model)
+        self.messenger.send(self.task_name, model)
 
     def receive(self, timeout: int = 0) -> dict:
         return self.messenger.receive(timeout)
@@ -377,14 +374,14 @@ class Participant(BasicParticipant):
 
     def _get_messenger(self) -> Messenger:
         return Participant.InnerMessenger(
-            self.task.context, subscribe_queue=self.task.queue
+            self.context, subscribe_queue=self.queue
         )
 
     def send(self, status: str, model: dict = None) -> None:
-        self.messenger.send(self.task.task_name, status, model)
+        self.messenger.send(self.task_name, status, model)
 
     def leave_task(self):
-        return self.messenger.task_quit(self.task.task_name)
+        return self.messenger.task_quit(self.task_name)
 
 
 class Aggregator(BasicParticipant):
@@ -401,37 +398,37 @@ class Aggregator(BasicParticipant):
 
     def _get_messenger(self) -> Messenger:
         return Aggregator.InnerMessenger(
-            self.task.context, subscribe_queue=self.task.queue
+            self.context, subscribe_queue=self.queue
         )
 
     def task_assignments(self) -> dict:
-        return self.messenger.task_assignments(self.task.task_name)
+        return self.messenger.task_assignments(self.task_name)
 
     def task_update(self, status: str, algorithm: str = None,
                     quorum: int = -1, adhoc: dict = None) -> dict:
-        return self.messenger.task_update(self.task.task_name, status, algorithm, quorum, adhoc)
+        return self.messenger.task_update(self.task_name, status, algorithm, quorum, adhoc)
 
     def stop_task(self) -> None:
-        self.messenger.task_stop(self.task.task_name)
+        self.messenger.task_stop(self.task_name)
 
 
 class User(BasicParticipant):
     def _get_messenger(self) -> Messenger:
         return Messenger(
-            self.task.context, subscribe_queue=self.task.queue
+            self.context, subscribe_queue=self.queue
         )
 
     def create_user(self, user_name: str, password: str, organisation: str) -> dict:
         return self.messenger.user_create(user_name, password, organisation)
 
     def create_task(self, algorithm: str, quorum: int, adhoc: dict) -> dict:
-        return self.messenger.task_create(self.task.task_name, algorithm, quorum, adhoc)
+        return self.messenger.task_create(self.task_name, algorithm, quorum, adhoc)
 
     def join_task(self) -> dict:
-        return self.messenger.task_assignment_join(self.task.task_name)
+        return self.messenger.task_assignment_join(self.task_name)
 
     def task_info(self) -> dict:
-        return self.messenger.task_info(self.task.task_name)
+        return self.messenger.task_info(self.task_name)
 
 '''
 POM - privacy operation mode - is this a widely understood term in ffl
