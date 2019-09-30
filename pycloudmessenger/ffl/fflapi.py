@@ -189,8 +189,8 @@ class Messenger(rabbitmq.RabbitDualClient):
 
         if msg['notification']['type'] == flavour:
             if 'params' in msg and 'url' in msg['params']:
-                self.model_files.append(utils.FileDownloader(msg['params'].pop('url')))
-                msg['params'].update({'model': self.model_files[-1].name()})
+                self.model_files.append(utils.FileDownloader(msg['params']['url']))
+                msg['notification'].update({'model': self.model_files[-1].name()})
         return msg['notification']
 
 
@@ -430,6 +430,9 @@ class User(BasicParticipant):
 
     def task_info(self) -> dict:
         return self.messenger.task_info(self.task_name)
+
+    def get_tasks(self) -> dict:
+        return self.messenger.task_listing()
 
 '''
 POM - privacy operation mode - is this a widely understood term in ffl
