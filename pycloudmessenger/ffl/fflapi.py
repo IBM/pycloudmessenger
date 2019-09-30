@@ -327,7 +327,7 @@ class Messenger(rabbitmq.RabbitDualClient):
 
 class BasicParticipant():
     def __init__(self, context: Context, task_name: str = None,
-                 queue: str = None):
+                 subscribe_queue: str = None):
         self.messenger = None
 
         if not context:
@@ -335,7 +335,7 @@ class BasicParticipant():
 
         self.context = context
         self.task_name = task_name
-        self.queue = queue
+        self.queue = subscribe_queue
 
     def __enter__(self):
         return self.connect()
