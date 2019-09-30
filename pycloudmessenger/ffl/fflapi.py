@@ -189,9 +189,9 @@ class Messenger(rabbitmq.RabbitDualClient):
 
         if msg['notification']['type'] == flavour:
             if 'params' in msg and 'url' in msg['params']:
-                self.model_files.append(utils.FileDownloader(msg['params']['url']))
-                return {'model': self.model_files[-1].name()}
-        return None
+                self.model_files.append(utils.FileDownloader(msg['params'].pop('url')))
+                msg['params'].update({'model': self.model_files[-1].name()})
+        return msg['notification']
 
 
     ######## Public methods
@@ -323,7 +323,8 @@ class Messenger(rabbitmq.RabbitDualClient):
         #return self._invoke_service(message)
 
 
-######## Participant specific
+######## BasicParticipant 
+# reusable context manager
 
 class BasicParticipant():
     def __init__(self, context: Context, task_name: str = None,
@@ -361,7 +362,6 @@ class BasicParticipant():
         return self.messenger.receive(timeout)
 
 
-
 class Participant(BasicParticipant):
     class InnerMessenger(Messenger):
         def send(self, task_name, status: str, model: dict = None) -> None:
@@ -370,7 +370,7 @@ class Participant(BasicParticipant):
 
         def receive(self, timeout: int = 0) -> dict:
             msg = self._receive(timeout)
-            return self._download(msg, 'start')
+            return self._download(msg, 'task_start')
 
     def _get_messenger(self) -> Messenger:
         return Participant.InnerMessenger(
@@ -394,7 +394,8 @@ class Aggregator(BasicParticipant):
             self._send(message)
 
         def receive(self, timeout: int = 0) -> dict:
-            return self._receive(timeout)
+            msg = self._receive(timeout)
+            return self._download(msg, 'assignment')
 
     def _get_messenger(self) -> Messenger:
         return Aggregator.InnerMessenger(
