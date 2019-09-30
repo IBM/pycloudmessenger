@@ -330,9 +330,6 @@ class Task():
         if not context:
             raise Exception('Credentials must be specified.')
 
-        if not task_name:
-            raise Exception('Task name must be specified.')
-
         self.context = context
         self.task_name = task_name
         self.queue = queue
