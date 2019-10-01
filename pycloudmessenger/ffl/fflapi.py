@@ -37,10 +37,7 @@ logging.getLogger("pika").setLevel(logging.WARNING)
 
 
 class Context(rabbitmq.RabbitContext):
-    """
-        Holds connection details for an FFL service
-    """
-
+    '''Holds connection details for an FFL service'''
 
 class TimedOutException(rabbitmq.RabbitTimedOutException):
     '''Over-ride exception'''
@@ -50,17 +47,12 @@ class ConsumerException(rabbitmq.RabbitConsumerException):
 
 
 class Messenger(rabbitmq.RabbitDualClient):
-    """
-        Communicates with an FFL service
-    """
-    def __init__(self, context: Context, publish_queue: str = None, subscribe_queue: str = None, max_msg_size: int = 2*1024*1024):
-        """
-            Class initializer
-        """
-        super(Messenger, self).__init__(context)
+    '''Communicates with an FFL service'''
 
-        #List of messages/models downloaded
-        self.model_files = []
+    def __init__(self, context: Context, publish_queue: str = None,
+                 subscribe_queue: str = None, max_msg_size: int = 2*1024*1024):
+        '''Class initializer'''
+        super(Messenger, self).__init__(context)
 
         #Max size of a message for dispatch
         self.max_msg_size = max_msg_size
@@ -97,7 +89,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         pub_queue = rabbitmq.RabbitQueue(queue) if queue else None
         super(Messenger, self).send_message(message, pub_queue)
 
-    def _receive(self, timeout: int = 0) -> dict:
+    def receive(self, timeout: int = 0) -> dict:
         '''
         Wait for timeout seconds for a message to arrive
         Throws: An exception on failure
@@ -180,20 +172,6 @@ class Messenger(rabbitmq.RabbitDualClient):
         download_info = self._invoke_service(message)
         return {'url': download_info}
 
-    def _download(self, msg, flavour) -> dict:
-        if 'notification' not in msg:
-            raise Exception(f"Malformed object: {msg}")
-
-        if 'type' not in msg['notification']:
-            raise Exception(f"Malformed object: {msg['notification']}")
-
-        if msg['notification']['type'] == flavour:
-            if 'params' in msg and 'url' in msg['params']:
-                self.model_files.append(utils.FileDownloader(msg['params']['url']))
-                msg['notification'].update({'model': self.model_files[-1].name()})
-        return msg['notification']
-
-
     ######## Public methods
 
     def user_create(self, user_name: str, password: str, organisation: str) -> dict:
@@ -243,7 +221,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         Throws: An exception on failure
         Returns: dict
         '''
-        return self._receive(timeout)
+        return self.receive(timeout)
 
     def task_assignments(self, task_name: str) -> dict:
         '''
@@ -320,23 +298,25 @@ class Messenger(rabbitmq.RabbitDualClient):
         '''
         message = self.catalog.msg_task_stop(task_name)
         self._send(message)
-        #return self._invoke_service(message)
 
-
-######## BasicParticipant 
-# reusable context manager
 
 class BasicParticipant():
-    def __init__(self, context: Context, task_name: str = None,
-                 subscribe_queue: str = None):
-        self.messenger = None
+    '''Base class for an FFL user/participant'''
 
+    def __init__(self, context: Context, task_name: str = None,
+                 subscribe_queue: str = None, download_models: bool = True):
         if not context:
             raise Exception('Credentials must be specified.')
+
+        self.messenger = None
+
+        #List of messages/models downloaded
+        self.model_files = []
 
         self.context = context
         self.task_name = task_name
         self.queue = subscribe_queue
+        self.download = download_models
 
     def __enter__(self):
         return self.connect()
@@ -344,63 +324,62 @@ class BasicParticipant():
     def __exit__(self, *args):
         self.close()
 
-    def _get_messenger(self) -> Messenger:
-        pass
-
     def connect(self):
-        self.messenger = self._get_messenger()
+        self.messenger = Messenger(self.context, subscribe_queue=self.queue)
         return self
 
     def close(self) -> None:
         self.messenger.stop()
         self.messenger = None
 
-    def send(self, model: dict = None) -> None:
-        self.messenger.send(self.task_name, model)
+    def _receive(self, timeout: int = 0, flavours: [] = None) -> dict:
+        msg = self.messenger.receive(timeout)
 
-    def receive(self, timeout: int = 0) -> dict:
-        return self.messenger.receive(timeout)
+        if 'notification' not in msg:
+            raise Exception(f"Malformed object: {msg}")
+
+        if 'type' not in msg['notification']:
+            raise Exception(f"Malformed object: {msg['notification']}")
+
+        if msg['notification']['type'] not in flavours:
+            raise Exception(f"Unexpected notification " \
+                "{msg['notification']['type']}, expecting {flavours}")
+
+        if self.download:
+            msg = self.get_model(msg)
+        return msg
+
+    def get_model(self, model_info: dict) -> dict:
+        if 'params' in model_info:
+            if model_info['params'] and 'url' in model_info['params']:
+                self.model_files.append(utils.FileDownloader(model_info['params']['url']))
+                model_info.update({'model': self.model_files[-1].name()})
+        return model_info
 
 
 class Participant(BasicParticipant):
-    class InnerMessenger(Messenger):
-        def send(self, task_name, status: str, model: dict = None) -> None:
-            self.model_files.clear()
-            self.task_assignment_update(task_name, status, model)
-
-        def receive(self, timeout: int = 0) -> dict:
-            msg = self._receive(timeout)
-            return self._download(msg, 'task_start')
-
-    def _get_messenger(self) -> Messenger:
-        return Participant.InnerMessenger(
-            self.context, subscribe_queue=self.queue
-        )
+    '''An FFL task participant'''
 
     def send(self, status: str, model: dict = None) -> None:
-        self.messenger.send(self.task_name, status, model)
+        self.model_files.clear()
+        self.messenger.task_assignment_update(self.task_name, status, model)
+
+    def receive(self, timeout: int = 0) -> dict:
+        return self._receive(timeout, ['task_start'])
 
     def leave_task(self):
         return self.messenger.task_quit(self.task_name)
 
 
 class Aggregator(BasicParticipant):
-    class InnerMessenger(Messenger):
-        def send(self, task_name: str, model: dict = None) -> None:
-            self.model_files.clear()
+    '''An FFL task aggregator'''
 
-            model_message = self._dispatch_model(model)
-            message = self.catalog.msg_task_start(task_name, model_message)
-            self._send(message)
+    def send(self, model: dict = None) -> None:
+        self.model_files.clear()
+        self.messenger.task_start(self.task_name, model)
 
-        def receive(self, timeout: int = 0) -> dict:
-            msg = self._receive(timeout)
-            return self._download(msg, 'assignment')
-
-    def _get_messenger(self) -> Messenger:
-        return Aggregator.InnerMessenger(
-            self.context, subscribe_queue=self.queue
-        )
+    def receive(self, timeout: int = 0) -> dict:
+        return self._receive(timeout, ['join', 'assignment'])
 
     def task_assignments(self) -> dict:
         return self.messenger.task_assignments(self.task_name)
@@ -414,10 +393,7 @@ class Aggregator(BasicParticipant):
 
 
 class User(BasicParticipant):
-    def _get_messenger(self) -> Messenger:
-        return Messenger(
-            self.context, subscribe_queue=self.queue
-        )
+    '''A generic FFL user'''
 
     def create_user(self, user_name: str, password: str, organisation: str) -> dict:
         return self.messenger.user_create(user_name, password, organisation)
@@ -433,50 +409,3 @@ class User(BasicParticipant):
 
     def get_tasks(self) -> dict:
         return self.messenger.task_listing()
-
-'''
-POM - privacy operation mode - is this a widely understood term in ffl
-Project - ffl uses project, we currently use task
-
-
-Proposal:
-    Task/assignments
-    Project/tasks
-
-Participant classes:
-    Joinee
-        - project_join
-
-    Creator:
-        - project_create
-
-    StarParticipant
-        - task_wait x 1 per epoch
-        - send_model x 1 per epoch
-        = 2 comms calls per epoch
-
-    RingParticipant:
-        - task_wait x 1 per epoch
-        - send_model x 1 per epoch
-        = 2 comms calls per epoch
-
-    StarAggregator:
-        - quorum_wait x 1
-        - task_start x 1 per epoch
-        - model_wait x quorum per epoch
-        = quorum + 1 comms calls per epoch + 1
-
-    RingAggregator:
-        - quorum_wait x 1
-        - project_start x 1 per epoch
-        - model_wait x 1 (when ring complete) 
-        = 2 comms calls per epoch + 1
-
-
-NOTE:
-task_wait waits for a message from the ADMIN_SERVICE not the AGGREGATOR
-send_model sends a message to the ADMIN SERVICE not the AGGREGATOR
-
-task_start sends a message to the ADMIN SERVICE not to PARTICIPANTS
-model_wait waits for a message from the ADMIN_SERVICE not from PARTICIPANTS
-'''
