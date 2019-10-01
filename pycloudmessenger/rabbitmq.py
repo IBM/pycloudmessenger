@@ -26,35 +26,13 @@ import os
 import ssl
 import logging
 import json
-import tempfile
-import base64
-import weakref
 from abc import ABC, abstractmethod
 import pika
+import pycloudmessenger.utils as utils
 
 __rabbit_helper_version_info__ = ('0', '1', '2')
 LOGGER = logging.getLogger(__package__)
 
-
-class Certificate():
-    def __init__(self, b64string: str):
-        self.fd, self.file = tempfile.mkstemp()
-        os.close(self.fd)
-
-        #Convert the b64 cert string to a local PEM file
-        pem = base64.b64decode(b64string).decode('utf-8')
-        with open(self.file, 'w') as pem_file:
-            pem_file.write(pem)
-
-        #Ensure the file is deleted
-        self._finalizer = weakref.finalize(self, os.unlink, self.file)
-
-    def remove(self):
-        self._finalizer()
-
-    @property
-    def removed(self):
-        return not self._finalizer.alive
 
 
 class RabbitContext():
@@ -73,8 +51,8 @@ class RabbitContext():
         self.args['broker_password'] = password if password else self.arg_value(self.args, ['broker_password', 'broker_guest_password', 'client_pwd'])
 
         if 'broker_cert_b64' in self.args:
-            self.cert_file = Certificate(args['broker_cert_b64'])
-            self.args['broker_pem_path'] = self.cert_file.file
+            self.cert_file = utils.Certificate(args['broker_cert_b64'])
+            self.args['broker_pem_path'] = self.cert_file.filename
             self.args['broker_tls'] = True
         else:
             self.args['broker_tls'] = False
@@ -87,7 +65,7 @@ class RabbitContext():
                 raise Exception(f'{key} is missing from RabbitContext initialisation.')
 
     def __str__(self):
-        return self.args
+        return json.dumps(self.args)
 
     def arg_value(self, args, possibilities):
         for p in possibilities:
@@ -359,7 +337,7 @@ class RabbitClient(AbstractRabbitMessenger):
 
                 if handler:
                     #body is of type 'bytes' in Python 3+
-                    state = handler(body)
+                    handler(body)
                 elif not max_messages:
                     break
 
@@ -419,7 +397,7 @@ class RabbitDualClient():
         self.publisher = client(self.context)
         self.publisher.start(publish=queue)
 
-    def send(self, message, queue: RabbitQueue = None):
+    def send_message(self, message, queue: RabbitQueue = None):
         """
             Publish a message to Castor service
 
@@ -431,7 +409,7 @@ class RabbitDualClient():
         """
         self.publisher.publish(message, queue)
 
-    def receive(self, handler, timeout: int, max_messages: int):
+    def receive_message(self, handler, timeout: int, max_messages: int):
         """
             Receive messages from Castor service
 
@@ -467,7 +445,7 @@ class RabbitDualClient():
         """
         self.last_recv_msg = None
         LOGGER.debug(f"Sending message: {message}")
-        self.send(message)
+        self.send_message(message)
 
         LOGGER.debug("Waiting for reply...")
         #Now wait for the reply
@@ -477,7 +455,7 @@ class RabbitDualClient():
 
     def stop(self):
         """
-            Close connection to Castor service
+            Close connection to service
 
             Throws:
                 An exception if not successful

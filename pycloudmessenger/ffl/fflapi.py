@@ -28,7 +28,7 @@ in DRL funded by the European Union under the Horizon 2020 Program.
 import json
 import logging
 import requests
-
+import pycloudmessenger.utils as utils
 import pycloudmessenger.rabbitmq as rabbitmq
 import pycloudmessenger.serializer as serializer
 import pycloudmessenger.ffl.message_catalog as catalog
@@ -37,10 +37,7 @@ logging.getLogger("pika").setLevel(logging.WARNING)
 
 
 class Context(rabbitmq.RabbitContext):
-    """
-        Holds connection details for an FFL service
-    """
-
+    '''Holds connection details for an FFL service'''
 
 class TimedOutException(rabbitmq.RabbitTimedOutException):
     '''Over-ride exception'''
@@ -50,20 +47,21 @@ class ConsumerException(rabbitmq.RabbitConsumerException):
 
 
 class Messenger(rabbitmq.RabbitDualClient):
-    """
-        Communicates with an FFL service
-    """
-    def __init__(self, context: Context, publish_queue: str = None, subscribe_queue: str = None):
-        """
-            Class initializer
-        """
+    '''Communicates with an FFL service'''
+
+    def __init__(self, context: Context, publish_queue: str = None,
+                 subscribe_queue: str = None, max_msg_size: int = 2*1024*1024):
+        '''Class initializer'''
         super(Messenger, self).__init__(context)
+
+        #Max size of a message for dispatch
+        self.max_msg_size = max_msg_size
 
         #Keep a copy here - lots of re-use
         self.timeout = context.timeout()
 
-        #Publish not over-ridden so use context version
         if not publish_queue:
+            #Publish not over-ridden so use context version
             publish_queue = context.feeds()
 
         self.start_subscriber(queue=rabbitmq.RabbitQueue(subscribe_queue))
@@ -78,16 +76,20 @@ class Messenger(rabbitmq.RabbitDualClient):
     def __exit__(self, *args):
         self.stop()
 
-    def _send(self, message: dict, queue: str = None):
+    def _send(self, message: dict, queue: str = None) -> dict:
         '''
         Send a message and return immediately
         Throws: An exception on failure
         Returns: dict
         '''
-        pub_queue = rabbitmq.RabbitQueue(queue) if queue else None
-        super(Messenger, self).send(serializer.Serializer.serialize(message), pub_queue)
+        message = serializer.Serializer.serialize(message)
+        if len(message) > self.max_msg_size:
+            raise BufferError(f"Messenger: payload too large: {len(message)}.")
 
-    def _receive(self, timeout: int = 0) -> dict:
+        pub_queue = rabbitmq.RabbitQueue(queue) if queue else None
+        super(Messenger, self).send_message(message, pub_queue)
+
+    def receive(self, timeout: int = 0) -> dict:
         '''
         Wait for timeout seconds for a message to arrive
         Throws: An exception on failure
@@ -97,7 +99,7 @@ class Messenger(rabbitmq.RabbitDualClient):
             timeout = self.timeout
 
         try:
-            super(Messenger, self).receive(self.internal_handler, timeout, 1)
+            super(Messenger, self).receive_message(self.internal_handler, timeout, 1)
         except rabbitmq.RabbitTimedOutException as exc:
             raise TimedOutException(exc) from exc
         except rabbitmq.RabbitConsumerException as exc:
@@ -117,6 +119,8 @@ class Messenger(rabbitmq.RabbitDualClient):
 
         try:
             message = serializer.Serializer.serialize(message)
+            if len(message) > self.max_msg_size:
+                raise BufferError(f"Messenger: payload too large: {len(message)}.")
             result = super(Messenger, self).invoke_service(message, timeout)
         except rabbitmq.RabbitTimedOutException as exc:
             raise TimedOutException(exc) from exc
@@ -136,7 +140,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         results = result['calls'][0]['count'] #calls[0] will always succeed
         return result['calls'][0]['data'] if results else None
 
-    def _dispatch_model(self, model: dict = None):
+    def _dispatch_model(self, model: dict = None) -> dict:
         '''
         Dispatch a model and determine its download location
         Throws: An exception on failure
@@ -198,7 +202,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self._invoke_service(message)
         return message[0]
 
-    def task_assignment_update(self, task_name: str, status: str, model: dict = None):
+    def task_assignment_update(self, task_name: str, status: str, model: dict = None) -> None:
         '''
         Sends an update, including a model dict, no reply wanted
         Throws: An exception on failure
@@ -208,7 +212,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         model_message = self._dispatch_model(model)
 
         message = self.catalog.msg_task_assignment_update(
-                        task_name, status, model_message, want_reply=False)
+                        task_name, status, model_message)
         self._send(message)
 
     def task_assignment_wait(self, timeout: int = 0) -> dict:
@@ -217,7 +221,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         Throws: An exception on failure
         Returns: dict
         '''
-        return self._receive(timeout)
+        return self.receive(timeout)
 
     def task_assignments(self, task_name: str) -> dict:
         '''
@@ -267,7 +271,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self._invoke_service(message)
         return message[0]
 
-    def task_quit(self, task_name: str):
+    def task_quit(self, task_name: str) -> dict:
         '''
         As a task participant, leave the task
         Throws: An exception on failure
@@ -276,21 +280,132 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_task_quit(task_name)
         return self._invoke_service(message)
 
-    def task_start(self, task_name: str, model: dict = None) -> dict:
+    def task_start(self, task_name: str, model: dict = None) -> None:
         '''
         As a task owner, start the task
         Throws: An exception on failure
-        Returns: dict
+        Returns: Nothing
         '''
         model_message = self._dispatch_model(model)
         message = self.catalog.msg_task_start(task_name, model_message)
-        return self._invoke_service(message)
+        self._send(message)
 
-    def task_stop(self, task_name: str) -> dict:
+    def task_stop(self, task_name: str) -> None:
         '''
         As a task owner, stop the task
         Throws: An exception on failure
         Returns: dict
         '''
         message = self.catalog.msg_task_stop(task_name)
-        return self._invoke_service(message)
+        self._send(message)
+
+
+class BasicParticipant():
+    '''Base class for an FFL user/participant'''
+
+    def __init__(self, context: Context, task_name: str = None,
+                 subscribe_queue: str = None, download_models: bool = True):
+        if not context:
+            raise Exception('Credentials must be specified.')
+
+        self.messenger = None
+
+        #List of messages/models downloaded
+        self.model_files = []
+
+        self.context = context
+        self.task_name = task_name
+        self.queue = subscribe_queue
+        self.download = download_models
+
+    def __enter__(self):
+        return self.connect()
+
+    def __exit__(self, *args):
+        self.close()
+
+    def connect(self):
+        self.messenger = Messenger(self.context, subscribe_queue=self.queue)
+        return self
+
+    def close(self) -> None:
+        self.messenger.stop()
+        self.messenger = None
+
+    def _receive(self, timeout: int = 0, flavours: [] = None) -> dict:
+        msg = self.messenger.receive(timeout)
+
+        if 'notification' not in msg:
+            raise Exception(f"Malformed object: {msg}")
+
+        if 'type' not in msg['notification']:
+            raise Exception(f"Malformed object: {msg['notification']}")
+
+        if msg['notification']['type'] not in flavours:
+            raise Exception(f"Unexpected notification " \
+                "{msg['notification']['type']}, expecting {flavours}")
+
+        if self.download:
+            msg = self.get_model(msg)
+        return msg
+
+    def get_model(self, model_info: dict) -> dict:
+        if 'params' in model_info:
+            if model_info['params'] and 'url' in model_info['params']:
+                self.model_files.append(utils.FileDownloader(model_info['params']['url']))
+                model_info.update({'model': self.model_files[-1].name()})
+        return model_info
+
+
+class Participant(BasicParticipant):
+    '''An FFL task participant'''
+
+    def send(self, status: str, model: dict = None) -> None:
+        self.model_files.clear()
+        self.messenger.task_assignment_update(self.task_name, status, model)
+
+    def receive(self, timeout: int = 0) -> dict:
+        return self._receive(timeout, ['task_start'])
+
+    def leave_task(self):
+        return self.messenger.task_quit(self.task_name)
+
+
+class Aggregator(BasicParticipant):
+    '''An FFL task aggregator'''
+
+    def send(self, model: dict = None) -> None:
+        self.model_files.clear()
+        self.messenger.task_start(self.task_name, model)
+
+    def receive(self, timeout: int = 0) -> dict:
+        return self._receive(timeout, ['join', 'assignment'])
+
+    def task_assignments(self) -> dict:
+        return self.messenger.task_assignments(self.task_name)
+
+    def task_update(self, status: str, algorithm: str = None,
+                    quorum: int = -1, adhoc: dict = None) -> dict:
+        return self.messenger.task_update(self.task_name, status, algorithm, quorum, adhoc)
+
+    def stop_task(self) -> None:
+        self.messenger.task_stop(self.task_name)
+
+
+class User(BasicParticipant):
+    '''A generic FFL user'''
+
+    def create_user(self, user_name: str, password: str, organisation: str) -> dict:
+        return self.messenger.user_create(user_name, password, organisation)
+
+    def create_task(self, algorithm: str, quorum: int, adhoc: dict) -> dict:
+        return self.messenger.task_create(self.task_name, algorithm, quorum, adhoc)
+
+    def join_task(self) -> dict:
+        return self.messenger.task_assignment_join(self.task_name)
+
+    def task_info(self) -> dict:
+        return self.messenger.task_info(self.task_name)
+
+    def get_tasks(self) -> dict:
+        return self.messenger.task_listing()

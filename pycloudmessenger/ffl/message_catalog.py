@@ -109,7 +109,7 @@ class MessageCatalog():
         return template
 
     def msg_task_start(self, task_name: str, model: dict = None) -> dict:
-        template, args = self._msg_template()
+        template, args = self._msg_template(want_reply=False)
         args.append({'cmd':'task_start', 'params': [task_name, self.user_name, model]})
         return template
 
@@ -118,7 +118,7 @@ class MessageCatalog():
         args.append({'cmd':'task_stop', 'params': [task_name, self.user_name]})
         return template
 
-    def msg_task_assignment_update(self, task_name: str, status: str, model: dict = None, want_reply: bool = True):
-        template, args = self._msg_template(want_reply=want_reply)
+    def msg_task_assignment_update(self, task_name: str, status: str, model: dict = None):
+        template, args = self._msg_template(want_reply=False)
         args.append({'cmd':'task_assignment_update', 'params': [task_name, self.user_name, status, model]})
         return template
