@@ -122,3 +122,8 @@ class MessageCatalog():
         template, args = self._msg_template(want_reply=False)
         args.append({'cmd':'task_assignment_update', 'params': [task_name, self.user_name, status, model]})
         return template
+
+    def msg_task_assignment_info(self, task_name: str):
+        template, args = self._msg_template()
+        args.append({'cmd':'task_assignment_info', 'params': [task_name, self.user_name]})
+        return template

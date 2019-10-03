@@ -192,6 +192,16 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_user_assignments()
         return self._invoke_service(message)
 
+    def task_assignment_info(self, task_name: str) -> dict:
+        '''
+        As a task participant, get my participation details
+        Throws: An exception on failure
+        Returns: dict
+        '''
+        message = self.catalog.msg_task_assignment_info(task_name)
+        message = self._invoke_service(message)
+        return message[0]
+
     def task_assignment_join(self, task_name: str) -> dict:
         '''
         As a potential task participant, try to join the task
@@ -304,7 +314,7 @@ class BasicParticipant():
     '''Base class for an FFL user/participant'''
 
     def __init__(self, context: Context, task_name: str = None,
-                 subscribe_queue: str = None, download_models: bool = True):
+                 download_models: bool = True):
         if not context:
             raise Exception('Credentials must be specified.')
 
@@ -315,7 +325,7 @@ class BasicParticipant():
 
         self.context = context
         self.task_name = task_name
-        self.queue = subscribe_queue
+        self.queue = None
         self.download = download_models
 
     def __enter__(self):
@@ -332,7 +342,7 @@ class BasicParticipant():
         self.messenger.stop()
         self.messenger = None
 
-    def _receive(self, timeout: int = 0, flavours: [] = None) -> dict:
+    def _receive(self, timeout: int = 0, flavours: list = None) -> dict:
         msg = self.messenger.receive(timeout)
 
         if 'notification' not in msg:
@@ -359,6 +369,18 @@ class BasicParticipant():
 
 class Participant(BasicParticipant):
     '''An FFL task participant'''
+    def __init__(self, context: Context, task_name: str = None,
+                 download_models: bool = True):
+        super().__init__(context, task_name, download_models)
+
+        messenger = Messenger(self.context)
+        result = messenger.task_assignment_info(self.task_name)
+
+        if 'QUEUE' not in result:
+            raise Exception("Task not joined by this user.")
+
+        self.queue = result['QUEUE']
+        messenger.stop()
 
     def send(self, status: str, model: dict = None) -> None:
         self.model_files.clear()
@@ -373,6 +395,18 @@ class Participant(BasicParticipant):
 
 class Aggregator(BasicParticipant):
     '''An FFL task aggregator'''
+    def __init__(self, context: Context, task_name: str = None,
+                 download_models: bool = True):
+        super().__init__(context, task_name, download_models)
+
+        messenger = Messenger(self.context)
+        result = messenger.task_info(self.task_name)
+
+        if 'QUEUE' not in result:
+            raise Exception("Task not created by this user.")
+
+        self.queue = result['QUEUE']
+        messenger.stop()
 
     def send(self, model: dict = None) -> None:
         self.model_files.clear()
