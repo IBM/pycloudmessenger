@@ -31,7 +31,7 @@ LOGGER = logging.getLogger(__package__)
 class FFLTests(unittest.TestCase):
     #@unittest.skip("temporarily skipping")
     def test_enum(self):
-        self.assertTrue(fflapi.Notification('task_start') is fflapi.Notification.start)
+        self.assertTrue(fflapi.Notification('aggregator_started') is fflapi.Notification.aggregator_started)
 
         with self.assertRaises(ValueError):
             self.assertTrue(fflapi.Notification('start') is fflapi.Notification.started)
@@ -40,13 +40,13 @@ class FFLTests(unittest.TestCase):
             self.assertTrue(fflapi.Notification('started') is fflapi.Notification.start)
 
         #Check list searching
-        arr = [fflapi.Notification.start, fflapi.Notification.stop]
-        self.assertTrue(fflapi.Notification('task_start') in arr)
-        self.assertTrue(fflapi.Notification('join') not in arr)
+        arr = [fflapi.Notification.aggregator_started, fflapi.Notification.aggregator_stopped]
+        self.assertTrue(fflapi.Notification('aggregator_started') in arr)
+        self.assertTrue(fflapi.Notification('participant_joined') not in arr)
 
         #Ensure json serializability
-        notify = {'type': fflapi.Notification.join}
+        notify = {'type': fflapi.Notification.participant_joined}
         serialized = json.dumps(notify)
 
         deserialized = json.loads(serialized)
-        self.assertTrue(fflapi.Notification(deserialized['type']) is fflapi.Notification.join)
+        self.assertTrue(fflapi.Notification(deserialized['type']) is fflapi.Notification.participant_joined)

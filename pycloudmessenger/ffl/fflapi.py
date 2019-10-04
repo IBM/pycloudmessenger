@@ -27,8 +27,8 @@ in DRL funded by the European Union under the Horizon 2020 Program.
 
 import json
 import logging
-import requests
 from enum import Enum
+import requests
 import pycloudmessenger.utils as utils
 import pycloudmessenger.rabbitmq as rabbitmq
 import pycloudmessenger.serializer as serializer
@@ -38,10 +38,11 @@ logging.getLogger("pika").setLevel(logging.WARNING)
 
 
 class Notification(str, Enum):
-    start = 'task_start'
-    stop = 'task_stop'
-    join = 'join'
-    update = 'assignment'
+    aggregator_started = 'aggregator_started'
+    aggregator_stopped = 'aggregator_stopped'
+    participant_joined = 'participant_joined'
+    participant_updated = 'participant_updated'
+    participant_left = 'participant_left'
 
 
 class Context(rabbitmq.RabbitContext):
@@ -398,7 +399,8 @@ class Participant(BasicParticipant):
         self.messenger.task_assignment_update(self.task_name, status, model)
 
     def receive(self, timeout: int = 0) -> dict:
-        return self._receive(timeout, [Notification.start, Notification.stop])
+        return self._receive(timeout, [Notification.aggregator_started,
+                                       Notification.aggregator_stopped])
 
     def leave_task(self):
         return self.messenger.task_quit(self.task_name)
@@ -424,7 +426,9 @@ class Aggregator(BasicParticipant):
         self.messenger.task_start(self.task_name, model)
 
     def receive(self, timeout: int = 0) -> dict:
-        return self._receive(timeout, [Notification.join, Notification.update])
+        return self._receive(timeout, [Notification.participant_joined,
+                                       Notification.participant_updated,
+                                       Notification.participant_left])
 
     def task_assignments(self) -> dict:
         return self.messenger.task_assignments(self.task_name)
