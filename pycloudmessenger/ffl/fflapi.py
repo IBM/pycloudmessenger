@@ -359,7 +359,10 @@ class BasicParticipant():
         if 'type' not in msg['notification']:
             raise Exception(f"Malformed object: {msg['notification']}")
 
-        if Notification(msg['notification']['type']) not in flavours:
+        try:
+            if Notification(msg['notification']['type']) not in flavours:
+                raise ValueError
+        except:
             raise Exception(f"Unexpected notification " \
                 f"{msg['notification']['type']}, expecting {flavours}")
 
