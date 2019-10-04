@@ -27,6 +27,7 @@ in DRL funded by the European Union under the Horizon 2020 Program.
 
 import json
 import logging
+from enum import Enum
 import requests
 import pycloudmessenger.utils as utils
 import pycloudmessenger.rabbitmq as rabbitmq
@@ -34,6 +35,14 @@ import pycloudmessenger.serializer as serializer
 import pycloudmessenger.ffl.message_catalog as catalog
 
 logging.getLogger("pika").setLevel(logging.WARNING)
+
+
+class Notification(str, Enum):
+    aggregator_started = 'aggregator_started'
+    aggregator_stopped = 'aggregator_stopped'
+    participant_joined = 'participant_joined'
+    participant_updated = 'participant_updated'
+    participant_left = 'participant_left'
 
 
 class Context(rabbitmq.RabbitContext):
@@ -351,9 +360,12 @@ class BasicParticipant():
         if 'type' not in msg['notification']:
             raise Exception(f"Malformed object: {msg['notification']}")
 
-        if msg['notification']['type'] not in flavours:
+        try:
+            if Notification(msg['notification']['type']) not in flavours:
+                raise ValueError
+        except:
             raise Exception(f"Unexpected notification " \
-                "{msg['notification']['type']}, expecting {flavours}")
+                f"{msg['notification']['type']}, expecting {flavours}")
 
         if self.download:
             msg = self.get_model(msg)
@@ -363,7 +375,7 @@ class BasicParticipant():
         if 'params' in model_info:
             if model_info['params'] and 'url' in model_info['params']:
                 self.model_files.append(utils.FileDownloader(model_info['params']['url']))
-                model_info.update({'model': self.model_files[-1].name()})
+                model_info['params'].update({'model': self.model_files[-1].name()})
         return model_info
 
 
@@ -387,7 +399,8 @@ class Participant(BasicParticipant):
         self.messenger.task_assignment_update(self.task_name, status, model)
 
     def receive(self, timeout: int = 0) -> dict:
-        return self._receive(timeout, ['task_start'])
+        return self._receive(timeout, [Notification.aggregator_started,
+                                       Notification.aggregator_stopped])
 
     def leave_task(self):
         return self.messenger.task_quit(self.task_name)
@@ -413,7 +426,9 @@ class Aggregator(BasicParticipant):
         self.messenger.task_start(self.task_name, model)
 
     def receive(self, timeout: int = 0) -> dict:
-        return self._receive(timeout, ['join', 'assignment'])
+        return self._receive(timeout, [Notification.participant_joined,
+                                       Notification.participant_updated,
+                                       Notification.participant_left])
 
     def task_assignments(self) -> dict:
         return self.messenger.task_assignments(self.task_name)
