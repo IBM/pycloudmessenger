@@ -35,6 +35,9 @@ class FFLTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             self.assertTrue(fflapi.Notification('start') is fflapi.Notification.started)
+        
+        with self.assertRaises(ValueError):
+            self.assertTrue(fflapi.Notification('started') is fflapi.Notification.start)
 
         #Check list searching
         arr = [fflapi.Notification.start, fflapi.Notification.stop]
