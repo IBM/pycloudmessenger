@@ -53,6 +53,63 @@ class Notification(str, Enum):
     participant_updated = 'participant_updated'
     participant_left = 'participant_left'
 
+    @classmethod
+    def is_notification(cls, msg: dict, notification) -> bool:
+        '''is_notification
+
+        check if msg is a particular notification
+        returns :True if yes, False otherwise
+        '''
+        try:
+            ntype = msg['notification']['type']
+            return cls(ntype) is notification
+
+        except:
+            # not a notification
+            pass
+
+        return False
+
+    @classmethod
+    def is_aggregator_started(cls, msg: dict) -> bool:
+        '''is_aggregator_started
+
+        returns: True, if msg is an aggregator started notification, False otherwise
+        '''
+        return cls.is_notification(msg, cls.aggregator_started)
+
+    @classmethod
+    def is_aggregator_stopped(cls, msg: dict) -> bool:
+        '''is_aggregator_stopped
+
+        returns: True, if msg is an aggregator stopped notification, False otherwise
+        '''
+        return cls.is_notification(msg, cls.aggregator_stopped)
+
+    @classmethod
+    def is_participant_joined(cls, msg: dict) -> bool:
+        '''is_participant_joined
+
+        returns: True, if msg is a participant joined notification, False otherwise
+        '''
+        return cls.is_notification(msg, cls.participant_joined)
+
+    @classmethod
+    def is_participant_left(cls, msg: dict) -> bool:
+        '''is_participant_left
+
+        returns: True, if msg is a participant left notification, False otherwise
+        '''
+        return cls.is_notification(msg, cls.participant_left)
+
+    @classmethod
+    def is_participant_updated(cls, msg: dict) -> bool:
+        '''is_participant_updated
+
+        returns: True, if msg is a participant updated notification, False otherwise
+        '''
+        return cls.is_notification(msg, cls.participant_updated)
+
     def __str__(self):
         return self.value
 
