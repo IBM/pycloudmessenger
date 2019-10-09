@@ -78,14 +78,14 @@ class MessageCatalog():
         args.append({'cmd':'task_listing'})
         return template
 
-    def msg_task_create(self, task_name: str, algorithm: str, quorum: int, adhoc: dict) -> dict:
+    def msg_task_create(self, task_name: str, topology: str, definition: dict) -> dict:
         template, args = self._msg_template()
-        args.append({'cmd':'task_create', 'params': [task_name, self.user_name, algorithm, quorum, adhoc]})
+        args.append({'cmd':'task_create', 'params': [task_name, self.user_name, topology, definition]})
         return template
 
-    def msg_task_update(self, task_name: str, algorithm: str, quorum: int, adhoc: dict, status: str) -> dict:
+    def msg_task_update(self, task_name: str, topology: str, definition: dict, status: str) -> dict:
         template, args = self._msg_template()
-        args.append({'cmd':'task_update', 'params': [task_name, self.user_name, algorithm, quorum, adhoc, status]})
+        args.append({'cmd':'task_update', 'params': [task_name, self.user_name, topology, definition, status]})
         return template
 
     def msg_task_info(self, task_name: str) -> dict:
@@ -118,7 +118,7 @@ class MessageCatalog():
         args.append({'cmd':'task_stop', 'params': [task_name, self.user_name]})
         return template
 
-    def msg_task_assignment_update(self, task_name: str, status: str, model: dict = None):
+    def msg_task_assignment_update(self, task_name: str, status: str = None, model: dict = None):
         template, args = self._msg_template(want_reply=False)
         args.append({'cmd':'task_assignment_update', 'params': [task_name, self.user_name, status, model]})
         return template
