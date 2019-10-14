@@ -543,12 +543,23 @@ class Aggregator(BasicParticipant):
         super().__init__(context, task_name, download_models)
 
         messenger = Messenger(self.context)
+
+        #Get the task info for subscribe queue etc
         result = messenger.task_info(self.task_name)
 
         if 'QUEUE' not in result:
             raise Exception("Task not created by this user.")
 
         self.queue = result['QUEUE']
+
+        #Now get the list of already joined participants
+        assignments = self.messenger.task_assignments(self.task_name)
+        self.participants = {}
+
+        for ass in assignments:
+            self.add_participant(ass)
+
+        #Ready now for steady state modelling
         messenger.stop()
 
     def send(self, message: dict = None) -> None:
@@ -570,13 +581,16 @@ class Aggregator(BasicParticipant):
                                        Notification.participant_updated,
                                        Notification.participant_left])
 
+    def add_participant(self, participant) -> dict:
+        self.participants.update({participant['PARTICIPANT']: participant})
+
     def get_participants(self) -> dict:
         '''
         Return a list of task participants
         Throws: An exception on failure or timeout
         Returns: dict
         '''
-        return self.messenger.task_assignments(self.task_name)
+        return self.participants
 
     def stop_task(self) -> None:
         '''
