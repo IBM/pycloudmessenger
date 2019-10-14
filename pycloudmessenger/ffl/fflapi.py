@@ -63,7 +63,6 @@ class Notification(str, Enum):
         try:
             ntype = msg['notification']['type']
             return cls(ntype) is notification
-
         except:
             # not a notification
             pass
@@ -571,7 +570,7 @@ class Aggregator(BasicParticipant):
                                        Notification.participant_updated,
                                        Notification.participant_left])
 
-    def task_assignments(self) -> dict:
+    def get_participants(self) -> dict:
         '''
         Return a list of task participants
         Throws: An exception on failure or timeout
