@@ -215,7 +215,7 @@ class Messenger(rabbitmq.RabbitDualClient):
             raise Exception(f"Malformed object: {result}")
 
         results = result['calls'][0]['count'] #calls[0] will always succeed
-        return result['calls'][0]['data'] if results else None
+        return result['calls'][0]['data'] if results else []
 
     def _dispatch_model(self, model: dict = None) -> dict:
         '''
@@ -497,10 +497,10 @@ class Participant(BasicParticipant):
         messenger = Messenger(self.context)
         result = messenger.task_assignment_info(self.task_name)
 
-        if 'QUEUE' not in result:
+        if 'queue' not in result:
             raise Exception("Task not joined by this user.")
 
-        self.queue = result['QUEUE']
+        self.queue = result['queue']
         messenger.stop()
 
     def send(self, message: dict = None) -> None:
@@ -543,12 +543,24 @@ class Aggregator(BasicParticipant):
         super().__init__(context, task_name, download_models)
 
         messenger = Messenger(self.context)
+
+        #Get the task info for subscribe queue etc
         result = messenger.task_info(self.task_name)
 
-        if 'QUEUE' not in result:
+        if 'queue' not in result:
             raise Exception("Task not created by this user.")
 
-        self.queue = result['QUEUE']
+        self.queue = result['queue']
+
+        #Now get the list of already joined participants
+        self.participants = {}
+
+        assignments = messenger.task_assignments(self.task_name)
+        if assignments:
+            for ass in assignments:
+                self._add_participant(ass['participant'], ass)
+
+        #Ready now for steady state modelling
         messenger.stop()
 
     def send(self, message: dict = None) -> None:
@@ -566,9 +578,21 @@ class Aggregator(BasicParticipant):
         Throws: An exception on failure or timeout
         Returns: dict
         '''
-        return self._receive(timeout, [Notification.participant_joined,
-                                       Notification.participant_updated,
-                                       Notification.participant_left])
+        msg = self._receive(timeout, [Notification.participant_joined,
+                                      Notification.participant_updated,
+                                      Notification.participant_left])
+        flavour = msg['notification']
+        if flavour is Notification.participant_left:
+            self._del_participant(flavour['participant'])
+        else:
+            self._add_participant(flavour['participant'], flavour)
+        return msg
+
+    def _del_participant(self, participant) -> None:
+        del self.participants[participant]
+
+    def _add_participant(self, participant, attributes: dict) -> None:
+        self.participants.update({participant: attributes})
 
     def get_participants(self) -> dict:
         '''
@@ -576,7 +600,7 @@ class Aggregator(BasicParticipant):
         Throws: An exception on failure or timeout
         Returns: dict
         '''
-        return self.messenger.task_assignments(self.task_name)
+        return self.participants
 
     def stop_task(self) -> None:
         '''
