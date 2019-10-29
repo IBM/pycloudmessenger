@@ -315,7 +315,8 @@ class Messenger(rabbitmq.RabbitDualClient):
         """
         Register a new user on the platform.
         Throws: An exception on failure
-        :param user_name: user name (must be a non-empty string and unique; if a user with this name has registered
+        :param user_name: user name (must be a non-empty string and unique;
+                                     if a user with this name has registered
                                      before, an exception is thrown).
         :type user_name: `str`
         :param password: password (must be a non-empty string)
@@ -347,7 +348,8 @@ class Messenger(rabbitmq.RabbitDualClient):
 
     def task_assignment_join(self, task_name: str) -> dict:
         """
-        As a potential task participant, try to join the task. This will fail if the task status isn't 'CREATED'.
+        As a potential task participant, try to join the task.
+        This will fail if the task status isn't 'CREATED'.
         Throws: An exception on failure
         :param task_name: name of the task to be joined
         :type task_name: `str`
@@ -408,7 +410,8 @@ class Messenger(rabbitmq.RabbitDualClient):
 
     def task_create(self, task_name: str, topology: str, definition: dict) -> dict:
         """
-        Creates a task with the given definition and returns a dictionary with the details of the created tasks.
+        Creates a task with the given definition and returns a dictionary with the
+        details of the created tasks.
         Throws: An exception on failure
         :param task_name: name of the task
         :type task_name: `str`
@@ -467,7 +470,8 @@ class Messenger(rabbitmq.RabbitDualClient):
 
     def task_start(self, task_name: str, model: dict = None) -> None:
         """
-        As a task creator, start the given task and optionally send message including the given model to all task
+        As a task creator, start the given task and optionally send message
+        including the given model to all task
         participants. The status of the task will be changed to 'STARTED'.
         Throws: An exception on failure
         :param task_name: name of the task
@@ -481,7 +485,8 @@ class Messenger(rabbitmq.RabbitDualClient):
 
     def task_stop(self, task_name: str) -> None:
         """
-        As a task creator, stop the given task. The status of the task will be changed to 'COMPLETE'.
+        As a task creator, stop the given task.
+        The status of the task will be changed to 'COMPLETE'.
         Throws: An exception on failure
         :param task_name: name of the task
         :type task_name: `str`
@@ -502,7 +507,8 @@ class BasicParticipant():
         :type context: :class:`.Context`
         :param task_name: name of the task
         :type task_name: `str`
-        :param download_models: whether downloaded model file name or model url should be returned by receive function
+        :param download_models: whether downloaded model file name or model url
+                                should be returned by receive function
         :type download_models: `bool`
         """
         if not context:
@@ -554,8 +560,9 @@ class BasicParticipant():
 
     def _receive(self, timeout: int = 0, flavours: list = None) -> dict:
         """
-        Wait for a message to arrive or until timeout. If message is received, check whether its notification type
-        matches element in given list of flavours.
+        Wait for a message to arrive or until timeout.
+        If message is received, check whether its notification type matches
+        element in given list of notification flavours.
         Throws: An exception on failure
         :param timeout: timeout in seconds
         :type timeout: `int`
@@ -606,7 +613,8 @@ class User(BasicParticipant):
         """
         Register a new user on the platform.
         Throws: An exception on failure
-        :param user_name: user name (must be a non-empty string and unique; if a user with this name has registered
+        :param user_name: user name (must be a non-empty string and unique;
+                                     if a user with this name has registered
                                      before, an exception is thrown).
         :type user_name: `str`
         :param password: password (must be a non-empty string)
@@ -618,7 +626,8 @@ class User(BasicParticipant):
 
     def create_task(self, topology: Topology, definition: dict) -> dict:
         """
-        Creates a task with the given definition and returns a dictionary with the details of the created tasks.
+        Creates a task with the given definition and returns a dictionary
+        with the details of the created tasks.
         Throws: An exception on failure
         :param topology: topology of the task participants' communication network
         :type topology: `str`
@@ -658,7 +667,8 @@ class User(BasicParticipant):
 
 
 class Participant(BasicParticipant):
-    """ This class provides the functionality needed by the participants of a federated learning task.  """
+    """ This class provides the functionality needed by the
+        participants of a federated learning task.  """
 
     def __init__(self, context: Context, task_name: str = None,
                  download_models: bool = True):
@@ -669,7 +679,8 @@ class Participant(BasicParticipant):
         :type context: :class:`.Context`
         :param task_name: name of the task (the user needs to be a participant of this task).
         :type task_name: `str`
-        :param download_models: whether downloaded model file name or model url should be returned by receive function
+        :param download_models: whether downloaded model file name or model url should
+                                be returned by receive function
         :type download_models: `bool`
         """
         super().__init__(context, task_name, download_models)
@@ -714,7 +725,8 @@ class Participant(BasicParticipant):
 
 
 class Aggregator(BasicParticipant):
-    """ This class provides the functionality needed by the aggregator of a federated learning task. """
+    """ This class provides the functionality needed by the
+        aggregator of a federated learning task. """
 
     def __init__(self, context: Context, task_name: str = None,
                  download_models: bool = True):
@@ -725,7 +737,8 @@ class Aggregator(BasicParticipant):
         :type context: :class:`.Context`
         :param task_name: Name of the task (note: the user must be the creator of this task)
         :type task_name: `str`
-        :param download_models: Whether downloaded model file name or model url should be returned by receive function
+        :param download_models: Whether downloaded model file name or model url should
+                                be returned by receive function
         :type download_models: `bool`
         """
         super().__init__(context, task_name, download_models)
@@ -809,7 +822,8 @@ class Aggregator(BasicParticipant):
 
     def stop_task(self) -> None:
         """
-        As a task creator, stop the given task. The status of the task will be changed to 'COMPLETE'.
+        As a task creator, stop the given task.
+        The status of the task will be changed to 'COMPLETE'.
         Throws: An exception on failure
         """
         self.messenger.task_stop(self.task_name)
