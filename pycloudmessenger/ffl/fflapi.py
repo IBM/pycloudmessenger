@@ -38,7 +38,8 @@ logging.getLogger("pika").setLevel(logging.WARNING)
 
 
 class Topology(str, Enum):
-    '''FFL task topologies'''
+    """ Class representing FFL task topologies """
+
     star = "STAR"
 
     def __str__(self):
@@ -46,7 +47,8 @@ class Topology(str, Enum):
 
 
 class Notification(str, Enum):
-    '''Notifications that can be received'''
+    """ Notifications that can be received """
+
     aggregator_started = 'aggregator_started'
     aggregator_stopped = 'aggregator_stopped'
     participant_joined = 'participant_joined'
@@ -55,11 +57,15 @@ class Notification(str, Enum):
 
     @classmethod
     def is_notification(cls, msg: dict, notification) -> bool:
-        '''is_notification
-
-        check if msg is a particular notification
-        returns :True if yes, False otherwise
-        '''
+        """
+        Check if msg is a particular notification.
+        :param msg: message to be checked
+        :type msg: `dict`
+        :param notification: notification to be compared against
+        :type notification: `str`
+        :return: True if yes, False otherwise
+        :rtype: `bool`
+        """
         try:
             ntype = msg['notification']['type']
             return cls(ntype) is notification
@@ -71,42 +77,57 @@ class Notification(str, Enum):
 
     @classmethod
     def is_aggregator_started(cls, msg: dict) -> bool:
-        '''is_aggregator_started
-
-        returns: True, if msg is an aggregator started notification, False otherwise
-        '''
+        """
+        Check if msg is an 'aggregator_started' notification.
+        :param msg: message to be checked
+        :type msg: `dict`
+        :return: True if yes, False otherwise
+        :rtype: `bool`
+        """
         return cls.is_notification(msg, cls.aggregator_started)
 
     @classmethod
     def is_aggregator_stopped(cls, msg: dict) -> bool:
-        '''is_aggregator_stopped
-
-        returns: True, if msg is an aggregator stopped notification, False otherwise
-        '''
+        """
+        Check if msg is an 'aggregator_stopped' notification.
+        :param msg: message to be checked
+        :type msg: `dict`
+        :return: True if yes, False otherwise
+        :rtype: `bool`
+        """
         return cls.is_notification(msg, cls.aggregator_stopped)
 
     @classmethod
     def is_participant_joined(cls, msg: dict) -> bool:
-        '''is_participant_joined
-
-        returns: True, if msg is a participant joined notification, False otherwise
-        '''
+        """
+        Check if msg is a 'participant_joined' notification.
+        :param msg: message to be checked
+        :type msg: `dict`
+        :return: True if yes, False otherwise
+        :rtype: `bool`
+        """
         return cls.is_notification(msg, cls.participant_joined)
 
     @classmethod
     def is_participant_left(cls, msg: dict) -> bool:
-        '''is_participant_left
-
-        returns: True, if msg is a participant left notification, False otherwise
-        '''
+        """
+        Check if msg is a 'participant_left' notification.
+        :param msg: message to be checked
+        :type msg: `dict`
+        :return: True if yes, False otherwise
+        :rtype: `bool`
+        """
         return cls.is_notification(msg, cls.participant_left)
 
     @classmethod
     def is_participant_updated(cls, msg: dict) -> bool:
-        '''is_participant_updated
-
-        returns: True, if msg is a participant updated notification, False otherwise
-        '''
+        """
+        Check if msg is a 'participant_updated' notification.
+        :param msg: message to be checked
+        :type msg: `dict`
+        :return: True if yes, False otherwise
+        :rtype: `bool`
+        """
         return cls.is_notification(msg, cls.participant_updated)
 
     def __str__(self):
@@ -114,51 +135,82 @@ class Notification(str, Enum):
 
 
 class Context(rabbitmq.RabbitContext):
-    '''Holds connection details for an FFL service'''
+    """
+    Class holding connection details for an FFL service
+    """
+
 
 class TimedOutException(rabbitmq.RabbitTimedOutException):
-    '''Over-ride exception'''
+    """
+    Over-ride exception
+    """
+
 
 class ConsumerException(rabbitmq.RabbitConsumerException):
-    '''Over-ride exception'''
+    """
+    Over-ride exception
+    """
 
 
 class Messenger(rabbitmq.RabbitDualClient):
-    '''Communicates with an FFL service'''
+    """
+    Class for communicating with an FFL service
+    """
 
     def __init__(self, context: Context, publish_queue: str = None,
                  subscribe_queue: str = None, max_msg_size: int = 2*1024*1024):
-        '''Class initializer'''
+        """
+        Class initializer
+        :param context: connection details
+        :type context: :class:`.Context`
+        :param publish_queue: name of the publish queue
+        :type publish_queue: `str`
+        :param max_msg_size: maximum permissible message length
+        :type max_msg_size: `int`
+        """
         super(Messenger, self).__init__(context)
 
-        #Max size of a message for dispatch
+        # Max size of a message for dispatch
         self.max_msg_size = max_msg_size
 
-        #Keep a copy here - lots of re-use
+        # Keep a copy here - lots of re-use
         self.timeout = context.timeout()
 
         if not publish_queue:
-            #Publish not over-ridden so use context version
+            # Publish not over-ridden so use context version
             publish_queue = context.feeds()
 
         self.start_subscriber(queue=rabbitmq.RabbitQueue(subscribe_queue))
         self.start_publisher(queue=rabbitmq.RabbitQueue(publish_queue))
 
-        #Initialise the catalog with the target subscribe queue
+        # Initialise the catalog with the target subscribe queue
         self.catalog = catalog.MessageCatalog(context.user(), self.get_subscribe_queue())
 
     def __enter__(self):
+        """
+        Context manager enters.
+        Throws: An exception on failure
+        :return: self
+        :rtype: :class:`.Messenger`
+        """
         return self
 
     def __exit__(self, *args):
+        """
+        Context manager exits - call stop.
+        Throws: An exception on failure
+        """
         self.stop()
 
-    def _send(self, message: dict, queue: str = None) -> dict:
-        '''
-        Send a message and return immediately
+    def _send(self, message: dict, queue: str = None) -> None:
+        """
+        Send a message and return immediately.
         Throws: An exception on failure
-        Returns: dict
-        '''
+        :param message: message to be sent
+        :type message: `dict`
+        :param queue: name of the publish queue
+        :type queue: `str`
+        """
         message = serializer.Serializer.serialize(message)
         if len(message) > self.max_msg_size:
             raise BufferError(f"Messenger: payload too large: {len(message)}.")
@@ -167,11 +219,14 @@ class Messenger(rabbitmq.RabbitDualClient):
         super(Messenger, self).send_message(message, pub_queue)
 
     def receive(self, timeout: int = 0) -> dict:
-        '''
-        Wait for timeout seconds for a message to arrive
+        """
+        Wait for a message to arrive or until timeout.
         Throws: An exception on failure
-        Returns: dict
-        '''
+        :param timeout: timeout in seconds
+        :type timeout: `int`
+        :return: received message
+        :rtype: `dict`
+        """
         if not timeout:
             timeout = self.timeout
 
@@ -184,13 +239,16 @@ class Messenger(rabbitmq.RabbitDualClient):
         return serializer.Serializer.deserialize(self.last_recv_msg)
 
     def _invoke_service(self, message: dict, timeout: int = 0) -> dict:
-        '''
-        Send a message and wait for a reply
+        """
+        Send a message and wait for a reply or until timeout.
         Throws: An exception on failure
-        Returns: dict
-        '''
-
-        result = None
+        :param message: message to be sent
+        :type message: `dict`
+        :param timeout: timeout in seconds
+        :type timeout: `int`
+        :return: received message
+        :rtype: `dict`
+        """
         if not timeout:
             timeout = self.timeout
 
@@ -214,24 +272,26 @@ class Messenger(rabbitmq.RabbitDualClient):
         if 'calls' not in result:
             raise Exception(f"Malformed object: {result}")
 
-        results = result['calls'][0]['count'] #calls[0] will always succeed
+        results = result['calls'][0]['count']  # calls[0] will always succeed
         return result['calls'][0]['data'] if results else []
 
     def _dispatch_model(self, model: dict = None) -> dict:
-        '''
-        Dispatch a model and determine its download location
+        """
+        Dispatch a model and determine its download location.
         Throws: An exception on failure
-        Returns: dict
-        '''
-
+        :param model: model to be sent
+        :type model: `dict`
+        :return: download location information
+        :rtype: `dict`
+        """
         if not model:
             return {}
 
-        #First, obtain the upload location/keys
+        # First, obtain the upload location/keys
         message = self.catalog.msg_bin_uploader()
         upload_info = self._invoke_service(message)
 
-        #And then perform the upload
+        # And then perform the upload
         response = requests.post(
                         upload_info['url'],
                         files={'file': json.dumps(model)},
@@ -244,58 +304,69 @@ class Messenger(rabbitmq.RabbitDualClient):
         if 'key' not in upload_info['fields']:
             raise Exception('Malformed URL.')
 
-        #Now obtain the download location/keys
+        # Now obtain the download location/keys
         message = self.catalog.msg_bin_downloader(upload_info['fields']['key'])
         download_info = self._invoke_service(message)
         return {'url': download_info}
 
-    ######## Public methods
+    # Public methods
 
     def user_create(self, user_name: str, password: str, organisation: str) -> dict:
-        '''
-        Register as a new user on the platformr
+        """
+        Register a new user on the platform.
         Throws: An exception on failure
-        Returns: dict
-        '''
+        :param user_name: user name (must be a non-empty string and unique; if a user with this name has registered
+                                     before, an exception is thrown).
+        :type user_name: `str`
+        :param password: password (must be a non-empty string)
+        :type password: `str`
+        :param organisation: name of the user's organisation
+        :type organisation: `str`
+        """
         message = self.catalog.msg_user_create(user_name, password, organisation)
         return self._invoke_service(message)
 
-    def user_assignments(self) -> dict:
-        '''
-        Return all tasks joined by the current user
-        Throws: An exception on failure
-        Returns: dict
-        '''
+    def user_assignments(self) -> list:
+        """
+        Returns all the tasks the user is participating in.
+        :return: list of all the tasks, each of which is a dictionary
+        :rtype: `list`
+        """
         message = self.catalog.msg_user_assignments()
         return self._invoke_service(message)
 
     def task_assignment_info(self, task_name: str) -> dict:
-        '''
-        As a task participant, get my participation details
-        Throws: An exception on failure
-        Returns: dict
-        '''
+        """
+        Returns the details of the participant's task assignment.
+        :return: details of the task assignment
+        :rtype: `dict`
+        """
         message = self.catalog.msg_task_assignment_info(task_name)
         message = self._invoke_service(message)
         return message[0]
 
     def task_assignment_join(self, task_name: str) -> dict:
-        '''
-        As a potential task participant, try to join the task
+        """
+        As a potential task participant, try to join the task. This will fail if the task status isn't 'CREATED'.
         Throws: An exception on failure
-        Returns: dict
-        '''
+        :param task_name: name of the task to be joined
+        :type task_name: `str`
+        :return: details of the task assignment
+        :rtype: `dict`
+        """
         message = self.catalog.msg_task_join(task_name)
         message = self._invoke_service(message)
         return message[0]
 
     def task_assignment_update(self, task_name: str, model: dict = None) -> None:
-        '''
-        Sends an update, including a model dict, no reply wanted
+        """
+        Sends an update with the respect to the given task assignment.
         Throws: An exception on failure
-        Returns: Nothing
-        '''
-
+        :param task_name: name of the task
+        :type task_name: `str`
+        :param model: update to be sent
+        :type model: `dict`
+        """
         model_message = self._dispatch_model(model)
 
         message = self.catalog.msg_task_assignment_update(
@@ -303,106 +374,143 @@ class Messenger(rabbitmq.RabbitDualClient):
         self._send(message)
 
     def task_assignment_wait(self, timeout: int = 0) -> dict:
-        '''
-        Wait for a message, until timeout seconds
+        """
+        Wait for a message to arrive or until timeout.
         Throws: An exception on failure
-        Returns: dict
-        '''
+        :param timeout: timeout in seconds
+        :type timeout: `int`
+        :return: received message
+        :rtype: `dict`
+        """
         return self.receive(timeout)
 
-    def task_assignments(self, task_name: str) -> dict:
-        '''
-        Return all assignments for the owned task
+    def task_assignments(self, task_name: str) -> list:
+        """
+        Returns a list with all the assignments for the owned task.
         Throws: An exception on failure
-        Returns: dict
-        '''
+        :param task_name: name of the task
+        :type task_name: `str`
+        :return: list of all the participants assigned to the task
+        :rtype: `list`
+        """
         message = self.catalog.msg_task_assignments(task_name)
         return self._invoke_service(message)
 
     def task_listing(self) -> dict:
-        '''
-        Return a list of all tasks available
+        """
+        Returns a list with all the available tasks.
         Throws: An exception on failure
-        Returns: dict
-        '''
+        :return: list of all the available tasks
+        :rtype: `list`
+        """
         message = self.catalog.msg_task_listing()
         return self._invoke_service(message)
 
     def task_create(self, task_name: str, topology: str, definition: dict) -> dict:
-        '''
-        A new task created by the current user
+        """
+        Creates a task with the given definition and returns a dictionary with the details of the created tasks.
         Throws: An exception on failure
-        Returns: dict
-        '''
+        :param task_name: name of the task
+        :type task_name: `str`
+        :param topology: topology of the task participants' communication network
+        :type topology: `str`
+        :param definition: definition of the task to be created
+        :type definition: `dict`
+        :return: details of the created task
+        :rtype: `dict`
+        """
         message = self.catalog.msg_task_create(task_name, topology, definition)
         message = self._invoke_service(message)
         return message[0]
 
     def task_update(self, task_name: str, status: str, topology: str = None,
                     definition: dict = None) -> dict:
-        '''
-        Change task details
+        """
+        Updates a task with the given details.
         Throws: An exception on failure
-        Returns: dict
-        '''
+        :param task_name: name of the task
+        :type task_name: `str`
+        :param status: task status (must be either 'CREATED', 'STARTED', 'FAILED', 'COMPLETE')
+        :type status: `str`
+        :param topology: topology of the task participants' communication network
+        :type topology: `str`
+        :param definition: task definition
+        :type definition: `dict`
+        :return: details of the updated task
+        :rtype: `dict`
+        """
         message = self.catalog.msg_task_update(task_name, topology, definition, status)
         return self._invoke_service(message)
 
     def task_info(self, task_name: str) -> dict:
-        '''
-        Return info on a task
+        """
+        Returns the details of a given task.
         Throws: An exception on failure
-        Returns: dict
-        '''
+        :param task_name: name of the task
+        :type task_name: `str`
+        :return: details of the task
+        :rtype: `dict`
+        """
         message = self.catalog.msg_task_info(task_name)
         message = self._invoke_service(message)
         return message[0]
 
-    def task_quit(self, task_name: str) -> dict:
-        '''
-        As a task participant, leave the task
+    def task_quit(self, task_name: str) -> None:
+        """
+        As a task participant, leave the given task.
         Throws: An exception on failure
-        Returns: dict
-        '''
+        :param task_name: name of the task
+        :type task_name: `str`
+        """
         message = self.catalog.msg_task_quit(task_name)
         return self._invoke_service(message)
 
     def task_start(self, task_name: str, model: dict = None) -> None:
-        '''
-        As a task owner, start the task
+        """
+        As a task creator, start the given task and optionally send message including the given model to all task
+        participants. The status of the task will be changed to 'STARTED'.
         Throws: An exception on failure
-        Returns: Nothing
-        '''
+        :param task_name: name of the task
+        :type task_name: `str`
+        :param model: model to be sent as part of the message
+        :type model: `dict`
+        """
         model_message = self._dispatch_model(model)
         message = self.catalog.msg_task_start(task_name, model_message)
         self._send(message)
 
     def task_stop(self, task_name: str) -> None:
-        '''
-        As a task owner, stop the task
+        """
+        As a task creator, stop the given task. The status of the task will be changed to 'COMPLETE'.
         Throws: An exception on failure
-        Returns: dict
-        '''
+        :param task_name: name of the task
+        :type task_name: `str`
+        """
         message = self.catalog.msg_task_stop(task_name)
         self._send(message)
 
 
 class BasicParticipant():
-    '''Base class for an FFL user/participant'''
+    """ Base class for an FFL general user """
 
     def __init__(self, context: Context, task_name: str = None,
                  download_models: bool = True):
-        '''
-        Class initializer
+        """
+        Class initializer.
         Throws: An exception on failure
-        Returns: BasicParticipant
-        '''
+        :param context: connection details
+        :type context: :class:`.Context`
+        :param task_name: name of the task
+        :type task_name: `str`
+        :param download_models: whether downloaded model file name or model url should be returned by receive function
+        :type download_models: `bool`
+        """
         if not context:
             raise Exception('Credentials must be specified.')
 
         self.messenger = None
 
-        #List of messages/models downloaded
+        # List of messages/models downloaded
         self.model_files = []
 
         self.context = context
@@ -411,45 +519,51 @@ class BasicParticipant():
         self.download = download_models
 
     def __enter__(self):
-        '''
-        Context manager enters - call connect
+        """
+        Context manager enters - call connect.
         Throws: An exception on failure
-        Returns: self
-        '''
+        :return: self
+        :rtype: :class:`.BasicParticipant`
+        """
         return self.connect()
 
     def __exit__(self, *args):
-        '''
+        """
         Context manager exits - call close
         Throws: An exception on failure
-        Returns: Nothing
-        '''
+        """
         self.close()
 
     def connect(self):
-        '''
-        Connect to the messaging system
+        """
+        Connect to the messaging system.
         Throws: An exception on failure
-        Returns: self
-        '''
+        :return: self
+        :rtype: :class:`.BasicParticipant`
+        """
         self.messenger = Messenger(self.context, subscribe_queue=self.queue)
         return self
 
     def close(self) -> None:
-        '''
-        Close the connection to the messaging system
+        """
+        Close the connection to the messaging system.
         Throws: An exception on failure
-        Returns: Nothing
-        '''
+        """
         self.messenger.stop()
         self.messenger = None
 
     def _receive(self, timeout: int = 0, flavours: list = None) -> dict:
-        '''
-        Receive a message - checking the notification type
+        """
+        Wait for a message to arrive or until timeout. If message is received, check whether its notification type
+        matches element in given list of flavours.
         Throws: An exception on failure
-        Returns: dict - the message received
-        '''
+        :param timeout: timeout in seconds
+        :type timeout: `int`
+        :param flavours: expected notification types
+        :type flavours: `list`
+        :return: received message
+        :rtype: `dict`
+        """
         msg = self.messenger.receive(timeout)
 
         if 'notification' not in msg:
@@ -470,11 +584,14 @@ class BasicParticipant():
         return msg
 
     def get_model(self, model_info: dict) -> dict:
-        '''
-        Download a model if the message contains the correct details
+        """
+        Download a model if the given information contains the correct details.
         Throws: An exception on failure
-        Returns: dict
-        '''
+        :param model_info: information with details for downloading the model
+        :type model_info: `dict`
+        :return: updated information containing the name of the downloaded file
+        :rtype: `dict`
+        """
         if 'params' in model_info:
             if model_info['params'] and 'url' in model_info['params']:
                 self.model_files.append(utils.FileDownloader(model_info['params']['url']))
@@ -482,16 +599,79 @@ class BasicParticipant():
         return model_info
 
 
+class User(BasicParticipant):
+    """ Class that allows a general user to avail of the FFL platform services """
+
+    def create_user(self, user_name: str, password: str, organisation: str) -> dict:
+        """
+        Register a new user on the platform.
+        Throws: An exception on failure
+        :param user_name: user name (must be a non-empty string and unique; if a user with this name has registered
+                                     before, an exception is thrown).
+        :type user_name: `str`
+        :param password: password (must be a non-empty string)
+        :type password: `str`
+        :param organisation: name of the user's organisation
+        :type organisation: `str`
+        """
+        return self.messenger.user_create(user_name, password, organisation)
+
+    def create_task(self, topology: Topology, definition: dict) -> dict:
+        """
+        Creates a task with the given definition and returns a dictionary with the details of the created tasks.
+        Throws: An exception on failure
+        :param topology: topology of the task participants' communication network
+        :type topology: `str`
+        :param definition: definition of the task to be created
+        :type definition: `dict`
+        :return: details of the created task
+        :rtype: `dict`
+        """
+        return self.messenger.task_create(self.task_name, str(topology), definition)
+
+    def join_task(self) -> dict:
+        """
+        As a potential task participant, try to join an existing task that has yet to start.
+        Throws: An exception on failure
+        :return: details of the task assignment
+        :rtype: `dict`
+        """
+        return self.messenger.task_assignment_join(self.task_name)
+
+    def task_info(self) -> dict:
+        """
+        Returns the details of a given task.
+        Throws: An exception on failure
+        :return: details of the task
+        :rtype: `dict`
+        """
+        return self.messenger.task_info(self.task_name)
+
+    def get_tasks(self) -> list:
+        """
+        Returns a list with all the available tasks.
+        Throws: An exception on failure
+        :return: list of all the available tasks
+        :rtype: `list`
+        """
+        return self.messenger.task_listing()
+
+
 class Participant(BasicParticipant):
-    '''An FFL task participant'''
+    """ This class provides the functionality needed by the participants of a federated learning task.  """
 
     def __init__(self, context: Context, task_name: str = None,
                  download_models: bool = True):
-        '''
-        Class initializer
+        """
+        Class initializer.
         Throws: An exception on failure
-        Returns: Participant
-        '''
+        :param context: connection details
+        :type context: :class:`.Context`
+        :param task_name: name of the task (the user needs to be a participant of this task).
+        :type task_name: `str`
+        :param download_models: whether downloaded model file name or model url should be returned by receive function
+        :type download_models: `bool`
+        """
         super().__init__(context, task_name, download_models)
 
         messenger = Messenger(self.context)
@@ -504,47 +684,55 @@ class Participant(BasicParticipant):
         messenger.stop()
 
     def send(self, message: dict = None) -> None:
-        '''
-        Send a message, no reply expected
-        Throws: An exception on failure or timeout
-        Returns: dict
-        '''
+        """
+        Send a message to the aggregator and return immediately (not waiting for a reply).
+        Throws: An exception on failure
+        :param message: message to be sent (needs to be serializable into json string)
+        :type message: `dict`
+        """
         self.model_files.clear()
         self.messenger.task_assignment_update(self.task_name, message)
 
     def receive(self, timeout: int = 0) -> dict:
-        '''
-        Wait for a message, of a given Notification type
-        Throws: An exception on failure or timeout
-        Returns: dict
-        '''
+        """
+        Wait for a message to arrive or until timeout period is exceeded.
+        Throws: An exception on failure
+        :param timeout: timeout in seconds
+        :type timeout: `int`
+        :return: received message
+        :rtype: `dict`
+        """
         return self._receive(timeout, [Notification.aggregator_started,
                                        Notification.aggregator_stopped])
 
     def leave_task(self) -> None:
-        '''
-        Leave a previously joined task
-        Throws: An exception on failure or timeout
-        Returns: dict
-        '''
+        """
+        As a task participant, leave the given task.
+        Throws: An exception on failure
+        """
         return self.messenger.task_quit(self.task_name)
 
 
 class Aggregator(BasicParticipant):
-    '''An FFL task aggregator'''
+    """ This class provides the functionality needed by the aggregator of a federated learning task. """
 
     def __init__(self, context: Context, task_name: str = None,
                  download_models: bool = True):
-        '''
-        Class initializer
+        """
+        Class initializer.
         Throws: An exception on failure
-        Returns: Aggregator
-        '''
+        :param context: Connection details
+        :type context: :class:`.Context`
+        :param task_name: Name of the task (note: the user must be the creator of this task)
+        :type task_name: `str`
+        :param download_models: Whether downloaded model file name or model url should be returned by receive function
+        :type download_models: `bool`
+        """
         super().__init__(context, task_name, download_models)
 
         messenger = Messenger(self.context)
 
-        #Get the task info for subscribe queue etc
+        # Get the task info for subscribe queue etc
         result = messenger.task_info(self.task_name)
 
         if 'queue' not in result:
@@ -552,7 +740,7 @@ class Aggregator(BasicParticipant):
 
         self.queue = result['queue']
 
-        #Now get the list of already joined participants
+        # Now get the list of already joined participants
         self.participants = {}
 
         assignments = messenger.task_assignments(self.task_name)
@@ -560,24 +748,28 @@ class Aggregator(BasicParticipant):
             for ass in assignments:
                 self._add_participant(ass['participant'], ass)
 
-        #Ready now for steady state modelling
+        # Ready now for steady state modelling
         messenger.stop()
 
     def send(self, message: dict = None) -> None:
-        '''
-        Send a message, no reply expected
-        Throws: An exception on failure or timeout
-        Returns: dict
-        '''
+        """
+        Send a message to all task participants and return immediately (not waiting for a reply).
+        Throws: An exception on failure
+        :param message: message to be sent (needs to be serializable into json string)
+        :type message: `dict`
+        """
         self.model_files.clear()
         self.messenger.task_start(self.task_name, message)
 
     def receive(self, timeout: int = 0) -> dict:
-        '''
-        Wait for a message, of a given Notification type
-        Throws: An exception on failure or timeout
-        Returns: dict
-        '''
+        """
+        Wait for a message to arrive or until timeout period is exceeded.
+        Throws: An exception on failure
+        :param timeout: timeout in seconds
+        :type timeout: `int`
+        :return: received message
+        :rtype: `dict`
+        """
         msg = self._receive(timeout, [Notification.participant_joined,
                                       Notification.participant_updated,
                                       Notification.participant_left])
@@ -589,67 +781,35 @@ class Aggregator(BasicParticipant):
         return msg
 
     def _del_participant(self, participant) -> None:
+        """
+        Delete a given task participant from the list of participants.
+        Throws: An exception on failure
+        :param participant: participant to be deleted
+        :type participant: `str`
+        """
         del self.participants[participant]
 
     def _add_participant(self, participant, attributes: dict) -> None:
+        """
+        Add a given task participant to the list of participants.
+        Throws: An exception on failure
+        :param participant: participant to be added
+        :type participant: `str`
+        """
         self.participants.update({participant: attributes})
 
     def get_participants(self) -> dict:
-        '''
-        Return a list of task participants
-        Throws: An exception on failure or timeout
-        Returns: dict
-        '''
+        """
+        Return a list of participants.
+        Throws: An exception on failure
+        :return participant: list of participants
+        :rtype participant: `dict`
+        """
         return self.participants
 
     def stop_task(self) -> None:
-        '''
-        End a task for which the current user is the owner
-        Throws: An exception on failure or timeout
-        Returns: Nothing
-        '''
+        """
+        As a task creator, stop the given task. The status of the task will be changed to 'COMPLETE'.
+        Throws: An exception on failure
+        """
         self.messenger.task_stop(self.task_name)
-
-
-class User(BasicParticipant):
-    '''A generic FFL user'''
-
-    def create_user(self, user_name: str, password: str, organisation: str) -> dict:
-        '''
-        Register a new user on the platform
-        Throws: An exception on failure or timeout
-        Returns: dict
-        '''
-        return self.messenger.user_create(user_name, password, organisation)
-
-    def create_task(self, topology: Topology, definition: dict) -> dict:
-        '''
-        Create a new FFL task
-        Throws: An exception on failure or timeout
-        Returns: dict
-        '''
-        return self.messenger.task_create(self.task_name, str(topology), definition)
-
-    def join_task(self) -> dict:
-        '''
-        Join an existing task that has yet to start
-        Throws: An exception on failure or timeout
-        Returns: dict
-        '''
-        return self.messenger.task_assignment_join(self.task_name)
-
-    def task_info(self) -> dict:
-        '''
-        Return details on a given task
-        Throws: An exception on failure or timeout
-        Returns: dict
-        '''
-        return self.messenger.task_info(self.task_name)
-
-    def get_tasks(self) -> dict:
-        '''
-        Return a list of existing tasks
-        Throws: An exception on failure or timeout
-        Returns: dict
-        '''
-        return self.messenger.task_listing()
