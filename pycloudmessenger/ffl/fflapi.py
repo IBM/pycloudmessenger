@@ -267,7 +267,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         result = serializer.Serializer.deserialize(result)
 
         if 'error' in result:
-            raise Exception(result['error'])
+            raise Exception(f"Server Error ({result['activation']}): {result['error']}")
 
         if 'calls' not in result:
             raise Exception(f"Malformed object: {result}")
@@ -374,17 +374,6 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_task_assignment_update(
                         task_name, model=model_message)
         self._send(message)
-
-    def task_assignment_wait(self, timeout: int = 0) -> dict:
-        """
-        Wait for a message to arrive or until timeout.
-        Throws: An exception on failure
-        :param timeout: timeout in seconds
-        :type timeout: `int`
-        :return: received message
-        :rtype: `dict`
-        """
-        return self.receive(timeout)
 
     def task_assignments(self, task_name: str) -> list:
         """
@@ -757,9 +746,8 @@ class Aggregator(BasicParticipant):
         self.participants = {}
 
         assignments = messenger.task_assignments(self.task_name)
-        if assignments:
-            for ass in assignments:
-                self._add_participant(ass['participant'], ass)
+        for ass in assignments:
+            self._add_participant(ass['participant'], ass)
 
         # Ready now for steady state modelling
         messenger.stop()
