@@ -25,25 +25,19 @@ under the Horizon 2020 Program.
 
 
 class MessageCatalog():
-    def __init__(self, user_name: str, reply_to: str):
+    def __init__(self, user_name: str):
         self.correlation = 0
         self.user_name = user_name
 
-        if reply_to:
-            self.reply_to = {'replyTo': reply_to}
-        else:
-            self.reply_to = {}
-
-    def _requestor(self, want_reply: bool):
+    def _requestor(self):
         self.correlation += 1
-        req = self.reply_to if want_reply else {}
-        req.update({'correlationID': self.correlation})
+        req = {'correlationID': self.correlation}
         return req
 
-    def _msg_template(self, service_name: str = 'AccessManager', want_reply: bool = True):
+    def _msg_template(self, service_name: str = 'AccessManager'):
         message = {
             'serviceRequest': {
-                'requestor': self._requestor(want_reply),
+                'requestor': self._requestor(),
                 'service': {
                     'name': service_name,
                     'args': [
@@ -52,6 +46,11 @@ class MessageCatalog():
             }
         }
         return message, message['serviceRequest']['service']['args']
+
+    def msg_assign_reply(self, message: dict, reply_to: str = None) -> dict:
+        if reply_to:
+            message['serviceRequest']['requestor']['replyTo'] = reply_to
+        return message
 
     def msg_bin_uploader(self, object_name: str = None) -> dict:
         template, args = self._msg_template(service_name='BinService')
@@ -109,7 +108,7 @@ class MessageCatalog():
         return template
 
     def msg_task_start(self, task_name: str, model: dict = None) -> dict:
-        template, args = self._msg_template(want_reply=False)
+        template, args = self._msg_template()
         args.append({'cmd':'task_start', 'params': [task_name, self.user_name, model]})
         return template
 
@@ -119,7 +118,7 @@ class MessageCatalog():
         return template
 
     def msg_task_assignment_update(self, task_name: str, status: str = None, model: dict = None):
-        template, args = self._msg_template(want_reply=False)
+        template, args = self._msg_template()
         args.append({'cmd':'task_assignment_update', 'params': [task_name, self.user_name, status, model]})
         return template
 
