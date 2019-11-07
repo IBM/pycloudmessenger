@@ -47,8 +47,10 @@ class RabbitContext():
         if 'broker_timeout' not in self.args:
             self.args['broker_timeout'] = 60.0
 
-        self.args['broker_user'] = user if user else self.arg_value(self.args, ['broker_user', 'broker_guest_user', 'client_user'])
-        self.args['broker_password'] = password if password else self.arg_value(self.args, ['broker_password', 'broker_guest_password', 'client_pwd'])
+        self.args['broker_user'] = user if user else self.arg_value(self.args,
+                    ['broker_user', 'broker_guest_user', 'client_user'])
+        self.args['broker_password'] = password if password else self.arg_value(self.args,
+                    ['broker_password', 'broker_guest_password', 'client_pwd'])
 
         if 'broker_cert_b64' in self.args:
             self.cert_file = utils.Certificate(args['broker_cert_b64'])
@@ -308,7 +310,7 @@ class RabbitClient(AbstractRabbitMessenger):
             queue = self.pub_queue
         super(RabbitClient, self).publish(message, queue.name, exchange, mode)
 
-    def receive(self, handler=None, timeout: int = 30, max_messages: int = 0) -> str:
+    def receive(self, handler=None, timeout: int = 30, max_messages: int = 0, queue: RabbitQueue = None) -> str:
         """
             Start receiving messages, up to max_messages
 
@@ -321,10 +323,13 @@ class RabbitClient(AbstractRabbitMessenger):
         msgs = 0
         body = None
 
+        if not queue:
+            queue = self.sub_queue
+
         try:
             for msg in self.channel.consume(
-                    self.sub_queue.name,
-                    exclusive=self.sub_queue.exclusive,
+                    queue.name,
+                    exclusive=queue.exclusive,
                     inactivity_timeout=timeout):
 
                 method_frame, properties, body = msg
@@ -433,7 +438,7 @@ class RabbitDualClient():
         """
         self.last_recv_msg = message
 
-    def invoke_service(self, message, timeout: int = 30):
+    def invoke_service(self, message, timeout: int = 30, queue: RabbitQueue = None) -> str:
         """
             Publish a message and receive a reply
 
@@ -449,9 +454,15 @@ class RabbitDualClient():
 
         LOGGER.debug("Waiting for reply...")
         #Now wait for the reply
-        self.subscriber.receive(self.internal_handler, timeout, 1)
+        self.subscriber.receive(self.internal_handler, timeout, 1, queue)
         LOGGER.debug(f"Received: {self.last_recv_msg}")
         return self.last_recv_msg
+
+    def mktemp_queue(self) -> RabbitQueue:
+        #This allows for over-riding the class queue
+        queue = RabbitQueue()
+        self.subscriber.declare_queue(queue)
+        return queue
 
     def stop(self):
         """
