@@ -176,6 +176,9 @@ class Messenger(rabbitmq.RabbitDualClient):
         # Keep a copy here - lots of re-use
         self.timeout = context.timeout()
 
+        # Initialise the catalog
+        self.catalog = catalog.MessageCatalog(context.user())
+
         if not publish_queue:
             # Publish not over-ridden so use context version
             publish_queue = context.feeds()
@@ -183,8 +186,10 @@ class Messenger(rabbitmq.RabbitDualClient):
         self.start_subscriber(queue=rabbitmq.RabbitQueue(subscribe_queue))
         self.start_publisher(queue=rabbitmq.RabbitQueue(publish_queue))
 
-        # Initialise the catalog with the target subscribe queue
-        self.catalog = catalog.MessageCatalog(context.user(), self.get_subscribe_queue())
+        if subscribe_queue:
+            self.command_queue = super().mktemp_queue()
+        else:
+            self.command_queue = self.subscriber.sub_queue
 
     def __enter__(self):
         """
@@ -253,10 +258,13 @@ class Messenger(rabbitmq.RabbitDualClient):
             timeout = self.timeout
 
         try:
+            #Need a reply, so add this to the request message
+            message = self.catalog.msg_assign_reply(message, self.command_queue.name)
+
             message = serializer.Serializer.serialize(message)
             if len(message) > self.max_msg_size:
                 raise BufferError(f"Messenger: payload too large: {len(message)}.")
-            result = super(Messenger, self).invoke_service(message, timeout)
+            result = super(Messenger, self).invoke_service(message, timeout, queue=self.command_queue)
         except rabbitmq.RabbitTimedOutException as exc:
             raise TimedOutException(exc) from exc
         except rabbitmq.RabbitConsumerException as exc:
