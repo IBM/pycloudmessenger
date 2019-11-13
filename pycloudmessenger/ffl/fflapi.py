@@ -299,12 +299,12 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_bin_uploader()
         upload_info = self._invoke_service(message)
 
-        # And then perform the upload
-        response = requests.post(
-                        upload_info['url'],
-                        files={'file': json.dumps(model)},
-                        data=upload_info['fields'],
-                        headers=None)
+        with rabbitmq.RabbitHeartbeat(self.subscriber):
+            # And then perform the upload
+            response = requests.post(upload_info['url'],
+                                     files={'file': json.dumps(model)},
+                                     data=upload_info['fields'],
+                                     headers=None)
 
         if not response.ok:
             raise Exception(f'Upload Error: {response.status_code}')
