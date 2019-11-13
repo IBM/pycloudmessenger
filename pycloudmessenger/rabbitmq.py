@@ -481,7 +481,7 @@ class RabbitDualClient():
 class RabbitHeartbeat():
     def __init__(self, connection: RabbitClient):
         self.quit = None
-        self.thread = threading.Thread(target=self.heartbeat, args=(connection.connection))
+        self.thread = threading.Thread(target=self.heartbeat, args=(connection.connection,))
 
     def heartbeat(self, connection):
         while not self.quit.wait(1.0):

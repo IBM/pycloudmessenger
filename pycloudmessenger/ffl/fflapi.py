@@ -34,7 +34,7 @@ import pycloudmessenger.rabbitmq as rabbitmq
 import pycloudmessenger.serializer as serializer
 import pycloudmessenger.ffl.message_catalog as catalog
 
-logging.getLogger("pika").setLevel(logging.WARNING)
+logging.getLogger("pika").setLevel(logging.CRITICAL)
 
 
 class Topology(str, Enum):
