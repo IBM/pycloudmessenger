@@ -242,3 +242,254 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
         template, args = self._msg_template('WeatherService-TwoDayHourlyForecast-External')
         args.update({'apiKey': api_key, 'latitude': lat, 'longitude': lng})
         return template
+
+    def get_entity_types(self):
+        """
+        Get all entity types in Semantic Context store.
+        Parameters:
+            None
+        Returns:
+            (list): [
+                      {
+                        'name'        : (string) 'Entity Type name',
+                        'description' : (string) 'Entity Type description',
+                      }
+                      ...more...
+                    ]
+        """
+
+        template, args = self._msg_template()
+        args.update({'cmd':'context/get_entity_types'})
+        return template
+
+    def get_signal_types(self):
+        """
+        Get all signal types in Semantic Context store.
+        Parameters:
+            None
+        Returns:
+            (list): [
+                      {
+                        'name'        : (string) 'Signal Type name',
+                        'description' : (string) 'Signal Type description',
+                      }
+                      ...more...
+                    ]
+        """
+
+        template, args = self._msg_template()
+        args.update({'cmd':'context/get_signal_types'})
+        return template
+
+    def get_entities(self, entity_type=None):
+        """
+        Get all entities in Semantic Context store.
+        Optionally, only retrieve entities of a specified type.
+        Parameters:
+            entity_type (string): Optional entity type.
+        Returns:
+            (list): [
+                      {
+                        'name'        : (string) 'Entity name',
+                        'description' : (string) 'Entity description',
+                        'entity_type' : {
+                          'name'        : (string) 'Entity type name',
+                          'description' : (string) 'Entity type description'}
+                          },
+                        'geography' : {
+                          'geography_type' : (string) 'GIS_POINT',
+                          'latitude'       : (float) Entity latitude,
+                          'longitude'      : (float) Entity longitude
+                          }
+                      }
+                      ...more...
+                    ]
+        """
+        
+        template, args = self._msg_template()
+        if entity_type is None:
+           args.update({'cmd':'context/get_entities'})
+        else:
+           args.update({'cmd':'context/get_entities','entity_type_name':entity_type})
+        return template
+
+    def get_signals(self, signal_type=None):
+        """
+        Get all signals persisted in context store.
+        Optionally, only retrieve signals of a specified type.
+        Parameters:
+            signal_type (string): Optional signal type.
+        Returns:
+            (dict): {
+                      'signals: [
+                        {
+                          'name'        : (string) Signal name,
+                          'description' : (string) Signal description,
+                          'signal_type' : {
+                            'name'        : (string) Signal type name,
+                            'description' : (string) Signal type description,
+                            },
+                          'unit'        : (string) Signal unit of measurement
+                        }
+                      ]
+                    }
+        """   
+        template, args = self._msg_template()
+        if signal_type is None:
+           args.update({'cmd':'context/get_signals'})
+        else:
+           args.update({'cmd':'context/get_signals','signal_type_name':signal_type})
+        return template
+
+    def get_entities_connectivity(self, entity_names):
+        """
+        Get connectivity for a set of entity name(s).
+        Parameters:
+            entity_names (list of string): Entity name(s).
+        Returns:
+            (list): [
+                      [(string) 'Entity name A connected', (string) 'to entity name B'],
+                      [(string) 'Entity name A connected', (string) 'to entity name C'],
+                      ...more...
+                    ]
+        """
+        
+        template, args = self._msg_template()
+        args.update({'cmd':'context/get_connectivity','entity_names':entity_names})
+        return template
+
+    def get_timeseries_data(self, signal, entity,from_date, to_date, asof=None,asof_all=False):
+        """
+        Get timeseries values for a signal & entity, over a specified time range.
+        Parameters:
+            signal (string)  : Context signal name.
+            entity (string)  : Context entity name.
+            fromDate (string): Start of time range (inclusive); format: 'YYYY-MM-DDThh:mm:ss+00:00'
+            toDate (string)  : End of time range (inclusive); format: 'YYYY-MM-DDThh:mm:ss+00:00'
+            asof (string)    : Optional 'as of' dateime; format: 'YYYY-MM-DDThh:mm:ss+00:00'
+            asof_all (Boolean) : If False (default) only most recent forecasts for every timestamp are returned, otherwise all.
+        Returns:
+            (dict): {
+                      'fields' : [
+                        'observed_timestamp',
+                        'added_timestamp',
+                        'value',
+                        'adhoc'
+                      ],
+                      'values' : [
+                        [
+                          (string) '2019-02-01T13:00:00+00:00',
+                          (string) '2019-02-01T13:02:00+00:00',
+                          (float)  239.2,
+                          (string) 'SomeValueMetadata'
+                        ],
+                        ...more...
+                      ]
+                    }
+        """
+
+        template, args = self._msg_template()
+        args.update({'cmd':'get_timeseries_values', 
+                     'context': {
+                        'signal_name': signal,
+                        'entity_name': entity
+                     },
+                     'from': from_date, 
+                     'to': to_date})
+        if asof is not None:
+           args['asof'] = asof
+        if asof_all:
+           args['all'] = asof_all
+        return template
+   
+    def get_models(self, contexts):
+        """
+        Get CASTOR models, model versions for a given list of Semantic Context (entiyty_name, signal_name).
+        Parameters:
+            contexts (list of context dict): [{'entity_name': <ename1>, 'signal_name': <sname1>}, ... ]
+        Returns:
+            list: [ 
+                    { 
+                      'context': {ctx1},
+                      'models': [ 
+                         {
+                           'model': m1,
+                           'model_versions': [
+                              {'model_version': mv11, 'ts_id': tsv11},
+                              {'model_version': mv12, 'ts_id': tsv12},
+                              ...
+                           ]
+                         },
+                         {
+                           'model': m2,
+                           'model_versions': [
+                              {'model_version': mv21, 'ts_id': tsv21},
+                              {'model_version': mv22, 'ts_id': tsv22},
+                              ...
+                           ]
+                         },
+                         ...
+                       ]
+                    },
+                    {
+                      'context': {ctx2},
+                      'moedls': [...]
+                    },
+                    ...
+                  ]
+        """
+
+        template, args = self._msg_template()
+        args.update({'cmd':'get_models_hierarchy', 
+                     'context': contexts})
+        return template
+
+    def get_model_data(self, signal, entity, model_name, model_version=None, from_date=None, to_date=None, asof=None, asof_all=False):
+        """
+        Get forecast values for a given signal, entity, model name, and model version.
+        Parameters:
+            signal (string)        : Context signal name.
+            entity (string)        : Context entity name.
+            model_name (string)    : Model name.
+            model_version (integer): Model version ID.
+            fromDate (string)      : Start of time range (inclusive); format: 'YYYY-MM-DDThh:mm:ss+00:00'
+            toDate (string)        : End of time range (inclusive): format: 'YYYY-MM-DDTHH:mm:ss+00:00'
+            asof (string)          : Forecasts produced as of time (inclusive): format: 'YYYY-MM-DDTHH:mm:ss+00:00'
+            asof_all (Boolean)     : If False (default) only most recent forecasts for every timestamp are returned, otherwise all.
+        Returns:
+            (dict): {
+                      'fields' : [
+                        'observed_timestamp',
+                        'added_timestamp',
+                        'value',
+                        'adhoc'
+                      ],
+                      'values' : [
+                        [
+                          (string) '2019-02-01T12:00:00+00:00',
+                          (string) '2019-01-01T00:01:00+00:00',
+                          (float)  239.2,
+                          (string) 'SomeValueMetadata'
+                        ],
+                        ...more...
+                      ]
+                    }
+        """
+        
+        template, args = self._msg_template()
+        args.update({'cmd':'get_forecast_values', 
+                     'context': {
+                        'signal_name': signal,
+                        'entity_name': entity
+                     },
+                     'model_name':model_name,
+                     'from': from_date, 
+                     'to': to_date})
+        if model_version is not None:
+           args['model_version'] = model_version
+        if asof is not None:
+           args['asof'] = asof
+        if asof_all:
+           args['all'] = asof_all
+        return template
+
