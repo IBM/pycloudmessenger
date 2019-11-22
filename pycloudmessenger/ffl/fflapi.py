@@ -299,18 +299,21 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_bin_uploader()
         upload_info = self._invoke_service(message)
 
-        with rabbitmq.RabbitHeartbeat(self.subscriber):
-            # And then perform the upload
-            response = requests.post(upload_info['url'],
-                                     files={'file': json.dumps(model)},
-                                     data=upload_info['fields'],
-                                     headers=None)
-
-        if not response.ok:
-            raise Exception(f'Upload Error: {response.status_code}')
-
         if 'key' not in upload_info['fields']:
-            raise Exception('Malformed URL.')
+            raise Exception('Update Error: Malformed URL.')
+
+        try:
+            with rabbitmq.RabbitHeartbeat(self.subscriber):
+                # And then perform the upload
+                response = requests.post(upload_info['url'],
+                                         files={'file': json.dumps(model)},
+                                         data=upload_info['fields'],
+                                         headers=None)
+                response.raise_for_status()
+        except requests.exceptions.RequestException as err:
+            raise Exception(f'Update Error: {err.response.status_code}')
+        except:
+            raise Exception(f'General Update Error')
 
         # Now obtain the download location/keys
         message = self.catalog.msg_bin_downloader(upload_info['fields']['key'])
