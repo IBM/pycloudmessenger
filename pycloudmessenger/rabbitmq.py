@@ -22,10 +22,10 @@
 
 # pylint: disable=R0903, R0913
 
-import os
 import ssl
 import logging
 import json
+import threading
 from abc import ABC, abstractmethod
 import pika
 import pycloudmessenger.utils as utils
@@ -476,3 +476,22 @@ class RabbitDualClient():
         """
         self.subscriber.stop()
         self.publisher.stop()
+
+
+class RabbitHeartbeat():
+    def __init__(self, client: RabbitClient):
+        self.quit = None
+        self.thread = threading.Thread(target=self.heartbeat, args=(client.connection,))
+
+    def heartbeat(self, connection):
+        while not self.quit.wait(1.0):
+            connection.process_data_events()
+
+    def __enter__(self):
+        self.quit = threading.Event()
+        self.thread.start()
+        return self
+
+    def __exit__(self, *args):
+        self.quit.set()
+        self.thread.join()
