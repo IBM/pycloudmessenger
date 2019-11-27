@@ -57,10 +57,12 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
         if not publish_queue:
             publish_queue = context.feeds()
 
-        self.start_subscriber(queue=rabbitmq.RabbitQueue(subscribe_queue))
-        self.start_publisher(queue=rabbitmq.RabbitQueue(publish_queue))
+        self.publish_queue = publish_queue
+        self.subscribe_queue = subscribe_queue
 
     def __enter__(self):
+        self.start_subscriber(queue=rabbitmq.RabbitQueue(self.subscribe_queue))
+        self.start_publisher(queue=rabbitmq.RabbitQueue(self.publish_queue))
         return self
 
     def __exit__(self, *args):
@@ -98,6 +100,10 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
             Returns:
                 The requestor sub-info
         """
+
+        if not self.subscriber:
+            raise Exception(f"Subscriber not started, ensure a context manager is used")
+
         self.correlation += 1
         req = {'replyTo': self.get_subscribe_queue()}
         req.update({'correlationID': self.correlation,

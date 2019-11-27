@@ -49,7 +49,9 @@ def main():
     context = castorapi.CastorContext.from_credentials_file(cmdline.credentials, cmdline.broker_user, cmdline.broker_password)
 
     try:
-        with castorapi.CastorMessenger(context, cmdline.feed_queue, cmdline.reply_queue) as castor:
+        castor = castorapi.CastorMessenger(context, cmdline.feed_queue, cmdline.reply_queue)
+
+        with castor:
             #List the devices
             LOGGER.info("Requesting sensor ID listing...")
             message = castor.request_sensor_list()
@@ -57,6 +59,7 @@ def main():
             sensor = random.choice(reply['ts_ids'])
             LOGGER.info("\n\nSensor IDs: " + str(reply['ts_ids']) + "\n")
 
+        with castor:
             #Retrieve some time series
             LOGGER.info("Requesting time series for sensor ID '%s'...", sensor)
             message = castor.request_sensor_data(sensor, "2001-07-13T00:00:00+00:00", "2020-08-13T01:00:00+00:00")
@@ -64,6 +67,7 @@ def main():
             values = reply['count']
             LOGGER.info("Number of Time Series Values: %d", values)
 
+        with castor:
             if cmdline.register_model:
                 #Register external model
                 LOGGER.info("Registering model...")
