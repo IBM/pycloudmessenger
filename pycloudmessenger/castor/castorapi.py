@@ -247,6 +247,53 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
                      'entity': entity_name, 'signal': signal_name})
         return template
 
+    def deploy_model(self, model_name, entity_name, signal_name, model_description="",deployment={},environment="default"):
+        """
+        Deploy Python-based CASTOR model for automatic training and scoring
+        Parameters:
+            signal_name (string)           : Modelled signal name.
+            entity_name (string)           : Modelled entity name.
+            model_name (string)       : Model name.
+            deployment (dict): {
+                                          'task'            : (string) 'train',
+                                          'time'            : (string) Required initial training time: 'YYYY-MM-DDThh:mm:ss+00:00',
+                                          'repeatEvery'     : (string) Optional repeat training schedule: 'N_minutes | N_hours | N_days | N_weeks',
+                                          'until'           : (string) Optional final training time: 'YYYY-MM-DDThh:mm:ss+00:00',
+                                          'user_parameters' : {
+                                            'optional' : 'user',
+                                            'defined'  : 'parameters'
+                                            },
+                                          'scoring_deployment': {
+                                            'task'        : (string) 'score',
+                                            'time'        : (string) Default initial scoring time: 'YYYY-MM-DDThh:mm:ss+00:00',
+                                            'repeatEvery' : (string) Optional default repeat scoring schedule: 'N_minutes | N_hours | N_days | N_weeks',
+                                            'until'       : (string) Optional default final scoring time: 'YYYY-MM-DDThh:mm:ss+00:00'
+                                            }
+                                        }
+            environment (JSON string) : '{"type": "python_dist" or "python_dist_dl", "dist": {"name":"<distName>", "version":"<distVersion>", "module":"<distModule>"}}'
+            model_description (string): Optional model description.
+        Returns:
+            dict: {
+                    'model_id : (integer) Stored Python-based CASTOR model ID.
+                  }
+        """
+        context = {"entity_name": entity_name, "signal_name": signal_name}
+        model_json = {"name": model_name,
+                      "description": model_description,
+                      "model_data": {
+                         "environment": environment,
+                         "code": "NULL",
+                         "training_deployment": deployment
+                     }}
+
+        template, args = self._msg_template()
+        args.update({'cmd':'store_model', 
+                     'context': context,
+                     'model': model_json
+                    })
+        return template
+
+
     def request_model_time_series(self, model_name, entity_name, signal_name):
         """
             Format message for retrieving a models timeseries is
