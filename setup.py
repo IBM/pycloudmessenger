@@ -10,7 +10,8 @@ setup(
     packages=find_packages('.'),
     python_requires='>=3.6',
     install_requires=[
-        'pika==0.13.0'
+        'pika==0.13.0',
+        'requests'
     ],
     url='https://github.com/IBM/pycloudmessenger'
 )
