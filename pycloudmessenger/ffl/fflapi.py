@@ -283,7 +283,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         results = result['calls'][0]['count']  # calls[0] will always succeed
         return result['calls'][0]['data'] if results else []
 
-    def _dispatch_model(self, model: dict = None) -> dict:
+    def _dispatch_model(self, task_name: str = None, model: dict = None) -> dict:
         """
         Dispatch a model and determine its download location.
         Throws: An exception on failure
@@ -296,7 +296,11 @@ class Messenger(rabbitmq.RabbitDualClient):
             return {}
 
         # First, obtain the upload location/keys
-        message = self.catalog.msg_bin_uploader()
+        if task_name:
+            message = self.catalog.msg_bin_upload_object(task_name)
+        else:
+            message = self.catalog.msg_bin_uploader()
+
         upload_info = self._invoke_service(message)
 
         if 'key' not in upload_info['fields']:
@@ -316,9 +320,13 @@ class Messenger(rabbitmq.RabbitDualClient):
             raise Exception(f'General Update Error')
 
         # Now obtain the download location/keys
-        message = self.catalog.msg_bin_downloader(upload_info['fields']['key'])
+        if task_name:
+            message = self.catalog.msg_bin_download_object(upload_info['fields']['key'])
+        else:
+            message = self.catalog.msg_bin_downloader(upload_info['fields']['key'])
+
         download_info = self._invoke_service(message)
-        return {'url': download_info}
+        return {'url': download_info, 'key': upload_info['fields']['key']}
 
     # Public methods
 
@@ -380,7 +388,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         :param model: update to be sent
         :type model: `dict`
         """
-        model_message = self._dispatch_model(model)
+        model_message = self._dispatch_model(model=model)
 
         message = self.catalog.msg_task_assignment_update(
                         task_name, model=model_message)
@@ -479,11 +487,11 @@ class Messenger(rabbitmq.RabbitDualClient):
         :param model: model to be sent as part of the message
         :type model: `dict`
         """
-        model_message = self._dispatch_model(model)
+        model_message = self._dispatch_model(model=model)
         message = self.catalog.msg_task_start(task_name, model_message)
         self._send(message)
 
-    def task_stop(self, task_name: str) -> None:
+    def task_stop(self, task_name: str, model: dict = None) -> None:
         """
         As a task creator, stop the given task.
         The status of the task will be changed to 'COMPLETE'.
@@ -491,7 +499,8 @@ class Messenger(rabbitmq.RabbitDualClient):
         :param task_name: name of the task
         :type task_name: `str`
         """
-        message = self.catalog.msg_task_stop(task_name)
+        model_message = self._dispatch_model(task_name=task_name, model=model)
+        message = self.catalog.msg_task_stop(task_name, model_message)
         self._send(message)
 
 
@@ -819,10 +828,10 @@ class Aggregator(BasicParticipant):
         """
         return self.participants
 
-    def stop_task(self) -> None:
+    def stop_task(self, model: dict = None) -> None:
         """
         As a task creator, stop the given task.
         The status of the task will be changed to 'COMPLETE'.
         Throws: An exception on failure
         """
-        self.messenger.task_stop(self.task_name)
+        self.messenger.task_stop(self.task_name, model)
