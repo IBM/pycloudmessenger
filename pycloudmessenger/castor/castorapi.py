@@ -650,3 +650,42 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
            args['all'] = asof_all
         return template
 
+
+    def get_model_version_deployment(self, signal, entity, model_name, model_version):
+        """
+        Get CASTOR model deployment data.
+        Parameters:
+            signal (string)        : Context signal name.
+            entity (string)        : Context entity name.
+            model_name (string)    : Model name.
+            model_version (int)    : Trained model version
+        Returns:
+            dict: {
+                    'model' : {
+                      'model_id'    : (integer) Model ID,
+                      'version'  :  (integer) Model version ID,
+                      'model_version_data':{
+                         'train_time'        : (string) When model version was trained: 'YYYY-MM-DDThh:mm:ss+00:00',
+                         'scoring_deployment': {
+                            'task'            : (string) 'score',
+                            'time'            : (string) Initial scoring time: 'YYYY-MM-DDThh:mm:ss+00:00',
+                            'repeatEvery'     : (string) Optional repeat scoring schedule: 'N_minutes | N_hours | N_days | N_weeks',
+                            'until'           : (string) Optional final scoring time: 'YYYY-MM-DDThh:mm:ss+00:00',
+                            'user_parameters' : {
+                               'optional' : 'user',
+                               'defined'  : 'parameters'
+                            }
+                         }
+                      }
+            }
+           }
+        """
+        template, args = self._msg_template()
+        args.update({'cmd':'get_model_version',
+                     'context': {'signal_name':signal,'entity_name':entity},
+                     'model_name': model_name,
+                     'model_version': model_version,
+                     'core': True
+        })
+        return template
+
