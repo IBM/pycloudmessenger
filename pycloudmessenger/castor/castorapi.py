@@ -564,6 +564,43 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
                      'context': contexts})
         return template
 
+    def get_model_deployment(self, signal, entity, model_name):
+        """
+        Get CASTOR model deployment data.
+        Parameters:
+            signal (string)        : Context signal name.
+            entity (string)        : Context entity name.
+            model_name (string)    : Model name.
+        Returns:
+            dict: {
+                    'model' : {
+                      'model_id'    : (integer) Model ID,
+                      'name'        : (string) 'Model name',
+                      'description' : (string) 'Model description',
+                      'model_data' : {
+                        'environment'         : (string) 'Model environment',
+                        'code'                : (string) 'Model code in base64 format; used only for R-based models',
+                        'training_deployment' : {
+                          'task'            : (string) 'train',
+                          'time'            : (string) Initial training time: 'YYYY-MM-DDThh:mm:ss+00:00',
+                          'repeatEvery'     : (string) Optional repeat training schedule: 'N_minutes | N_hours | N_days | N_weeks',
+                          'until'           : (string) Optional final training time: 'YYYY-MM-DDThh:mm:ss+00:00',
+                          'user_parameters' : {
+                            'optional' : 'user',
+                            'defined'  : 'parameters'
+                            }
+                          }
+                        }
+                      }
+                  }
+        """
+        template, args = self._msg_template()
+        args.update({'cmd':'get_model',
+                     'context': {'signal_name':signal,'entity_name':entity},
+                     'model_name': model_name
+        })
+        return template
+
     def get_model_data(self, signal, entity, model_name, model_version=None, from_date=None, to_date=None, asof=None, asof_all=False):
         """
         Get forecast values for a given signal, entity, model name, and model version.
@@ -611,5 +648,44 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
            args['asof'] = asof
         if asof_all:
            args['all'] = asof_all
+        return template
+
+
+    def get_model_version_deployment(self, signal, entity, model_name, model_version):
+        """
+        Get CASTOR model deployment data.
+        Parameters:
+            signal (string)        : Context signal name.
+            entity (string)        : Context entity name.
+            model_name (string)    : Model name.
+            model_version (int)    : Trained model version
+        Returns:
+            dict: {
+                    'model' : {
+                      'model_id'    : (integer) Model ID,
+                      'version'  :  (integer) Model version ID,
+                      'model_version_data':{
+                         'train_time'        : (string) When model version was trained: 'YYYY-MM-DDThh:mm:ss+00:00',
+                         'scoring_deployment': {
+                            'task'            : (string) 'score',
+                            'time'            : (string) Initial scoring time: 'YYYY-MM-DDThh:mm:ss+00:00',
+                            'repeatEvery'     : (string) Optional repeat scoring schedule: 'N_minutes | N_hours | N_days | N_weeks',
+                            'until'           : (string) Optional final scoring time: 'YYYY-MM-DDThh:mm:ss+00:00',
+                            'user_parameters' : {
+                               'optional' : 'user',
+                               'defined'  : 'parameters'
+                            }
+                         }
+                      }
+            }
+           }
+        """
+        template, args = self._msg_template()
+        args.update({'cmd':'get_model_version',
+                     'context': {'signal_name':signal,'entity_name':entity},
+                     'model_name': model_name,
+                     'model_version': model_version,
+                     'core': True
+        })
         return template
 
