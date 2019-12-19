@@ -610,7 +610,7 @@ class BasicParticipant():
         """
         if 'params' in model_info:
             if model_info['params'] and 'url' in model_info['params']:
-                url = model_info['params']['url]
+                url = model_info['params']['url']
                 if url:
                     self.model_files.append(utils.FileDownloader(url))
                     model_info['params'].update({'model': self.model_files[-1].name()})
