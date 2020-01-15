@@ -65,7 +65,7 @@ def main():
             client.start(publish=rabbitmq.RabbitQueue(cmdline.feed_queue, purge=True), subscribe=rabbitmq.RabbitQueue(cmdline.reply_queue))
             message = {'action': 'Outbound', 'payload': 'some data'}
             LOGGER.info(f'sending {message}')
-            client.publish(json.dumps(message))
+            client.publish(json.dumps(message), delay=5)
 
             with rabbitmq.RabbitClient(context) as server:
                 server.start(subscribe=rabbitmq.RabbitQueue(cmdline.feed_queue))
