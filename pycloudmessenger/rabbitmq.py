@@ -428,7 +428,7 @@ class RabbitDualClient():
 
     def start_subscriber(self, queue: RabbitQueue, client=RabbitClient):
         """
-            Connect to Castor service and create a queue
+            Start the subscriber connection to the broker
 
             Throws:
                 An exception if connection attempt is not successful
@@ -445,7 +445,7 @@ class RabbitDualClient():
 
     def start_publisher(self, queue: RabbitQueue, client=RabbitClient):
         """
-            Connect to Castor service and create a queue
+            Start the publisher connection to the broker
 
             Throws:
                 An exception if connection attempt is not successful
@@ -458,7 +458,7 @@ class RabbitDualClient():
 
     def send_message(self, message, queue: RabbitQueue = None, delay: int = 0):
         """
-            Publish a message to Castor service
+            Publish a message, delaying delivery by 'delay' seconds
 
             Throws:
                 An exception if publish is not successful
@@ -470,7 +470,7 @@ class RabbitDualClient():
 
     def receive_message(self, handler, timeout: int, max_messages: int):
         """
-            Receive messages from Castor service
+            Receive messages
 
             Throws:
                 An exception if receive is not successful
@@ -504,7 +504,7 @@ class RabbitDualClient():
         """
         self.last_recv_msg = None
         LOGGER.debug(f"Sending message: {message}")
-        self.send_message(message, delay=5)
+        self.send_message(message)
 
         LOGGER.debug("Waiting for reply...")
         #Now wait for the reply
