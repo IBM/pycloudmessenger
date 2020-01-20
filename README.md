@@ -38,6 +38,16 @@ If the version of Python installed on your Linux machine is less than `3.5`, upd
 Follow [these instructions](https://www.python.org/downloads/) to download and install Python on Windows and Mac OS X. 
 
 
+## Examples and Testing
+
+Unit tests are contained in the tests directory and example code for basic messaging as well as ffl and castor are contained in the examples directory.
+
+To run the unit tests, a local RabbitMQ container is launched automatically. Settings and credentials to match the latest RabbitMQ docker image are also provided. To run the test:
+
+```
+creds=local.json make test 
+```
+
 ## References 
 
 * [IBM Research Blog](https://www.ibm.com/blogs/research/2018/11/forecasts-iot/)
