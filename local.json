@@ -1,0 +1,12 @@
+{
+	"broker_host": "localhost",
+	"broker_port": 5672,
+	"broker_admin_port": 15672,
+	"broker_vhost": "/",
+	"broker_request_queue": "feeds",
+	"broker_response_queue": "replies",
+	"broker_delayed_exchange": "delay",
+	"broker_user": "guest",
+	"broker_password": "guest",
+	"unused": ""
+}

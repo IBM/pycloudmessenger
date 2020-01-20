@@ -20,8 +20,6 @@
  */
 """
 
-# pylint: disable=R0903, R0913
-
 import ssl
 import logging
 import json
@@ -29,6 +27,8 @@ import threading
 from abc import ABC, abstractmethod
 import pika
 import pycloudmessenger.utils as utils
+
+# pylint: disable=R0903, R0913
 
 __rabbit_helper_version_info__ = ('0', '1', '2')
 LOGGER = logging.getLogger(__package__)
@@ -47,10 +47,10 @@ class RabbitContext():
         if 'broker_timeout' not in self.args:
             self.args['broker_timeout'] = 60.0
 
-        self.args['broker_user'] = user if user else self.arg_value(self.args,
-                    ['broker_user', 'broker_guest_user', 'client_user'])
-        self.args['broker_password'] = password if password else self.arg_value(self.args,
-                    ['broker_password', 'broker_guest_password', 'client_pwd'])
+        self.args['broker_user'] = user if user else self.arg_value(
+            self.args, ['broker_user', 'broker_guest_user', 'client_user'])
+        self.args['broker_password'] = password if password else self.arg_value(
+            self.args, ['broker_password', 'broker_guest_password', 'client_pwd'])
 
         if 'broker_cert_b64' in self.args:
             self.cert_file = utils.Certificate(args['broker_cert_b64'])
@@ -69,15 +69,33 @@ class RabbitContext():
     def __str__(self):
         return json.dumps(self.args)
 
-    def arg_value(self, args, possibilities):
-        for p in possibilities:
-            val = args.get(p)
+    def arg_value(self, args: dict, possibilities: list):
+        """
+            Determine if an argument is contained in a list
+
+            Throws:
+                An exception if is not present
+
+            Returns:
+                The argument value
+        """
+        for possible in possibilities:
+            val = args.get(possible)
             if val:
                 return val
         raise Exception(f'{possibilities} missing from arguments.')
 
     @classmethod
     def from_credentials_file(self, cred_file: str, user: str = None, password: str = None):
+        """
+            Construct a RabbitContext object from the arguments provided
+
+            Throws:
+                An exception if required arguments are absent
+
+            Returns:
+                The new RabbitContext object
+        """
         with open(cred_file) as creds:
             args = json.load(creds)
 
@@ -92,39 +110,47 @@ class RabbitContext():
 
         return RabbitContext(args, user, password)
 
-    def get(self, key: str):
-        try:
-            return self.args[key]
-        except:
-            return None
-
     def user(self):
-        return self.get('broker_user')
+        """ Return user, default to None"""
+        return self.args.get('broker_user', None)
     def pwd(self):
-        return self.get('broker_password')
+        """ Return password, default to None"""
+        return self.args.get('broker_password', None)
     def host(self):
-        return self.get('broker_host')
+        """ Return host, default to None"""
+        return self.args.get('broker_host', None)
     def port(self):
-        return self.get('broker_port')
+        """ Return port, default to None"""
+        return self.args.get('broker_port', None)
     def vhost(self):
-        return self.get('broker_vhost')
+        """ Return vhost, default to None"""
+        return self.args.get('broker_vhost', None)
     def cert(self):
-        return self.get('broker_pem_path')
+        """ Return cert, default to None"""
+        return self.args.get('broker_pem_path', None)
     def ssl(self):
-        return self.get('broker_tls')
+        """ Return ssl, default to None"""
+        return self.args.get('broker_tls', None)
     def feeds(self):
-        return self.get('broker_request_queue')
+        """ Return feed queue, default to None"""
+        return self.args.get('broker_request_queue', None)
     def replies(self):
-        return self.get('broker_response_queue')
+        """ Return reply queue, default to None"""
+        return self.args.get('broker_response_queue', None)
     def timeout(self):
-        return self.get('broker_timeout')
+        """ Return timeout, default to None"""
+        return self.args.get('broker_timeout', None)
+    def delayed_exchange(self):
+        """ Return delayed message exchange, default to None"""
+        return self.args.get('broker_delayed_exchange', None)
 
 
 class RabbitQueue():
     """
         Holds configuration details for a RabbitMQ Queue
     """
-    def __init__(self, queue: str = None, auto_delete: bool = False, durable: bool = False, purge: bool = False, prefetch: int = 1):
+    def __init__(self, queue: str = None, auto_delete: bool = False,
+                 durable: bool = False, purge: bool = False, prefetch: int = 1):
         self.durable = durable
         self.auto_delete = auto_delete
         self.purge = purge
@@ -226,7 +252,8 @@ class AbstractRabbitMessenger(ABC):
                         retry_delay=retry_delay)
         self.establish_connection(parameters)
 
-    def publish(self, message, queue: str, exchange: str = '', mode: int = 1):
+    def basic_publish(self, message, queue: str, exchange: str = None,
+                      mode: int = 1, delay: int = 0):
         """
             Publish a message to a queue
 
@@ -236,10 +263,14 @@ class AbstractRabbitMessenger(ABC):
             Returns:
                 None
         """
+        if not exchange:
+            exchange = ''
+
+        headers = {"x-delay": 1000 * delay} if delay else None
+
         self.channel.basic_publish(
             exchange=exchange, routing_key=queue, body=message,
-            properties=pika.BasicProperties(delivery_mode=mode)
-        )
+            properties=pika.BasicProperties(delivery_mode=mode, headers=headers))
         self.outbound += 1
 
     def stop(self):
@@ -259,30 +290,33 @@ class AbstractRabbitMessenger(ABC):
                 self.channel.close()
             if self.connection:
                 self.connection.close()
-        except:
+        except Exception:
             pass
 
     @abstractmethod
-    def receive(self, handler, timeout: int, max_messages: int):
-        pass
-
-    @abstractmethod
-    def start(self, publish: RabbitQueue = None, subscribe: RabbitQueue = None, connection_attempts: int = 10, retry_delay: int = 1):
-        pass
+    def start(self, publish: RabbitQueue = None, subscribe: RabbitQueue = None,
+              connection_attempts: int = 10, retry_delay: int = 1):
+        """
+            Start the client connection to the broker
+        """
 
 
 class RabbitTimedOutException(Exception):
-    pass
+    """ Exception for timeouts """
 
 class RabbitConsumerException(Exception):
-    pass
+    """ Exception for connection closed by broker """
 
 
 class RabbitClient(AbstractRabbitMessenger):
     """
         Communicates with a RabbitMQ service
     """
-    def start(self, publish: RabbitQueue = None, subscribe: RabbitQueue = None, connection_attempts: int = 10, retry_delay: int = 1):
+    def start(self, publish: RabbitQueue = None, subscribe: RabbitQueue = None,
+              connection_attempts: int = 10, retry_delay: int = 1):
+        """
+            Start the client connection to the broker
+        """
         if publish:
             self.pub_queue = publish
 
@@ -292,9 +326,13 @@ class RabbitClient(AbstractRabbitMessenger):
         self.connect(connection_attempts, retry_delay)
 
     def get_subscribe_queue(self):
+        """ Get the clients subscribe queue, default to None """
         return self.sub_queue.name if self.sub_queue else None
 
     def establish_connection(self, parameters: pika.ConnectionParameters):
+        """
+            Complete the connection request, declaring the publish queue
+        """
         super(RabbitClient, self).establish_connection(parameters)
 
         if self.pub_queue:
@@ -305,12 +343,27 @@ class RabbitClient(AbstractRabbitMessenger):
             #Ensure the consumer only gets 'prefetch' unacknowledged message
             self.channel.basic_qos(prefetch_count=self.sub_queue.prefetch)
 
-    def publish(self, message, queue: RabbitQueue = None, exchange: str = '', mode: int = 1):
+    def publish(self, message, queue: RabbitQueue = None, exchange: str = None,
+                mode: int = 1, delay: int = 0):
+        """
+            Publish a message to a queue
+
+            Throws:
+                Exception - maybe access rights are insufficient on the queue
+
+            Returns:
+                None
+        """
         if not queue:
             queue = self.pub_queue
-        super(RabbitClient, self).publish(message, queue.name, exchange, mode)
 
-    def receive(self, handler=None, timeout: int = 30, max_messages: int = 0, queue: RabbitQueue = None) -> str:
+        if not exchange:
+            exchange = self.context.delayed_exchange() if delay else None
+
+        super(RabbitClient, self).basic_publish(message, queue.name, exchange, mode, delay)
+
+    def receive(self, handler=None, timeout: int = 30, max_messages: int = 0,
+                queue: RabbitQueue = None) -> str:
         """
             Start receiving messages, up to max_messages
 
@@ -375,7 +428,7 @@ class RabbitDualClient():
 
     def start_subscriber(self, queue: RabbitQueue, client=RabbitClient):
         """
-            Connect to Castor service and create a queue
+            Start the subscriber connection to the broker
 
             Throws:
                 An exception if connection attempt is not successful
@@ -387,11 +440,12 @@ class RabbitDualClient():
         self.subscriber.start(subscribe=queue)
 
     def get_subscribe_queue(self):
+        """ Get the clients subscribe queue, default to None """
         return self.subscriber.get_subscribe_queue()
 
     def start_publisher(self, queue: RabbitQueue, client=RabbitClient):
         """
-            Connect to Castor service and create a queue
+            Start the publisher connection to the broker
 
             Throws:
                 An exception if connection attempt is not successful
@@ -402,9 +456,9 @@ class RabbitDualClient():
         self.publisher = client(self.context)
         self.publisher.start(publish=queue)
 
-    def send_message(self, message, queue: RabbitQueue = None):
+    def send_message(self, message, queue: RabbitQueue = None, delay: int = 0):
         """
-            Publish a message to Castor service
+            Publish a message, delaying delivery by 'delay' seconds
 
             Throws:
                 An exception if publish is not successful
@@ -412,11 +466,11 @@ class RabbitDualClient():
             Returns:
                 Nothing
         """
-        self.publisher.publish(message, queue)
+        self.publisher.publish(message, queue, delay=delay)
 
     def receive_message(self, handler, timeout: int, max_messages: int):
         """
-            Receive messages from Castor service
+            Receive messages
 
             Throws:
                 An exception if receive is not successful
@@ -459,6 +513,7 @@ class RabbitDualClient():
         return self.last_recv_msg
 
     def mktemp_queue(self) -> RabbitQueue:
+        """ Create a temporary, broker defined queue """
         #This allows for over-riding the class queue
         queue = RabbitQueue()
         self.subscriber.declare_queue(queue)
@@ -479,11 +534,15 @@ class RabbitDualClient():
 
 
 class RabbitHeartbeat():
+    """
+        Thread to keep the broker connection alive
+    """
     def __init__(self, client: RabbitClient):
         self.quit = None
         self.thread = threading.Thread(target=self.heartbeat, args=(client.connection,))
 
     def heartbeat(self, connection):
+        """ Thread that periodically processes pika events """
         while not self.quit.wait(1.0):
             connection.process_data_events()
 

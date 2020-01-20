@@ -51,8 +51,6 @@ class ServerMessageHandler():
 def main():
     parser = argparse.ArgumentParser(description='Messaging Client')
     parser.add_argument('--credentials', required=True)
-    parser.add_argument('--feed_queue', required=True)
-    parser.add_argument('--reply_queue', required=True)
     parser.add_argument('--broker_user', help='Defaults to credentials file')
     parser.add_argument('--broker_password', help='Defaults to credentials file')
     cmdline = parser.parse_args()
@@ -62,20 +60,20 @@ def main():
 
     try:
         with rabbitmq.RabbitClient(context) as client:
-            client.start(publish=rabbitmq.RabbitQueue(cmdline.feed_queue, purge=True), subscribe=rabbitmq.RabbitQueue(cmdline.reply_queue))
+            client.start(publish=rabbitmq.RabbitQueue(context.feeds(), purge=True), subscribe=rabbitmq.RabbitQueue(context.replies()))
             message = {'action': 'Outbound', 'payload': 'some data'}
             LOGGER.info(f'sending {message}')
             client.publish(json.dumps(message))
 
             with rabbitmq.RabbitClient(context) as server:
-                server.start(subscribe=rabbitmq.RabbitQueue(cmdline.feed_queue))
+                server.start(subscribe=rabbitmq.RabbitQueue(context.feeds()))
 
                 mh = ServerMessageHandler()
                 server.receive(mh.handler, max_messages=1)
 
                 #And send a reply to the client
                 reply = {'action': 'Inbound', 'reply': 'the reply'}
-                server.publish(json.dumps(reply), rabbitmq.RabbitQueue(cmdline.reply_queue))
+                server.publish(json.dumps(reply), rabbitmq.RabbitQueue(context.replies()))
 
             #Now catch the reply in the client
             message = client.receive()
