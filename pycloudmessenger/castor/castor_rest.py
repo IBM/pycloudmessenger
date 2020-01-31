@@ -94,7 +94,7 @@ class CastorREST(api.CastorABC):
         url = self.args.get(service)
 
         try:
-            result = self.session.post(url, proxies=self.proxies, json=message, verify=False)
+            result = self.session.post(url, proxies=self.proxies, json=message)
             result.raise_for_status()
         except Exception as exc:
             return self.exception_handler(exc)
