@@ -51,7 +51,7 @@ class CastorMessenger(rabbitmq.RabbitDualClient, api.CastorABC):
         """
             Class initializer
         """
-        super(CastorMessenger, self).__init__()
+        super(CastorMessenger, self).__init__(context)
 
         if not publish_queue:
             publish_queue = context.feeds()
