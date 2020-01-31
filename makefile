@@ -18,6 +18,10 @@ basic: depend
 castor: depend
 	@test -f $(creds) && python3 -m examples.castor.sample_client --credentials=$(creds) || echo "No certificate"
 
+rest:
+	@test -f $(creds) && python3 -m examples.castor.sample_rest --credentials=$(creds) || echo "No certificate"
+	#@test -f $(creds) && python3 -m examples.castor.sample_rest --credentials=$(creds) --proxies=$(proxies) || echo "No certificate"
+
 ffl: depend
 	@test -f $(creds) && python3 -m examples.ffl.sample --credentials=$(creds) || echo "No certificate"
 
