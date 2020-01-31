@@ -35,6 +35,9 @@ import pycloudmessenger.castor.api_abc as api
 #requests_log.setLevel(logging.DEBUG)
 #requests_log.propagate = True
 
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 
 class CastorREST(api.CastorABC):
     def __init__(self, cred_file = None, proxies = None):
@@ -94,7 +97,7 @@ class CastorREST(api.CastorABC):
         url = self.args.get(service)
 
         try:
-            result = self.session.post(url, proxies=self.proxies, json=message)
+            result = self.session.post(url, proxies=self.proxies, json=message, verify=False)
             result.raise_for_status()
         except Exception as exc:
             return self.exception_handler(exc)
