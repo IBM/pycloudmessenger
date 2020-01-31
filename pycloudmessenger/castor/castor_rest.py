@@ -25,7 +25,6 @@ import requests
 import logging
 from http.client import HTTPConnection
 import pycloudmessenger.castor.api_abc as api
-import pycloudmessenger.serializer as serializer
 
 #logging.basicConfig(level=logging.DEBUG)
 #HTTPConnection.debuglevel = 1
