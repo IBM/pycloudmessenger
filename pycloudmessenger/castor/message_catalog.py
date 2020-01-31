@@ -26,7 +26,7 @@ import uuid
 
 
 class MessageCatalog():
-    def __init__(self, reply_to: str):
+    def __init__(self, reply_to: str = None):
         self.correlation = 0
         self.reply_to = reply_to
         self.client_id = str(uuid.uuid4())

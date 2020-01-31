@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #author mark_purcell@ie.ibm.com
 
-"""Castor message formmatter and protocol handler.
+"""Castor protocol handler.
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -51,7 +51,7 @@ class CastorMessenger(rabbitmq.RabbitDualClient, api.CastorABC):
         """
             Class initializer
         """
-        super(CastorMessenger, self).__init__(context)
+        super(CastorMessenger, self).__init__()
 
         if not publish_queue:
             publish_queue = context.feeds()

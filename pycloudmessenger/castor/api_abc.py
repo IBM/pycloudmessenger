@@ -24,8 +24,8 @@ import pycloudmessenger.castor.message_catalog as catalog
 
 
 class CastorABC(ABC):
-    def __init__(self, context, publish_queue: str = None, subscribe_queue: str = None):
-        self.catalog = None
+    def __init__(self):
+        self.catalog = catalog.MessageCatalog()
 
     @abstractmethod
     def invoke_service(self, message, timeout=60):
