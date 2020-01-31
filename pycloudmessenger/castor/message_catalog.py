@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #author mark_purcell@ie.ibm.com
 
-"""Castor message formmatter and protocol handler.
+"""Castor message formmatter.
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -20,76 +20,57 @@
  */
 """
 
+import uuid
+
 # pylint: disable=R0903, R0913
 
-import logging
-import pycloudmessenger.rabbitmq as rabbitmq
-import pycloudmessenger.serializer as serializer
-import pycloudmessenger.castor.message_catalog as catalog
 
-logging.getLogger("pika").setLevel(logging.WARNING)
+class MessageCatalog():
+    def __init__(self, reply_to: str):
+        self.correlation = 0
+        self.reply_to = reply_to
+        self.client_id = str(uuid.uuid4())
 
-
-class CastorContext(rabbitmq.RabbitContext):
-    """
-        Holds connection details for a Castor service
-    """
-
-class TimedOutException(rabbitmq.RabbitTimedOutException):
-    '''Over-ride exception'''
-
-class ConsumerException(rabbitmq.RabbitConsumerException):
-    '''Over-ride exception'''
-
-
-class CastorMessenger(rabbitmq.RabbitDualClient):
-    """
-        Communicates with a Castor service
-    """
-    def __init__(self, context, publish_queue: str = None, subscribe_queue: str = None):
+    def _msg_template(self, service_name: str = 'TimeseriesService'):
         """
-            Class initializer
+            Format message template - internal only
+
+            Throws:
+                Nothing
+
+            Returns:
+                The requestor sub-info
         """
-        super(CastorMessenger, self).__init__(context)
-        self.catalog = None
+        message = {
+            'serviceRequest': {
+                'requestor': self._requestor(),
+                'service': {
+                    'name': service_name,
+                    'args': {
+                    }
+                }
+            }
+        }
+        return message, message['serviceRequest']['service']['args']
 
-        if not publish_queue:
-            publish_queue = context.feeds()
+    def _requestor(self):
+        """
+            Format message for requestor information - internal only
 
-        self.publish_queue = publish_queue
-        self.subscribe_queue = subscribe_queue
+            Throws:
+                Nothing
 
-    def __enter__(self):
-        self.start_subscriber(queue=rabbitmq.RabbitQueue(self.subscribe_queue))
-        self.start_publisher(queue=rabbitmq.RabbitQueue(self.publish_queue))
-        self.catalog = catalog.MessageCatalog(self.get_subscribe_queue())
-        return self
+            Returns:
+                The requestor sub-info
+        """
 
-    def __exit__(self, *args):
-        self.stop()
-        self.catalog = None
+        self.correlation += 1
+        req = {'correlationID': self.correlation}
 
-    def invoke_service(self, message, timeout=60):
-        try:
-            message = serializer.Serializer.serialize(message)
-            result = super(CastorMessenger, self).invoke_service(message, timeout)
-        except rabbitmq.RabbitTimedOutException as exc:
-            raise TimedOutException(exc) from exc
-        except rabbitmq.RabbitConsumerException as exc:
-            raise ConsumerException(exc) from exc
-
-        if not result:
-            raise Exception(f"Malformed object: None")
-        result = serializer.Serializer.deserialize(result)
-
-        if 'status' not in result['serviceResponse']['service']:
-            raise Exception(f"Malformed object: {result}")
-        status = result['serviceResponse']['service']['status']
-        if status != 200:
-            msg = f"({status}): {result['serviceResponse']['service']['result']}"
-            raise Exception(msg)
-
-        return result['serviceResponse']['service']['result']
+        if self.reply_to:
+            req.update({'replyTo': self.reply_to,
+                        'clientID': self.client_id, 'transient': True})
+        return req
 
     def request_sensor_data(self, meter, from_date, to_date):
         """
@@ -101,7 +82,10 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
             Returns:
                 Dict - The message to send
         """
-        return self.catalog.request_sensor_data(meter, from_date, to_date)
+        template, args = self._msg_template()
+        args.update({'cmd':'ts/get_timeseries_values', 'device_id': meter,
+                     'from': from_date, 'to': to_date})
+        return template
 
     def request_sensor_data_batch(self, meter_ids, from_date, to_date, asof=None, asof_all=False):
         """
@@ -135,7 +119,15 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
                       ]
                     }
         """
-        return self.catalog.request_sensor_data_batch(meter_ids, from_date, to_date, asof, asof_all)
+        template, args = self._msg_template()
+        args.update({'cmd':'ts/get_timeseries_values_batch', 
+                     'ts_ids': meter_ids,
+                     'from': from_date, 'to': to_date})
+        if asof is not None:
+           args.update({'asof': asof})
+        if asof_all:
+           args.update({'all': asof_all})
+        return template
 
     def request_sensor_list(self):
         """
@@ -147,7 +139,9 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
             Returns:
                 Dict - The message to send
         """
-        return self.catalog.request_sensor_list()
+        template, args = self._msg_template()
+        args.update({'cmd':'ts/get_time_series'})
+        return template
 
     def store_time_series(self, values):
         """
@@ -159,7 +153,9 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
             Returns:
                 Dict - The message to send
         """
-        return self.catalog.store_time_series(values)
+        template, args = self._msg_template()
+        args.update({'cmd':'ts/store_timeseries_values', 'values': values})
+        return template
 
     def average_time_series(self, meter, from_date, to_date):
         """
@@ -171,7 +167,10 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
             Returns:
                 Dict - The message to send
         """
-        return self.catalog.average_time_series(meter, from_date, to_date)
+        template, args = self._msg_template()
+        args.update({'cmd':'ts/average_timeseries_values', 'device_id': meter,
+                     'from': from_date, 'to': to_date})
+        return template
 
     def register_model(self, model_name, entity_name, signal_name):
         """
@@ -183,7 +182,10 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
             Returns:
                 Dict - The message to send
         """
-        return self.catalog.register_model(model_name, entity_name, signal_name)
+        template, args = self._msg_template()
+        args.update({'cmd':'register_model', 'model_name': model_name,
+                     'entity': entity_name, 'signal': signal_name})
+        return template
 
     def deploy_model(self, model_name, entity_name, signal_name, model_description="",deployment={},environment="default"):
         """
@@ -215,7 +217,21 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
                     'model_id : (integer) Stored Python-based CASTOR model ID.
                   }
         """
-        return self.catalog.deploy_model(model_name, entity_name, signal_name, model_description, deployment, environment)
+        context = {"entity_name": entity_name, "signal_name": signal_name}
+        model_json = {"name": model_name,
+                      "description": model_description,
+                      "model_data": {
+                         "environment": environment,
+                         "code": "NULL",
+                         "training_deployment": deployment
+                     }}
+
+        template, args = self._msg_template()
+        args.update({'cmd':'store_model', 
+                     'context': context,
+                     'model': model_json
+                    })
+        return template
 
 
     def request_model_time_series(self, model_name, entity_name, signal_name):
@@ -228,7 +244,11 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
             Returns:
                 Dict - The message to send
         """
-        return self.catalog.request_model_time_series(model_name, entity_name, signal_name)
+        template, args = self._msg_template()
+        args.update({'cmd':'get_model_time_series',
+                     'model_name': model_name, 'entity': entity_name,
+                     'signal': signal_name})
+        return template
 
     def key_value_service(self, cmd, keys):
         """
@@ -240,7 +260,9 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
             Returns:
                 Dict - The message to send
         """
-        return self.catalog.key_value_service(cmd, keys)
+        template, args = self._msg_template('KeyValueService')
+        args.update({'cmd': cmd, 'keys': keys})
+        return template
 
     def weather_service_hourly(self, api_key, lat, lng):
         """
@@ -252,7 +274,9 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
             Returns:
                 Dict - The message to send
         """
-        return self.catalog.weather_service_hourly(api_key, lat, lng)
+        template, args = self._msg_template('WeatherService-TwoDayHourlyForecast-External')
+        args.update({'apiKey': api_key, 'latitude': lat, 'longitude': lng})
+        return template
 
     def get_entity_types(self):
         """
@@ -268,7 +292,10 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
                       ...more...
                     ]
         """
-        return self.catalog.get_entity_types()
+
+        template, args = self._msg_template()
+        args.update({'cmd':'context/get_entity_types'})
+        return template
 
     def get_signal_types(self):
         """
@@ -284,8 +311,10 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
                       ...more...
                     ]
         """
-        return self.catalog.get_signal_types()
 
+        template, args = self._msg_template()
+        args.update({'cmd':'context/get_signal_types'})
+        return template
 
     def get_entities(self, entity_type=None):
         """
@@ -311,7 +340,13 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
                       ...more...
                     ]
         """
-        return self.catalog.get_entities(entity_type)
+        
+        template, args = self._msg_template()
+        if entity_type is None:
+           args.update({'cmd':'context/get_entities'})
+        else:
+           args.update({'cmd':'context/get_entities','entity_type_name':entity_type})
+        return template
 
     def get_signals(self, signal_type=None):
         """
@@ -334,7 +369,12 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
                       ]
                     }
         """   
-        return self.catalog.get_signals(signal_type)
+        template, args = self._msg_template()
+        if signal_type is None:
+           args.update({'cmd':'context/get_signals'})
+        else:
+           args.update({'cmd':'context/get_signals','signal_type_name':signal_type})
+        return template
 
     def get_entities_connectivity(self, entity_names):
         """
@@ -348,8 +388,10 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
                       ...more...
                     ]
         """
-        return self.catalog.get_entities_connectivity(entity_names)
         
+        template, args = self._msg_template()
+        args.update({'cmd':'context/get_connectivity','entity_names':entity_names})
+        return template
 
     def get_timeseries_id(self, contexts):
         """
@@ -359,7 +401,9 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
         Returns:
             A list: [{'context':{'entity_name':<val>,'signal_name':<val>,'ts_id':<val>},...]
         """
-        return self.catalog.get_timeseries_id(contexts)
+        template, args = self._msg_template()
+        args.update({'cmd':'get_timeseries','context':contexts})
+        return template
 
     def get_timeseries_context(self, ts_ids):
         """
@@ -369,7 +413,9 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
         Returns:
             output (list): [{'ts_id':'ts_id1','context':{'entity_name':<val>,'signal_name':<val>},...]
         """
-        return self.catalog.get_timeseries_context(ts_ids)
+        template, args = self._msg_template()
+        args.update({'cmd':'get_timeseries_context','ts_ids':ts_ids})
+        return template
 
 
     def get_timeseries_data(self, signal, entity,from_date, to_date, asof=None,asof_all=False):
@@ -401,8 +447,21 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
                       ]
                     }
         """
-        return self.catalog.get_timeseries_data(signal, entity,from_date, to_date, asof, asof_all)
 
+        template, args = self._msg_template()
+        args.update({'cmd':'get_timeseries_values', 
+                     'context': {
+                        'signal_name': signal,
+                        'entity_name': entity
+                     },
+                     'from': from_date, 
+                     'to': to_date})
+        if asof is not None:
+           args['asof'] = asof
+        if asof_all:
+           args['all'] = asof_all
+        return template
+   
     def get_models(self, contexts):
         """
         Get CASTOR models, model versions for a given list of Semantic Context (entiyty_name, signal_name).
@@ -439,8 +498,11 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
                     ...
                   ]
         """
-        return self.catalog.get_models(contexts)
 
+        template, args = self._msg_template()
+        args.update({'cmd':'get_models_hierarchy', 
+                     'context': contexts})
+        return template
 
     def get_model_deployment(self, signal, entity, model_name):
         """
@@ -472,7 +534,12 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
                       }
                   }
         """
-        return self.catalog.get_model_deployment(signal, entity, model_name)
+        template, args = self._msg_template()
+        args.update({'cmd':'get_model',
+                     'context': {'signal_name':signal,'entity_name':entity},
+                     'model_name': model_name
+        })
+        return template
 
     def get_model_data(self, signal, entity, model_name, model_version=None, from_date=None, to_date=None, asof=None, asof_all=False):
         """
@@ -505,8 +572,24 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
                       ]
                     }
         """
-        return self.catalog.get_model_data(signal, entity, model_name, model_version, from_date, to_date, asof, asof_all)
         
+        template, args = self._msg_template()
+        args.update({'cmd':'get_forecast_values', 
+                     'context': {
+                        'signal_name': signal,
+                        'entity_name': entity
+                     },
+                     'model_name':model_name,
+                     'from': from_date, 
+                     'to': to_date})
+        if model_version is not None:
+           args['model_version'] = model_version
+        if asof is not None:
+           args['asof'] = asof
+        if asof_all:
+           args['all'] = asof_all
+        return template
+
 
     def get_model_version_deployment(self, signal, entity, model_name, model_version):
         """
@@ -537,5 +620,12 @@ class CastorMessenger(rabbitmq.RabbitDualClient):
             }
            }
         """
-        return self.catalog.get_model_version_deployment(signal, entity, model_name, model_version)
+        template, args = self._msg_template()
+        args.update({'cmd':'get_model_version',
+                     'context': {'signal_name':signal,'entity_name':entity},
+                     'model_name': model_name,
+                     'model_version': model_version,
+                     'core': True
+        })
+        return template
 
