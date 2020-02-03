@@ -1,0 +1,2514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.6.4" />
+<title>message_catalog API documentation</title>
+<meta name="description" content="Castor message formmatter.
+/*
+* Licensed to the Apache Software Foundation (ASF) under one or more
+* contributor license agreements.
+See the NOTICE …" />
+<link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
+<link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
+<style>.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{font-weight:bold}#index h4 + ul{margin-bottom:.6em}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase;cursor:pointer}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>message_catalog</code></h1>
+</header>
+<section id="section-intro">
+<p>Castor message formmatter.
+/<em>
+* Licensed to the Apache Software Foundation (ASF) under one or more
+* contributor license agreements.
+See the NOTICE file distributed with
+* this work for additional information regarding copyright ownership.
+* The ASF licenses this file to You under the Apache License, Version 2.0
+* (the "License"); you may not use this file except in compliance with
+* the License.
+You may obtain a copy of the License at
+*
+*
+<a href="http://www.apache.org/licenses/LICENSE-2.0">http://www.apache.org/licenses/LICENSE-2.0</a>
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+</em>/</p>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">#!/usr/bin/env python
+#author mark_purcell@ie.ibm.com
+
+&#34;&#34;&#34;Castor message formmatter.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &#34;License&#34;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &#34;AS IS&#34; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+&#34;&#34;&#34;
+
+import uuid
+
+# pylint: disable=R0903, R0913
+
+
+class MessageCatalog():
+    def __init__(self, reply_to: str = None):
+        self.correlation = 0
+        self.reply_to = reply_to
+        self.client_id = str(uuid.uuid4())
+
+    def _msg_template(self, service_name: str = &#39;TimeseriesService&#39;):
+        &#34;&#34;&#34;
+            Format message template - internal only
+
+            Throws:
+                Nothing
+
+            Returns:
+                The requestor sub-info
+        &#34;&#34;&#34;
+        message = {
+            &#39;serviceRequest&#39;: {
+                &#39;requestor&#39;: self._requestor(),
+                &#39;service&#39;: {
+                    &#39;name&#39;: service_name,
+                    &#39;args&#39;: {
+                    }
+                }
+            }
+        }
+        return message, message[&#39;serviceRequest&#39;][&#39;service&#39;][&#39;args&#39;]
+
+    def _requestor(self):
+        &#34;&#34;&#34;
+            Format message for requestor information - internal only
+
+            Throws:
+                Nothing
+
+            Returns:
+                The requestor sub-info
+        &#34;&#34;&#34;
+
+        self.correlation += 1
+        req = {&#39;correlationID&#39;: self.correlation}
+
+        if self.reply_to:
+            req.update({&#39;replyTo&#39;: self.reply_to,
+                        &#39;clientID&#39;: self.client_id, &#39;transient&#39;: True})
+        return req
+
+    def request_sensor_data(self, meter, from_date, to_date):
+        &#34;&#34;&#34;
+            Format message for retrieving sensor data
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;ts/get_timeseries_values&#39;, &#39;device_id&#39;: meter,
+                     &#39;from&#39;: from_date, &#39;to&#39;: to_date})
+        return template
+
+    def request_sensor_data_batch(self, meter_ids, from_date, to_date, asof=None, asof_all=False):
+        &#34;&#34;&#34;
+           Format message for retrieving sensor data for a list of meter_ids
+        Parameters:
+            meter_ids (list of string): Timeseries IDs.
+            from_date (string)      : Start of datetime range (inclusive); format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+            to_date (string)        : End of datetime range (inclusive); format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+            asof (string)    : Optional &#39;as of&#39; dateime; format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+            asof_all (Boolean) : If False (default) only most recent forecasts for every timestamp are returned, otherwise all.
+        Returns:
+            (dict): {
+                      &#39;fields&#39; : [
+                        &#39;observed_timestamp&#39;,
+                        &#39;added_timestamp&#39;,
+                        &#39;value&#39;,
+                        &#39;adhoc&#39;
+                      ],
+                      &#39;batches&#39; : [
+                        {
+                          &#39;ts_id&#39;  : (string) &#39;Timeseries ID&#39;,
+                          &#39;values&#39; : [
+                            (string) &#39;2019-02-01T13:00:00+00:00&#39;,
+                            (string) &#39;2019-02-01T13:02:00+00:00&#39;,
+                            (float)  239.2,
+                            (string) &#39;SomeValueMetadata&#39;
+                          ],
+                          ...more...
+                        },
+                        ... more...
+                      ]
+                    }
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;ts/get_timeseries_values_batch&#39;, 
+                     &#39;ts_ids&#39;: meter_ids,
+                     &#39;from&#39;: from_date, &#39;to&#39;: to_date})
+        if asof is not None:
+           args.update({&#39;asof&#39;: asof})
+        if asof_all:
+           args.update({&#39;all&#39;: asof_all})
+        return template
+
+    def request_sensor_list(self):
+        &#34;&#34;&#34;
+            Format message for retrieving sensor listing
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;ts/get_time_series&#39;})
+        return template
+
+    def store_time_series(self, values):
+        &#34;&#34;&#34;
+            Format message for storing sensor observations
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;ts/store_timeseries_values&#39;, &#39;values&#39;: values})
+        return template
+
+    def average_time_series(self, meter, from_date, to_date):
+        &#34;&#34;&#34;
+            Format message for averaging sensor observations
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;ts/average_timeseries_values&#39;, &#39;device_id&#39;: meter,
+                     &#39;from&#39;: from_date, &#39;to&#39;: to_date})
+        return template
+
+    def register_model(self, model_name, entity_name, signal_name):
+        &#34;&#34;&#34;
+            Format message for registering an external model
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;register_model&#39;, &#39;model_name&#39;: model_name,
+                     &#39;entity&#39;: entity_name, &#39;signal&#39;: signal_name})
+        return template
+
+    def deploy_model(self, model_name, entity_name, signal_name, model_description=&#34;&#34;,deployment={},environment=&#34;default&#34;):
+        &#34;&#34;&#34;
+        Deploy Python-based CASTOR model for automatic training and scoring
+        Parameters:
+            signal_name (string)           : Modelled signal name.
+            entity_name (string)           : Modelled entity name.
+            model_name (string)       : Model name.
+            deployment (dict): {
+                                          &#39;task&#39;            : (string) &#39;train&#39;,
+                                          &#39;time&#39;            : (string) Required initial training time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                                          &#39;repeatEvery&#39;     : (string) Optional repeat training schedule: &#39;N_minutes | N_hours | N_days | N_weeks&#39;,
+                                          &#39;until&#39;           : (string) Optional final training time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                                          &#39;user_parameters&#39; : {
+                                            &#39;optional&#39; : &#39;user&#39;,
+                                            &#39;defined&#39;  : &#39;parameters&#39;
+                                            },
+                                          &#39;scoring_deployment&#39;: {
+                                            &#39;task&#39;        : (string) &#39;score&#39;,
+                                            &#39;time&#39;        : (string) Default initial scoring time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                                            &#39;repeatEvery&#39; : (string) Optional default repeat scoring schedule: &#39;N_minutes | N_hours | N_days | N_weeks&#39;,
+                                            &#39;until&#39;       : (string) Optional default final scoring time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+                                            }
+                                        }
+            environment (JSON string) : &#39;{&#34;type&#34;: &#34;python_dist&#34; or &#34;python_dist_dl&#34;, &#34;dist&#34;: {&#34;name&#34;:&#34;&lt;distName&gt;&#34;, &#34;version&#34;:&#34;&lt;distVersion&gt;&#34;, &#34;module&#34;:&#34;&lt;distModule&gt;&#34;}}&#39;
+            model_description (string): Optional model description.
+        Returns:
+            dict: {
+                    &#39;model_id : (integer) Stored Python-based CASTOR model ID.
+                  }
+        &#34;&#34;&#34;
+        context = {&#34;entity_name&#34;: entity_name, &#34;signal_name&#34;: signal_name}
+        model_json = {&#34;name&#34;: model_name,
+                      &#34;description&#34;: model_description,
+                      &#34;model_data&#34;: {
+                         &#34;environment&#34;: environment,
+                         &#34;code&#34;: &#34;NULL&#34;,
+                         &#34;training_deployment&#34;: deployment
+                     }}
+
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;store_model&#39;, 
+                     &#39;context&#39;: context,
+                     &#39;model&#39;: model_json
+                    })
+        return template
+
+
+    def request_model_time_series(self, model_name, entity_name, signal_name):
+        &#34;&#34;&#34;
+            Format message for retrieving a models timeseries is
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;get_model_time_series&#39;,
+                     &#39;model_name&#39;: model_name, &#39;entity&#39;: entity_name,
+                     &#39;signal&#39;: signal_name})
+        return template
+
+    def key_value_service(self, cmd, keys):
+        &#34;&#34;&#34;
+            Format message for interacting with the key/value service
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        &#34;&#34;&#34;
+        template, args = self._msg_template(&#39;KeyValueService&#39;)
+        args.update({&#39;cmd&#39;: cmd, &#39;keys&#39;: keys})
+        return template
+
+    def weather_service_hourly(self, api_key, lat, lng):
+        &#34;&#34;&#34;
+            Format message for interacting with the weather service
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        &#34;&#34;&#34;
+        template, args = self._msg_template(&#39;WeatherService-TwoDayHourlyForecast-External&#39;)
+        args.update({&#39;apiKey&#39;: api_key, &#39;latitude&#39;: lat, &#39;longitude&#39;: lng})
+        return template
+
+    def get_entity_types(self):
+        &#34;&#34;&#34;
+        Get all entity types in Semantic Context store.
+        Parameters:
+            None
+        Returns:
+            (list): [
+                      {
+                        &#39;name&#39;        : (string) &#39;Entity Type name&#39;,
+                        &#39;description&#39; : (string) &#39;Entity Type description&#39;,
+                      }
+                      ...more...
+                    ]
+        &#34;&#34;&#34;
+
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;context/get_entity_types&#39;})
+        return template
+
+    def get_signal_types(self):
+        &#34;&#34;&#34;
+        Get all signal types in Semantic Context store.
+        Parameters:
+            None
+        Returns:
+            (list): [
+                      {
+                        &#39;name&#39;        : (string) &#39;Signal Type name&#39;,
+                        &#39;description&#39; : (string) &#39;Signal Type description&#39;,
+                      }
+                      ...more...
+                    ]
+        &#34;&#34;&#34;
+
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;context/get_signal_types&#39;})
+        return template
+
+    def get_entities(self, entity_type=None):
+        &#34;&#34;&#34;
+        Get all entities in Semantic Context store.
+        Optionally, only retrieve entities of a specified type.
+        Parameters:
+            entity_type (string): Optional entity type.
+        Returns:
+            (list): [
+                      {
+                        &#39;name&#39;        : (string) &#39;Entity name&#39;,
+                        &#39;description&#39; : (string) &#39;Entity description&#39;,
+                        &#39;entity_type&#39; : {
+                          &#39;name&#39;        : (string) &#39;Entity type name&#39;,
+                          &#39;description&#39; : (string) &#39;Entity type description&#39;}
+                          },
+                        &#39;geography&#39; : {
+                          &#39;geography_type&#39; : (string) &#39;GIS_POINT&#39;,
+                          &#39;latitude&#39;       : (float) Entity latitude,
+                          &#39;longitude&#39;      : (float) Entity longitude
+                          }
+                      }
+                      ...more...
+                    ]
+        &#34;&#34;&#34;
+        
+        template, args = self._msg_template()
+        if entity_type is None:
+           args.update({&#39;cmd&#39;:&#39;context/get_entities&#39;})
+        else:
+           args.update({&#39;cmd&#39;:&#39;context/get_entities&#39;,&#39;entity_type_name&#39;:entity_type})
+        return template
+
+    def get_signals(self, signal_type=None):
+        &#34;&#34;&#34;
+        Get all signals persisted in context store.
+        Optionally, only retrieve signals of a specified type.
+        Parameters:
+            signal_type (string): Optional signal type.
+        Returns:
+            (dict): {
+                      &#39;signals: [
+                        {
+                          &#39;name&#39;        : (string) Signal name,
+                          &#39;description&#39; : (string) Signal description,
+                          &#39;signal_type&#39; : {
+                            &#39;name&#39;        : (string) Signal type name,
+                            &#39;description&#39; : (string) Signal type description,
+                            },
+                          &#39;unit&#39;        : (string) Signal unit of measurement
+                        }
+                      ]
+                    }
+        &#34;&#34;&#34;   
+        template, args = self._msg_template()
+        if signal_type is None:
+           args.update({&#39;cmd&#39;:&#39;context/get_signals&#39;})
+        else:
+           args.update({&#39;cmd&#39;:&#39;context/get_signals&#39;,&#39;signal_type_name&#39;:signal_type})
+        return template
+
+    def get_entities_connectivity(self, entity_names):
+        &#34;&#34;&#34;
+        Get connectivity for a set of entity name(s).
+        Parameters:
+            entity_names (list of string): Entity name(s).
+        Returns:
+            (list): [
+                      [(string) &#39;Entity name A connected&#39;, (string) &#39;to entity name B&#39;],
+                      [(string) &#39;Entity name A connected&#39;, (string) &#39;to entity name C&#39;],
+                      ...more...
+                    ]
+        &#34;&#34;&#34;
+        
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;context/get_connectivity&#39;,&#39;entity_names&#39;:entity_names})
+        return template
+
+    def get_timeseries_id(self, contexts):
+        &#34;&#34;&#34;
+        Retrieve ts_id for a given list of contexts
+        Parameters:
+            contexts (list)    : list of objects [{&#39;entity_name&#39;:&lt;val&gt;,&#39;signal_name&#39;:&lt;val&gt;},...]
+        Returns:
+            A list: [{&#39;context&#39;:{&#39;entity_name&#39;:&lt;val&gt;,&#39;signal_name&#39;:&lt;val&gt;,&#39;ts_id&#39;:&lt;val&gt;},...]
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;get_timeseries&#39;,&#39;context&#39;:contexts})
+        return template
+
+    def get_timeseries_context(self, ts_ids):
+        &#34;&#34;&#34;
+        Retrieve the context for a list of ts_ids
+        Parameters:
+            ts_ids (list)      : List of ts_id (string) [&#39;ts_id1&#39;,&#39;ts_id2&#39;,...]
+        Returns:
+            output (list): [{&#39;ts_id&#39;:&#39;ts_id1&#39;,&#39;context&#39;:{&#39;entity_name&#39;:&lt;val&gt;,&#39;signal_name&#39;:&lt;val&gt;},...]
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;get_timeseries_context&#39;,&#39;ts_ids&#39;:ts_ids})
+        return template
+
+
+    def get_timeseries_data(self, signal, entity,from_date, to_date, asof=None,asof_all=False):
+        &#34;&#34;&#34;
+        Get timeseries values for a signal &amp; entity, over a specified time range.
+        Parameters:
+            signal (string)  : Context signal name.
+            entity (string)  : Context entity name.
+            fromDate (string): Start of time range (inclusive); format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+            toDate (string)  : End of time range (inclusive); format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+            asof (string)    : Optional &#39;as of&#39; dateime; format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+            asof_all (Boolean) : If False (default) only most recent forecasts for every timestamp are returned, otherwise all.
+        Returns:
+            (dict): {
+                      &#39;fields&#39; : [
+                        &#39;observed_timestamp&#39;,
+                        &#39;added_timestamp&#39;,
+                        &#39;value&#39;,
+                        &#39;adhoc&#39;
+                      ],
+                      &#39;values&#39; : [
+                        [
+                          (string) &#39;2019-02-01T13:00:00+00:00&#39;,
+                          (string) &#39;2019-02-01T13:02:00+00:00&#39;,
+                          (float)  239.2,
+                          (string) &#39;SomeValueMetadata&#39;
+                        ],
+                        ...more...
+                      ]
+                    }
+        &#34;&#34;&#34;
+
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;get_timeseries_values&#39;, 
+                     &#39;context&#39;: {
+                        &#39;signal_name&#39;: signal,
+                        &#39;entity_name&#39;: entity
+                     },
+                     &#39;from&#39;: from_date, 
+                     &#39;to&#39;: to_date})
+        if asof is not None:
+           args[&#39;asof&#39;] = asof
+        if asof_all:
+           args[&#39;all&#39;] = asof_all
+        return template
+   
+    def get_models(self, contexts):
+        &#34;&#34;&#34;
+        Get CASTOR models, model versions for a given list of Semantic Context (entiyty_name, signal_name).
+        Parameters:
+            contexts (list of context dict): [{&#39;entity_name&#39;: &lt;ename1&gt;, &#39;signal_name&#39;: &lt;sname1&gt;}, ... ]
+        Returns:
+            list: [ 
+                    { 
+                      &#39;context&#39;: {ctx1},
+                      &#39;models&#39;: [ 
+                         {
+                           &#39;model&#39;: m1,
+                           &#39;model_versions&#39;: [
+                              {&#39;model_version&#39;: mv11, &#39;ts_id&#39;: tsv11},
+                              {&#39;model_version&#39;: mv12, &#39;ts_id&#39;: tsv12},
+                              ...
+                           ]
+                         },
+                         {
+                           &#39;model&#39;: m2,
+                           &#39;model_versions&#39;: [
+                              {&#39;model_version&#39;: mv21, &#39;ts_id&#39;: tsv21},
+                              {&#39;model_version&#39;: mv22, &#39;ts_id&#39;: tsv22},
+                              ...
+                           ]
+                         },
+                         ...
+                       ]
+                    },
+                    {
+                      &#39;context&#39;: {ctx2},
+                      &#39;moedls&#39;: [...]
+                    },
+                    ...
+                  ]
+        &#34;&#34;&#34;
+
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;get_models_hierarchy&#39;, 
+                     &#39;context&#39;: contexts})
+        return template
+
+    def get_model_deployment(self, signal, entity, model_name):
+        &#34;&#34;&#34;
+        Get CASTOR model deployment data.
+        Parameters:
+            signal (string)        : Context signal name.
+            entity (string)        : Context entity name.
+            model_name (string)    : Model name.
+        Returns:
+            dict: {
+                    &#39;model&#39; : {
+                      &#39;model_id&#39;    : (integer) Model ID,
+                      &#39;name&#39;        : (string) &#39;Model name&#39;,
+                      &#39;description&#39; : (string) &#39;Model description&#39;,
+                      &#39;model_data&#39; : {
+                        &#39;environment&#39;         : (string) &#39;Model environment&#39;,
+                        &#39;code&#39;                : (string) &#39;Model code in base64 format; used only for R-based models&#39;,
+                        &#39;training_deployment&#39; : {
+                          &#39;task&#39;            : (string) &#39;train&#39;,
+                          &#39;time&#39;            : (string) Initial training time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                          &#39;repeatEvery&#39;     : (string) Optional repeat training schedule: &#39;N_minutes | N_hours | N_days | N_weeks&#39;,
+                          &#39;until&#39;           : (string) Optional final training time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                          &#39;user_parameters&#39; : {
+                            &#39;optional&#39; : &#39;user&#39;,
+                            &#39;defined&#39;  : &#39;parameters&#39;
+                            }
+                          }
+                        }
+                      }
+                  }
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;get_model&#39;,
+                     &#39;context&#39;: {&#39;signal_name&#39;:signal,&#39;entity_name&#39;:entity},
+                     &#39;model_name&#39;: model_name
+        })
+        return template
+
+    def get_model_data(self, signal, entity, model_name, model_version=None, from_date=None, to_date=None, asof=None, asof_all=False):
+        &#34;&#34;&#34;
+        Get forecast values for a given signal, entity, model name, and model version.
+        Parameters:
+            signal (string)        : Context signal name.
+            entity (string)        : Context entity name.
+            model_name (string)    : Model name.
+            model_version (integer): Model version ID.
+            fromDate (string)      : Start of time range (inclusive); format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+            toDate (string)        : End of time range (inclusive): format: &#39;YYYY-MM-DDTHH:mm:ss+00:00&#39;
+            asof (string)          : Forecasts produced as of time (inclusive): format: &#39;YYYY-MM-DDTHH:mm:ss+00:00&#39;
+            asof_all (Boolean)     : If False (default) only most recent forecasts for every timestamp are returned, otherwise all.
+        Returns:
+            (dict): {
+                      &#39;fields&#39; : [
+                        &#39;observed_timestamp&#39;,
+                        &#39;added_timestamp&#39;,
+                        &#39;value&#39;,
+                        &#39;adhoc&#39;
+                      ],
+                      &#39;values&#39; : [
+                        [
+                          (string) &#39;2019-02-01T12:00:00+00:00&#39;,
+                          (string) &#39;2019-01-01T00:01:00+00:00&#39;,
+                          (float)  239.2,
+                          (string) &#39;SomeValueMetadata&#39;
+                        ],
+                        ...more...
+                      ]
+                    }
+        &#34;&#34;&#34;
+        
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;get_forecast_values&#39;, 
+                     &#39;context&#39;: {
+                        &#39;signal_name&#39;: signal,
+                        &#39;entity_name&#39;: entity
+                     },
+                     &#39;model_name&#39;:model_name,
+                     &#39;from&#39;: from_date, 
+                     &#39;to&#39;: to_date})
+        if model_version is not None:
+           args[&#39;model_version&#39;] = model_version
+        if asof is not None:
+           args[&#39;asof&#39;] = asof
+        if asof_all:
+           args[&#39;all&#39;] = asof_all
+        return template
+
+
+    def get_model_version_deployment(self, signal, entity, model_name, model_version):
+        &#34;&#34;&#34;
+        Get CASTOR model deployment data.
+        Parameters:
+            signal (string)        : Context signal name.
+            entity (string)        : Context entity name.
+            model_name (string)    : Model name.
+            model_version (int)    : Trained model version
+        Returns:
+            dict: {
+                    &#39;model&#39; : {
+                      &#39;model_id&#39;    : (integer) Model ID,
+                      &#39;version&#39;  :  (integer) Model version ID,
+                      &#39;model_version_data&#39;:{
+                         &#39;train_time&#39;        : (string) When model version was trained: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                         &#39;scoring_deployment&#39;: {
+                            &#39;task&#39;            : (string) &#39;score&#39;,
+                            &#39;time&#39;            : (string) Initial scoring time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                            &#39;repeatEvery&#39;     : (string) Optional repeat scoring schedule: &#39;N_minutes | N_hours | N_days | N_weeks&#39;,
+                            &#39;until&#39;           : (string) Optional final scoring time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                            &#39;user_parameters&#39; : {
+                               &#39;optional&#39; : &#39;user&#39;,
+                               &#39;defined&#39;  : &#39;parameters&#39;
+                            }
+                         }
+                      }
+            }
+           }
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;get_model_version&#39;,
+                     &#39;context&#39;: {&#39;signal_name&#39;:signal,&#39;entity_name&#39;:entity},
+                     &#39;model_name&#39;: model_name,
+                     &#39;model_version&#39;: model_version,
+                     &#39;core&#39;: True
+        })
+        return template</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="message_catalog.MessageCatalog"><code class="flex name class">
+<span>class <span class="ident">MessageCatalog</span></span>
+<span>(</span><span>reply_to=None)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">class MessageCatalog():
+    def __init__(self, reply_to: str = None):
+        self.correlation = 0
+        self.reply_to = reply_to
+        self.client_id = str(uuid.uuid4())
+
+    def _msg_template(self, service_name: str = &#39;TimeseriesService&#39;):
+        &#34;&#34;&#34;
+            Format message template - internal only
+
+            Throws:
+                Nothing
+
+            Returns:
+                The requestor sub-info
+        &#34;&#34;&#34;
+        message = {
+            &#39;serviceRequest&#39;: {
+                &#39;requestor&#39;: self._requestor(),
+                &#39;service&#39;: {
+                    &#39;name&#39;: service_name,
+                    &#39;args&#39;: {
+                    }
+                }
+            }
+        }
+        return message, message[&#39;serviceRequest&#39;][&#39;service&#39;][&#39;args&#39;]
+
+    def _requestor(self):
+        &#34;&#34;&#34;
+            Format message for requestor information - internal only
+
+            Throws:
+                Nothing
+
+            Returns:
+                The requestor sub-info
+        &#34;&#34;&#34;
+
+        self.correlation += 1
+        req = {&#39;correlationID&#39;: self.correlation}
+
+        if self.reply_to:
+            req.update({&#39;replyTo&#39;: self.reply_to,
+                        &#39;clientID&#39;: self.client_id, &#39;transient&#39;: True})
+        return req
+
+    def request_sensor_data(self, meter, from_date, to_date):
+        &#34;&#34;&#34;
+            Format message for retrieving sensor data
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;ts/get_timeseries_values&#39;, &#39;device_id&#39;: meter,
+                     &#39;from&#39;: from_date, &#39;to&#39;: to_date})
+        return template
+
+    def request_sensor_data_batch(self, meter_ids, from_date, to_date, asof=None, asof_all=False):
+        &#34;&#34;&#34;
+           Format message for retrieving sensor data for a list of meter_ids
+        Parameters:
+            meter_ids (list of string): Timeseries IDs.
+            from_date (string)      : Start of datetime range (inclusive); format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+            to_date (string)        : End of datetime range (inclusive); format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+            asof (string)    : Optional &#39;as of&#39; dateime; format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+            asof_all (Boolean) : If False (default) only most recent forecasts for every timestamp are returned, otherwise all.
+        Returns:
+            (dict): {
+                      &#39;fields&#39; : [
+                        &#39;observed_timestamp&#39;,
+                        &#39;added_timestamp&#39;,
+                        &#39;value&#39;,
+                        &#39;adhoc&#39;
+                      ],
+                      &#39;batches&#39; : [
+                        {
+                          &#39;ts_id&#39;  : (string) &#39;Timeseries ID&#39;,
+                          &#39;values&#39; : [
+                            (string) &#39;2019-02-01T13:00:00+00:00&#39;,
+                            (string) &#39;2019-02-01T13:02:00+00:00&#39;,
+                            (float)  239.2,
+                            (string) &#39;SomeValueMetadata&#39;
+                          ],
+                          ...more...
+                        },
+                        ... more...
+                      ]
+                    }
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;ts/get_timeseries_values_batch&#39;, 
+                     &#39;ts_ids&#39;: meter_ids,
+                     &#39;from&#39;: from_date, &#39;to&#39;: to_date})
+        if asof is not None:
+           args.update({&#39;asof&#39;: asof})
+        if asof_all:
+           args.update({&#39;all&#39;: asof_all})
+        return template
+
+    def request_sensor_list(self):
+        &#34;&#34;&#34;
+            Format message for retrieving sensor listing
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;ts/get_time_series&#39;})
+        return template
+
+    def store_time_series(self, values):
+        &#34;&#34;&#34;
+            Format message for storing sensor observations
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;ts/store_timeseries_values&#39;, &#39;values&#39;: values})
+        return template
+
+    def average_time_series(self, meter, from_date, to_date):
+        &#34;&#34;&#34;
+            Format message for averaging sensor observations
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;ts/average_timeseries_values&#39;, &#39;device_id&#39;: meter,
+                     &#39;from&#39;: from_date, &#39;to&#39;: to_date})
+        return template
+
+    def register_model(self, model_name, entity_name, signal_name):
+        &#34;&#34;&#34;
+            Format message for registering an external model
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;register_model&#39;, &#39;model_name&#39;: model_name,
+                     &#39;entity&#39;: entity_name, &#39;signal&#39;: signal_name})
+        return template
+
+    def deploy_model(self, model_name, entity_name, signal_name, model_description=&#34;&#34;,deployment={},environment=&#34;default&#34;):
+        &#34;&#34;&#34;
+        Deploy Python-based CASTOR model for automatic training and scoring
+        Parameters:
+            signal_name (string)           : Modelled signal name.
+            entity_name (string)           : Modelled entity name.
+            model_name (string)       : Model name.
+            deployment (dict): {
+                                          &#39;task&#39;            : (string) &#39;train&#39;,
+                                          &#39;time&#39;            : (string) Required initial training time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                                          &#39;repeatEvery&#39;     : (string) Optional repeat training schedule: &#39;N_minutes | N_hours | N_days | N_weeks&#39;,
+                                          &#39;until&#39;           : (string) Optional final training time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                                          &#39;user_parameters&#39; : {
+                                            &#39;optional&#39; : &#39;user&#39;,
+                                            &#39;defined&#39;  : &#39;parameters&#39;
+                                            },
+                                          &#39;scoring_deployment&#39;: {
+                                            &#39;task&#39;        : (string) &#39;score&#39;,
+                                            &#39;time&#39;        : (string) Default initial scoring time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                                            &#39;repeatEvery&#39; : (string) Optional default repeat scoring schedule: &#39;N_minutes | N_hours | N_days | N_weeks&#39;,
+                                            &#39;until&#39;       : (string) Optional default final scoring time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+                                            }
+                                        }
+            environment (JSON string) : &#39;{&#34;type&#34;: &#34;python_dist&#34; or &#34;python_dist_dl&#34;, &#34;dist&#34;: {&#34;name&#34;:&#34;&lt;distName&gt;&#34;, &#34;version&#34;:&#34;&lt;distVersion&gt;&#34;, &#34;module&#34;:&#34;&lt;distModule&gt;&#34;}}&#39;
+            model_description (string): Optional model description.
+        Returns:
+            dict: {
+                    &#39;model_id : (integer) Stored Python-based CASTOR model ID.
+                  }
+        &#34;&#34;&#34;
+        context = {&#34;entity_name&#34;: entity_name, &#34;signal_name&#34;: signal_name}
+        model_json = {&#34;name&#34;: model_name,
+                      &#34;description&#34;: model_description,
+                      &#34;model_data&#34;: {
+                         &#34;environment&#34;: environment,
+                         &#34;code&#34;: &#34;NULL&#34;,
+                         &#34;training_deployment&#34;: deployment
+                     }}
+
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;store_model&#39;, 
+                     &#39;context&#39;: context,
+                     &#39;model&#39;: model_json
+                    })
+        return template
+
+
+    def request_model_time_series(self, model_name, entity_name, signal_name):
+        &#34;&#34;&#34;
+            Format message for retrieving a models timeseries is
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;get_model_time_series&#39;,
+                     &#39;model_name&#39;: model_name, &#39;entity&#39;: entity_name,
+                     &#39;signal&#39;: signal_name})
+        return template
+
+    def key_value_service(self, cmd, keys):
+        &#34;&#34;&#34;
+            Format message for interacting with the key/value service
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        &#34;&#34;&#34;
+        template, args = self._msg_template(&#39;KeyValueService&#39;)
+        args.update({&#39;cmd&#39;: cmd, &#39;keys&#39;: keys})
+        return template
+
+    def weather_service_hourly(self, api_key, lat, lng):
+        &#34;&#34;&#34;
+            Format message for interacting with the weather service
+
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Dict - The message to send
+        &#34;&#34;&#34;
+        template, args = self._msg_template(&#39;WeatherService-TwoDayHourlyForecast-External&#39;)
+        args.update({&#39;apiKey&#39;: api_key, &#39;latitude&#39;: lat, &#39;longitude&#39;: lng})
+        return template
+
+    def get_entity_types(self):
+        &#34;&#34;&#34;
+        Get all entity types in Semantic Context store.
+        Parameters:
+            None
+        Returns:
+            (list): [
+                      {
+                        &#39;name&#39;        : (string) &#39;Entity Type name&#39;,
+                        &#39;description&#39; : (string) &#39;Entity Type description&#39;,
+                      }
+                      ...more...
+                    ]
+        &#34;&#34;&#34;
+
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;context/get_entity_types&#39;})
+        return template
+
+    def get_signal_types(self):
+        &#34;&#34;&#34;
+        Get all signal types in Semantic Context store.
+        Parameters:
+            None
+        Returns:
+            (list): [
+                      {
+                        &#39;name&#39;        : (string) &#39;Signal Type name&#39;,
+                        &#39;description&#39; : (string) &#39;Signal Type description&#39;,
+                      }
+                      ...more...
+                    ]
+        &#34;&#34;&#34;
+
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;context/get_signal_types&#39;})
+        return template
+
+    def get_entities(self, entity_type=None):
+        &#34;&#34;&#34;
+        Get all entities in Semantic Context store.
+        Optionally, only retrieve entities of a specified type.
+        Parameters:
+            entity_type (string): Optional entity type.
+        Returns:
+            (list): [
+                      {
+                        &#39;name&#39;        : (string) &#39;Entity name&#39;,
+                        &#39;description&#39; : (string) &#39;Entity description&#39;,
+                        &#39;entity_type&#39; : {
+                          &#39;name&#39;        : (string) &#39;Entity type name&#39;,
+                          &#39;description&#39; : (string) &#39;Entity type description&#39;}
+                          },
+                        &#39;geography&#39; : {
+                          &#39;geography_type&#39; : (string) &#39;GIS_POINT&#39;,
+                          &#39;latitude&#39;       : (float) Entity latitude,
+                          &#39;longitude&#39;      : (float) Entity longitude
+                          }
+                      }
+                      ...more...
+                    ]
+        &#34;&#34;&#34;
+        
+        template, args = self._msg_template()
+        if entity_type is None:
+           args.update({&#39;cmd&#39;:&#39;context/get_entities&#39;})
+        else:
+           args.update({&#39;cmd&#39;:&#39;context/get_entities&#39;,&#39;entity_type_name&#39;:entity_type})
+        return template
+
+    def get_signals(self, signal_type=None):
+        &#34;&#34;&#34;
+        Get all signals persisted in context store.
+        Optionally, only retrieve signals of a specified type.
+        Parameters:
+            signal_type (string): Optional signal type.
+        Returns:
+            (dict): {
+                      &#39;signals: [
+                        {
+                          &#39;name&#39;        : (string) Signal name,
+                          &#39;description&#39; : (string) Signal description,
+                          &#39;signal_type&#39; : {
+                            &#39;name&#39;        : (string) Signal type name,
+                            &#39;description&#39; : (string) Signal type description,
+                            },
+                          &#39;unit&#39;        : (string) Signal unit of measurement
+                        }
+                      ]
+                    }
+        &#34;&#34;&#34;   
+        template, args = self._msg_template()
+        if signal_type is None:
+           args.update({&#39;cmd&#39;:&#39;context/get_signals&#39;})
+        else:
+           args.update({&#39;cmd&#39;:&#39;context/get_signals&#39;,&#39;signal_type_name&#39;:signal_type})
+        return template
+
+    def get_entities_connectivity(self, entity_names):
+        &#34;&#34;&#34;
+        Get connectivity for a set of entity name(s).
+        Parameters:
+            entity_names (list of string): Entity name(s).
+        Returns:
+            (list): [
+                      [(string) &#39;Entity name A connected&#39;, (string) &#39;to entity name B&#39;],
+                      [(string) &#39;Entity name A connected&#39;, (string) &#39;to entity name C&#39;],
+                      ...more...
+                    ]
+        &#34;&#34;&#34;
+        
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;context/get_connectivity&#39;,&#39;entity_names&#39;:entity_names})
+        return template
+
+    def get_timeseries_id(self, contexts):
+        &#34;&#34;&#34;
+        Retrieve ts_id for a given list of contexts
+        Parameters:
+            contexts (list)    : list of objects [{&#39;entity_name&#39;:&lt;val&gt;,&#39;signal_name&#39;:&lt;val&gt;},...]
+        Returns:
+            A list: [{&#39;context&#39;:{&#39;entity_name&#39;:&lt;val&gt;,&#39;signal_name&#39;:&lt;val&gt;,&#39;ts_id&#39;:&lt;val&gt;},...]
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;get_timeseries&#39;,&#39;context&#39;:contexts})
+        return template
+
+    def get_timeseries_context(self, ts_ids):
+        &#34;&#34;&#34;
+        Retrieve the context for a list of ts_ids
+        Parameters:
+            ts_ids (list)      : List of ts_id (string) [&#39;ts_id1&#39;,&#39;ts_id2&#39;,...]
+        Returns:
+            output (list): [{&#39;ts_id&#39;:&#39;ts_id1&#39;,&#39;context&#39;:{&#39;entity_name&#39;:&lt;val&gt;,&#39;signal_name&#39;:&lt;val&gt;},...]
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;get_timeseries_context&#39;,&#39;ts_ids&#39;:ts_ids})
+        return template
+
+
+    def get_timeseries_data(self, signal, entity,from_date, to_date, asof=None,asof_all=False):
+        &#34;&#34;&#34;
+        Get timeseries values for a signal &amp; entity, over a specified time range.
+        Parameters:
+            signal (string)  : Context signal name.
+            entity (string)  : Context entity name.
+            fromDate (string): Start of time range (inclusive); format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+            toDate (string)  : End of time range (inclusive); format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+            asof (string)    : Optional &#39;as of&#39; dateime; format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+            asof_all (Boolean) : If False (default) only most recent forecasts for every timestamp are returned, otherwise all.
+        Returns:
+            (dict): {
+                      &#39;fields&#39; : [
+                        &#39;observed_timestamp&#39;,
+                        &#39;added_timestamp&#39;,
+                        &#39;value&#39;,
+                        &#39;adhoc&#39;
+                      ],
+                      &#39;values&#39; : [
+                        [
+                          (string) &#39;2019-02-01T13:00:00+00:00&#39;,
+                          (string) &#39;2019-02-01T13:02:00+00:00&#39;,
+                          (float)  239.2,
+                          (string) &#39;SomeValueMetadata&#39;
+                        ],
+                        ...more...
+                      ]
+                    }
+        &#34;&#34;&#34;
+
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;get_timeseries_values&#39;, 
+                     &#39;context&#39;: {
+                        &#39;signal_name&#39;: signal,
+                        &#39;entity_name&#39;: entity
+                     },
+                     &#39;from&#39;: from_date, 
+                     &#39;to&#39;: to_date})
+        if asof is not None:
+           args[&#39;asof&#39;] = asof
+        if asof_all:
+           args[&#39;all&#39;] = asof_all
+        return template
+   
+    def get_models(self, contexts):
+        &#34;&#34;&#34;
+        Get CASTOR models, model versions for a given list of Semantic Context (entiyty_name, signal_name).
+        Parameters:
+            contexts (list of context dict): [{&#39;entity_name&#39;: &lt;ename1&gt;, &#39;signal_name&#39;: &lt;sname1&gt;}, ... ]
+        Returns:
+            list: [ 
+                    { 
+                      &#39;context&#39;: {ctx1},
+                      &#39;models&#39;: [ 
+                         {
+                           &#39;model&#39;: m1,
+                           &#39;model_versions&#39;: [
+                              {&#39;model_version&#39;: mv11, &#39;ts_id&#39;: tsv11},
+                              {&#39;model_version&#39;: mv12, &#39;ts_id&#39;: tsv12},
+                              ...
+                           ]
+                         },
+                         {
+                           &#39;model&#39;: m2,
+                           &#39;model_versions&#39;: [
+                              {&#39;model_version&#39;: mv21, &#39;ts_id&#39;: tsv21},
+                              {&#39;model_version&#39;: mv22, &#39;ts_id&#39;: tsv22},
+                              ...
+                           ]
+                         },
+                         ...
+                       ]
+                    },
+                    {
+                      &#39;context&#39;: {ctx2},
+                      &#39;moedls&#39;: [...]
+                    },
+                    ...
+                  ]
+        &#34;&#34;&#34;
+
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;get_models_hierarchy&#39;, 
+                     &#39;context&#39;: contexts})
+        return template
+
+    def get_model_deployment(self, signal, entity, model_name):
+        &#34;&#34;&#34;
+        Get CASTOR model deployment data.
+        Parameters:
+            signal (string)        : Context signal name.
+            entity (string)        : Context entity name.
+            model_name (string)    : Model name.
+        Returns:
+            dict: {
+                    &#39;model&#39; : {
+                      &#39;model_id&#39;    : (integer) Model ID,
+                      &#39;name&#39;        : (string) &#39;Model name&#39;,
+                      &#39;description&#39; : (string) &#39;Model description&#39;,
+                      &#39;model_data&#39; : {
+                        &#39;environment&#39;         : (string) &#39;Model environment&#39;,
+                        &#39;code&#39;                : (string) &#39;Model code in base64 format; used only for R-based models&#39;,
+                        &#39;training_deployment&#39; : {
+                          &#39;task&#39;            : (string) &#39;train&#39;,
+                          &#39;time&#39;            : (string) Initial training time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                          &#39;repeatEvery&#39;     : (string) Optional repeat training schedule: &#39;N_minutes | N_hours | N_days | N_weeks&#39;,
+                          &#39;until&#39;           : (string) Optional final training time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                          &#39;user_parameters&#39; : {
+                            &#39;optional&#39; : &#39;user&#39;,
+                            &#39;defined&#39;  : &#39;parameters&#39;
+                            }
+                          }
+                        }
+                      }
+                  }
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;get_model&#39;,
+                     &#39;context&#39;: {&#39;signal_name&#39;:signal,&#39;entity_name&#39;:entity},
+                     &#39;model_name&#39;: model_name
+        })
+        return template
+
+    def get_model_data(self, signal, entity, model_name, model_version=None, from_date=None, to_date=None, asof=None, asof_all=False):
+        &#34;&#34;&#34;
+        Get forecast values for a given signal, entity, model name, and model version.
+        Parameters:
+            signal (string)        : Context signal name.
+            entity (string)        : Context entity name.
+            model_name (string)    : Model name.
+            model_version (integer): Model version ID.
+            fromDate (string)      : Start of time range (inclusive); format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+            toDate (string)        : End of time range (inclusive): format: &#39;YYYY-MM-DDTHH:mm:ss+00:00&#39;
+            asof (string)          : Forecasts produced as of time (inclusive): format: &#39;YYYY-MM-DDTHH:mm:ss+00:00&#39;
+            asof_all (Boolean)     : If False (default) only most recent forecasts for every timestamp are returned, otherwise all.
+        Returns:
+            (dict): {
+                      &#39;fields&#39; : [
+                        &#39;observed_timestamp&#39;,
+                        &#39;added_timestamp&#39;,
+                        &#39;value&#39;,
+                        &#39;adhoc&#39;
+                      ],
+                      &#39;values&#39; : [
+                        [
+                          (string) &#39;2019-02-01T12:00:00+00:00&#39;,
+                          (string) &#39;2019-01-01T00:01:00+00:00&#39;,
+                          (float)  239.2,
+                          (string) &#39;SomeValueMetadata&#39;
+                        ],
+                        ...more...
+                      ]
+                    }
+        &#34;&#34;&#34;
+        
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;get_forecast_values&#39;, 
+                     &#39;context&#39;: {
+                        &#39;signal_name&#39;: signal,
+                        &#39;entity_name&#39;: entity
+                     },
+                     &#39;model_name&#39;:model_name,
+                     &#39;from&#39;: from_date, 
+                     &#39;to&#39;: to_date})
+        if model_version is not None:
+           args[&#39;model_version&#39;] = model_version
+        if asof is not None:
+           args[&#39;asof&#39;] = asof
+        if asof_all:
+           args[&#39;all&#39;] = asof_all
+        return template
+
+
+    def get_model_version_deployment(self, signal, entity, model_name, model_version):
+        &#34;&#34;&#34;
+        Get CASTOR model deployment data.
+        Parameters:
+            signal (string)        : Context signal name.
+            entity (string)        : Context entity name.
+            model_name (string)    : Model name.
+            model_version (int)    : Trained model version
+        Returns:
+            dict: {
+                    &#39;model&#39; : {
+                      &#39;model_id&#39;    : (integer) Model ID,
+                      &#39;version&#39;  :  (integer) Model version ID,
+                      &#39;model_version_data&#39;:{
+                         &#39;train_time&#39;        : (string) When model version was trained: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                         &#39;scoring_deployment&#39;: {
+                            &#39;task&#39;            : (string) &#39;score&#39;,
+                            &#39;time&#39;            : (string) Initial scoring time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                            &#39;repeatEvery&#39;     : (string) Optional repeat scoring schedule: &#39;N_minutes | N_hours | N_days | N_weeks&#39;,
+                            &#39;until&#39;           : (string) Optional final scoring time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                            &#39;user_parameters&#39; : {
+                               &#39;optional&#39; : &#39;user&#39;,
+                               &#39;defined&#39;  : &#39;parameters&#39;
+                            }
+                         }
+                      }
+            }
+           }
+        &#34;&#34;&#34;
+        template, args = self._msg_template()
+        args.update({&#39;cmd&#39;:&#39;get_model_version&#39;,
+                     &#39;context&#39;: {&#39;signal_name&#39;:signal,&#39;entity_name&#39;:entity},
+                     &#39;model_name&#39;: model_name,
+                     &#39;model_version&#39;: model_version,
+                     &#39;core&#39;: True
+        })
+        return template</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="message_catalog.MessageCatalog.average_time_series"><code class="name flex">
+<span>def <span class="ident">average_time_series</span></span>(<span>self, meter, from_date, to_date)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Format message for averaging sensor observations</p>
+<h2 id="throws">Throws</h2>
+<p>An exception if not successful</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Dict</code> - <code>The</code> <code>message</code> <code>to</code> <code>send</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def average_time_series(self, meter, from_date, to_date):
+    &#34;&#34;&#34;
+        Format message for averaging sensor observations
+
+        Throws:
+            An exception if not successful
+
+        Returns:
+            Dict - The message to send
+    &#34;&#34;&#34;
+    template, args = self._msg_template()
+    args.update({&#39;cmd&#39;:&#39;ts/average_timeseries_values&#39;, &#39;device_id&#39;: meter,
+                 &#39;from&#39;: from_date, &#39;to&#39;: to_date})
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.deploy_model"><code class="name flex">
+<span>def <span class="ident">deploy_model</span></span>(<span>self, model_name, entity_name, signal_name, model_description=&#39;&#39;, deployment={}, environment=&#39;default&#39;)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Deploy Python-based CASTOR model for automatic training and scoring</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt>signal_name (string)
+: Modelled signal name.</dt>
+<dt>entity_name (string)
+: Modelled entity name.</dt>
+<dt>model_name (string)
+: Model name.</dt>
+<dt><strong><code>deployment</code></strong> :&ensp;<code>dict</code></dt>
+<dd>{
+'task'
+: (string) 'train',
+'time'
+: (string) Required initial training time: 'YYYY-MM-DDThh:mm:ss+00:00',
+'repeatEvery'
+: (string) Optional repeat training schedule: 'N_minutes | N_hours | N_days | N_weeks',
+'until'
+: (string) Optional final training time: 'YYYY-MM-DDThh:mm:ss+00:00',
+'user_parameters' : {
+'optional' : 'user',
+'defined'
+: 'parameters'
+},
+'scoring_deployment': {
+'task'
+: (string) 'score',
+'time'
+: (string) Default initial scoring time: 'YYYY-MM-DDThh:mm:ss+00:00',
+'repeatEvery' : (string) Optional default repeat scoring schedule: 'N_minutes | N_hours | N_days | N_weeks',
+'until'
+: (string) Optional default final scoring time: 'YYYY-MM-DDThh:mm:ss+00:00'
+}
+}</dd>
+<dt>environment (JSON string) : '{"type": "python_dist" or "python_dist_dl", "dist": {"name":"<distName>", "version":"<distVersion>", "module":"<distModule>"}}'</dt>
+<dt><strong><code>model_description</code></strong> :&ensp;<code>string</code></dt>
+<dd>Optional model description.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>dict</code></strong></dt>
+<dd>{
+'model_id : (integer) Stored Python-based CASTOR model ID.
+}</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def deploy_model(self, model_name, entity_name, signal_name, model_description=&#34;&#34;,deployment={},environment=&#34;default&#34;):
+    &#34;&#34;&#34;
+    Deploy Python-based CASTOR model for automatic training and scoring
+    Parameters:
+        signal_name (string)           : Modelled signal name.
+        entity_name (string)           : Modelled entity name.
+        model_name (string)       : Model name.
+        deployment (dict): {
+                                      &#39;task&#39;            : (string) &#39;train&#39;,
+                                      &#39;time&#39;            : (string) Required initial training time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                                      &#39;repeatEvery&#39;     : (string) Optional repeat training schedule: &#39;N_minutes | N_hours | N_days | N_weeks&#39;,
+                                      &#39;until&#39;           : (string) Optional final training time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                                      &#39;user_parameters&#39; : {
+                                        &#39;optional&#39; : &#39;user&#39;,
+                                        &#39;defined&#39;  : &#39;parameters&#39;
+                                        },
+                                      &#39;scoring_deployment&#39;: {
+                                        &#39;task&#39;        : (string) &#39;score&#39;,
+                                        &#39;time&#39;        : (string) Default initial scoring time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                                        &#39;repeatEvery&#39; : (string) Optional default repeat scoring schedule: &#39;N_minutes | N_hours | N_days | N_weeks&#39;,
+                                        &#39;until&#39;       : (string) Optional default final scoring time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+                                        }
+                                    }
+        environment (JSON string) : &#39;{&#34;type&#34;: &#34;python_dist&#34; or &#34;python_dist_dl&#34;, &#34;dist&#34;: {&#34;name&#34;:&#34;&lt;distName&gt;&#34;, &#34;version&#34;:&#34;&lt;distVersion&gt;&#34;, &#34;module&#34;:&#34;&lt;distModule&gt;&#34;}}&#39;
+        model_description (string): Optional model description.
+    Returns:
+        dict: {
+                &#39;model_id : (integer) Stored Python-based CASTOR model ID.
+              }
+    &#34;&#34;&#34;
+    context = {&#34;entity_name&#34;: entity_name, &#34;signal_name&#34;: signal_name}
+    model_json = {&#34;name&#34;: model_name,
+                  &#34;description&#34;: model_description,
+                  &#34;model_data&#34;: {
+                     &#34;environment&#34;: environment,
+                     &#34;code&#34;: &#34;NULL&#34;,
+                     &#34;training_deployment&#34;: deployment
+                 }}
+
+    template, args = self._msg_template()
+    args.update({&#39;cmd&#39;:&#39;store_model&#39;, 
+                 &#39;context&#39;: context,
+                 &#39;model&#39;: model_json
+                })
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.get_entities"><code class="name flex">
+<span>def <span class="ident">get_entities</span></span>(<span>self, entity_type=None)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Get all entities in Semantic Context store.
+Optionally, only retrieve entities of a specified type.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>entity_type</code></strong> :&ensp;<code>string</code></dt>
+<dd>Optional entity type.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>(list): [
+{
+'name'
+: (string) 'Entity name',
+'description' : (string) 'Entity description',
+'entity_type' : {
+'name'
+: (string) 'Entity type name',
+'description' : (string) 'Entity type description'}
+},
+'geography' : {
+'geography_type' : (string) 'GIS_POINT',
+'latitude'
+: (float) Entity latitude,
+'longitude'
+: (float) Entity longitude
+}
+}
+&hellip;more&hellip;
+]</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def get_entities(self, entity_type=None):
+    &#34;&#34;&#34;
+    Get all entities in Semantic Context store.
+    Optionally, only retrieve entities of a specified type.
+    Parameters:
+        entity_type (string): Optional entity type.
+    Returns:
+        (list): [
+                  {
+                    &#39;name&#39;        : (string) &#39;Entity name&#39;,
+                    &#39;description&#39; : (string) &#39;Entity description&#39;,
+                    &#39;entity_type&#39; : {
+                      &#39;name&#39;        : (string) &#39;Entity type name&#39;,
+                      &#39;description&#39; : (string) &#39;Entity type description&#39;}
+                      },
+                    &#39;geography&#39; : {
+                      &#39;geography_type&#39; : (string) &#39;GIS_POINT&#39;,
+                      &#39;latitude&#39;       : (float) Entity latitude,
+                      &#39;longitude&#39;      : (float) Entity longitude
+                      }
+                  }
+                  ...more...
+                ]
+    &#34;&#34;&#34;
+    
+    template, args = self._msg_template()
+    if entity_type is None:
+       args.update({&#39;cmd&#39;:&#39;context/get_entities&#39;})
+    else:
+       args.update({&#39;cmd&#39;:&#39;context/get_entities&#39;,&#39;entity_type_name&#39;:entity_type})
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.get_entities_connectivity"><code class="name flex">
+<span>def <span class="ident">get_entities_connectivity</span></span>(<span>self, entity_names)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Get connectivity for a set of entity name(s).</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>entity_names</code></strong> :&ensp;<code>list</code> of <code>string</code></dt>
+<dd>Entity name(s).</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>(list): [
+[(string) 'Entity name A connected', (string) 'to entity name B'],
+[(string) 'Entity name A connected', (string) 'to entity name C'],
+&hellip;more&hellip;
+]</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def get_entities_connectivity(self, entity_names):
+    &#34;&#34;&#34;
+    Get connectivity for a set of entity name(s).
+    Parameters:
+        entity_names (list of string): Entity name(s).
+    Returns:
+        (list): [
+                  [(string) &#39;Entity name A connected&#39;, (string) &#39;to entity name B&#39;],
+                  [(string) &#39;Entity name A connected&#39;, (string) &#39;to entity name C&#39;],
+                  ...more...
+                ]
+    &#34;&#34;&#34;
+    
+    template, args = self._msg_template()
+    args.update({&#39;cmd&#39;:&#39;context/get_connectivity&#39;,&#39;entity_names&#39;:entity_names})
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.get_entity_types"><code class="name flex">
+<span>def <span class="ident">get_entity_types</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Get all entity types in Semantic Context store.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>None</code></strong></dt>
+<dd>&nbsp;</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>(list): [
+{
+'name'
+: (string) 'Entity Type name',
+'description' : (string) 'Entity Type description',
+}
+&hellip;more&hellip;
+]</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def get_entity_types(self):
+    &#34;&#34;&#34;
+    Get all entity types in Semantic Context store.
+    Parameters:
+        None
+    Returns:
+        (list): [
+                  {
+                    &#39;name&#39;        : (string) &#39;Entity Type name&#39;,
+                    &#39;description&#39; : (string) &#39;Entity Type description&#39;,
+                  }
+                  ...more...
+                ]
+    &#34;&#34;&#34;
+
+    template, args = self._msg_template()
+    args.update({&#39;cmd&#39;:&#39;context/get_entity_types&#39;})
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.get_model_data"><code class="name flex">
+<span>def <span class="ident">get_model_data</span></span>(<span>self, signal, entity, model_name, model_version=None, from_date=None, to_date=None, asof=None, asof_all=False)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Get forecast values for a given signal, entity, model name, and model version.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt>signal (string)
+: Context signal name.</dt>
+<dt>entity (string)
+: Context entity name.</dt>
+<dt>model_name (string)
+: Model name.</dt>
+<dt><strong><code>model_version</code></strong> :&ensp;<code>integer</code></dt>
+<dd>Model version ID.</dd>
+</dl>
+<p>fromDate (string)
+: Start of time range (inclusive); format: 'YYYY-MM-DDThh:mm:ss+00:00'
+toDate (string)
+: End of time range (inclusive): format: 'YYYY-MM-DDTHH:mm:ss+00:00'
+asof (string)
+: Forecasts produced as of time (inclusive): format: 'YYYY-MM-DDTHH:mm:ss+00:00'
+asof_all (Boolean)
+: If False (default) only most recent forecasts for every timestamp are returned, otherwise all.</p>
+<h2 id="returns">Returns</h2>
+<p>(dict): {
+'fields' : [
+'observed_timestamp',
+'added_timestamp',
+'value',
+'adhoc'
+],
+'values' : [
+[
+(string) '2019-02-01T12:00:00+00:00',
+(string) '2019-01-01T00:01:00+00:00',
+(float)
+239.2,
+(string) 'SomeValueMetadata'
+],
+&hellip;more&hellip;
+]
+}</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def get_model_data(self, signal, entity, model_name, model_version=None, from_date=None, to_date=None, asof=None, asof_all=False):
+    &#34;&#34;&#34;
+    Get forecast values for a given signal, entity, model name, and model version.
+    Parameters:
+        signal (string)        : Context signal name.
+        entity (string)        : Context entity name.
+        model_name (string)    : Model name.
+        model_version (integer): Model version ID.
+        fromDate (string)      : Start of time range (inclusive); format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+        toDate (string)        : End of time range (inclusive): format: &#39;YYYY-MM-DDTHH:mm:ss+00:00&#39;
+        asof (string)          : Forecasts produced as of time (inclusive): format: &#39;YYYY-MM-DDTHH:mm:ss+00:00&#39;
+        asof_all (Boolean)     : If False (default) only most recent forecasts for every timestamp are returned, otherwise all.
+    Returns:
+        (dict): {
+                  &#39;fields&#39; : [
+                    &#39;observed_timestamp&#39;,
+                    &#39;added_timestamp&#39;,
+                    &#39;value&#39;,
+                    &#39;adhoc&#39;
+                  ],
+                  &#39;values&#39; : [
+                    [
+                      (string) &#39;2019-02-01T12:00:00+00:00&#39;,
+                      (string) &#39;2019-01-01T00:01:00+00:00&#39;,
+                      (float)  239.2,
+                      (string) &#39;SomeValueMetadata&#39;
+                    ],
+                    ...more...
+                  ]
+                }
+    &#34;&#34;&#34;
+    
+    template, args = self._msg_template()
+    args.update({&#39;cmd&#39;:&#39;get_forecast_values&#39;, 
+                 &#39;context&#39;: {
+                    &#39;signal_name&#39;: signal,
+                    &#39;entity_name&#39;: entity
+                 },
+                 &#39;model_name&#39;:model_name,
+                 &#39;from&#39;: from_date, 
+                 &#39;to&#39;: to_date})
+    if model_version is not None:
+       args[&#39;model_version&#39;] = model_version
+    if asof is not None:
+       args[&#39;asof&#39;] = asof
+    if asof_all:
+       args[&#39;all&#39;] = asof_all
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.get_model_deployment"><code class="name flex">
+<span>def <span class="ident">get_model_deployment</span></span>(<span>self, signal, entity, model_name)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Get CASTOR model deployment data.</p>
+<h2 id="parameters">Parameters</h2>
+<p>signal (string)
+: Context signal name.
+entity (string)
+: Context entity name.
+model_name (string)
+: Model name.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>dict</code></strong></dt>
+<dd>{
+'model' : {
+'model_id'
+: (integer) Model ID,
+'name'
+: (string) 'Model name',
+'description' : (string) 'Model description',
+'model_data' : {
+'environment'
+: (string) 'Model environment',
+'code'
+: (string) 'Model code in base64 format; used only for R-based models',
+'training_deployment' : {
+'task'
+: (string) 'train',
+'time'
+: (string) Initial training time: 'YYYY-MM-DDThh:mm:ss+00:00',
+'repeatEvery'
+: (string) Optional repeat training schedule: 'N_minutes | N_hours | N_days | N_weeks',
+'until'
+: (string) Optional final training time: 'YYYY-MM-DDThh:mm:ss+00:00',
+'user_parameters' : {
+'optional' : 'user',
+'defined'
+: 'parameters'
+}
+}
+}
+}
+}</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def get_model_deployment(self, signal, entity, model_name):
+    &#34;&#34;&#34;
+    Get CASTOR model deployment data.
+    Parameters:
+        signal (string)        : Context signal name.
+        entity (string)        : Context entity name.
+        model_name (string)    : Model name.
+    Returns:
+        dict: {
+                &#39;model&#39; : {
+                  &#39;model_id&#39;    : (integer) Model ID,
+                  &#39;name&#39;        : (string) &#39;Model name&#39;,
+                  &#39;description&#39; : (string) &#39;Model description&#39;,
+                  &#39;model_data&#39; : {
+                    &#39;environment&#39;         : (string) &#39;Model environment&#39;,
+                    &#39;code&#39;                : (string) &#39;Model code in base64 format; used only for R-based models&#39;,
+                    &#39;training_deployment&#39; : {
+                      &#39;task&#39;            : (string) &#39;train&#39;,
+                      &#39;time&#39;            : (string) Initial training time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                      &#39;repeatEvery&#39;     : (string) Optional repeat training schedule: &#39;N_minutes | N_hours | N_days | N_weeks&#39;,
+                      &#39;until&#39;           : (string) Optional final training time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                      &#39;user_parameters&#39; : {
+                        &#39;optional&#39; : &#39;user&#39;,
+                        &#39;defined&#39;  : &#39;parameters&#39;
+                        }
+                      }
+                    }
+                  }
+              }
+    &#34;&#34;&#34;
+    template, args = self._msg_template()
+    args.update({&#39;cmd&#39;:&#39;get_model&#39;,
+                 &#39;context&#39;: {&#39;signal_name&#39;:signal,&#39;entity_name&#39;:entity},
+                 &#39;model_name&#39;: model_name
+    })
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.get_model_version_deployment"><code class="name flex">
+<span>def <span class="ident">get_model_version_deployment</span></span>(<span>self, signal, entity, model_name, model_version)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Get CASTOR model deployment data.</p>
+<h2 id="parameters">Parameters</h2>
+<p>signal (string)
+: Context signal name.
+entity (string)
+: Context entity name.
+model_name (string)
+: Model name.
+model_version (int)
+: Trained model version</p>
+<h2 id="returns">Returns</h2>
+<p>dict: {
+'model' : {
+'model_id'
+: (integer) Model ID,
+'version'
+:
+(integer) Model version ID,
+'model_version_data':{
+'train_time'
+: (string) When model version was trained: 'YYYY-MM-DDThh:mm:ss+00:00',
+'scoring_deployment': {
+'task'
+: (string) 'score',
+'time'
+: (string) Initial scoring time: 'YYYY-MM-DDThh:mm:ss+00:00',
+'repeatEvery'
+: (string) Optional repeat scoring schedule: 'N_minutes | N_hours | N_days | N_weeks',
+'until'
+: (string) Optional final scoring time: 'YYYY-MM-DDThh:mm:ss+00:00',
+'user_parameters' : {
+'optional' : 'user',
+'defined'
+: 'parameters'
+}
+}
+}
+}
+}</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def get_model_version_deployment(self, signal, entity, model_name, model_version):
+    &#34;&#34;&#34;
+    Get CASTOR model deployment data.
+    Parameters:
+        signal (string)        : Context signal name.
+        entity (string)        : Context entity name.
+        model_name (string)    : Model name.
+        model_version (int)    : Trained model version
+    Returns:
+        dict: {
+                &#39;model&#39; : {
+                  &#39;model_id&#39;    : (integer) Model ID,
+                  &#39;version&#39;  :  (integer) Model version ID,
+                  &#39;model_version_data&#39;:{
+                     &#39;train_time&#39;        : (string) When model version was trained: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                     &#39;scoring_deployment&#39;: {
+                        &#39;task&#39;            : (string) &#39;score&#39;,
+                        &#39;time&#39;            : (string) Initial scoring time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                        &#39;repeatEvery&#39;     : (string) Optional repeat scoring schedule: &#39;N_minutes | N_hours | N_days | N_weeks&#39;,
+                        &#39;until&#39;           : (string) Optional final scoring time: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;,
+                        &#39;user_parameters&#39; : {
+                           &#39;optional&#39; : &#39;user&#39;,
+                           &#39;defined&#39;  : &#39;parameters&#39;
+                        }
+                     }
+                  }
+        }
+       }
+    &#34;&#34;&#34;
+    template, args = self._msg_template()
+    args.update({&#39;cmd&#39;:&#39;get_model_version&#39;,
+                 &#39;context&#39;: {&#39;signal_name&#39;:signal,&#39;entity_name&#39;:entity},
+                 &#39;model_name&#39;: model_name,
+                 &#39;model_version&#39;: model_version,
+                 &#39;core&#39;: True
+    })
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.get_models"><code class="name flex">
+<span>def <span class="ident">get_models</span></span>(<span>self, contexts)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Get CASTOR models, model versions for a given list of Semantic Context (entiyty_name, signal_name).</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>contexts</code></strong> :&ensp;<code>list</code> of <code>context</code> <code>dict</code></dt>
+<dd>[{'entity_name': <ename1>, 'signal_name': <sname1>}, &hellip; ]</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>list</code></strong></dt>
+<dd>[
+{
+'context': {ctx1},
+'models': [
+{
+'model': m1,
+'model_versions': [
+{'model_version': mv11, 'ts_id': tsv11},
+{'model_version': mv12, 'ts_id': tsv12},
+&hellip;
+]
+},
+{
+'model': m2,
+'model_versions': [
+{'model_version': mv21, 'ts_id': tsv21},
+{'model_version': mv22, 'ts_id': tsv22},
+&hellip;
+]
+},
+&hellip;
+]
+},
+{
+'context': {ctx2},
+'moedls': [&hellip;]
+},
+&hellip;
+]</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def get_models(self, contexts):
+    &#34;&#34;&#34;
+    Get CASTOR models, model versions for a given list of Semantic Context (entiyty_name, signal_name).
+    Parameters:
+        contexts (list of context dict): [{&#39;entity_name&#39;: &lt;ename1&gt;, &#39;signal_name&#39;: &lt;sname1&gt;}, ... ]
+    Returns:
+        list: [ 
+                { 
+                  &#39;context&#39;: {ctx1},
+                  &#39;models&#39;: [ 
+                     {
+                       &#39;model&#39;: m1,
+                       &#39;model_versions&#39;: [
+                          {&#39;model_version&#39;: mv11, &#39;ts_id&#39;: tsv11},
+                          {&#39;model_version&#39;: mv12, &#39;ts_id&#39;: tsv12},
+                          ...
+                       ]
+                     },
+                     {
+                       &#39;model&#39;: m2,
+                       &#39;model_versions&#39;: [
+                          {&#39;model_version&#39;: mv21, &#39;ts_id&#39;: tsv21},
+                          {&#39;model_version&#39;: mv22, &#39;ts_id&#39;: tsv22},
+                          ...
+                       ]
+                     },
+                     ...
+                   ]
+                },
+                {
+                  &#39;context&#39;: {ctx2},
+                  &#39;moedls&#39;: [...]
+                },
+                ...
+              ]
+    &#34;&#34;&#34;
+
+    template, args = self._msg_template()
+    args.update({&#39;cmd&#39;:&#39;get_models_hierarchy&#39;, 
+                 &#39;context&#39;: contexts})
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.get_signal_types"><code class="name flex">
+<span>def <span class="ident">get_signal_types</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Get all signal types in Semantic Context store.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>None</code></strong></dt>
+<dd>&nbsp;</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>(list): [
+{
+'name'
+: (string) 'Signal Type name',
+'description' : (string) 'Signal Type description',
+}
+&hellip;more&hellip;
+]</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def get_signal_types(self):
+    &#34;&#34;&#34;
+    Get all signal types in Semantic Context store.
+    Parameters:
+        None
+    Returns:
+        (list): [
+                  {
+                    &#39;name&#39;        : (string) &#39;Signal Type name&#39;,
+                    &#39;description&#39; : (string) &#39;Signal Type description&#39;,
+                  }
+                  ...more...
+                ]
+    &#34;&#34;&#34;
+
+    template, args = self._msg_template()
+    args.update({&#39;cmd&#39;:&#39;context/get_signal_types&#39;})
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.get_signals"><code class="name flex">
+<span>def <span class="ident">get_signals</span></span>(<span>self, signal_type=None)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Get all signals persisted in context store.
+Optionally, only retrieve signals of a specified type.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>signal_type</code></strong> :&ensp;<code>string</code></dt>
+<dd>Optional signal type.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>(dict): {
+'signals: [
+{
+'name'
+: (string) Signal name,
+'description' : (string) Signal description,
+'signal_type' : {
+'name'
+: (string) Signal type name,
+'description' : (string) Signal type description,
+},
+'unit'
+: (string) Signal unit of measurement
+}
+]
+}</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def get_signals(self, signal_type=None):
+    &#34;&#34;&#34;
+    Get all signals persisted in context store.
+    Optionally, only retrieve signals of a specified type.
+    Parameters:
+        signal_type (string): Optional signal type.
+    Returns:
+        (dict): {
+                  &#39;signals: [
+                    {
+                      &#39;name&#39;        : (string) Signal name,
+                      &#39;description&#39; : (string) Signal description,
+                      &#39;signal_type&#39; : {
+                        &#39;name&#39;        : (string) Signal type name,
+                        &#39;description&#39; : (string) Signal type description,
+                        },
+                      &#39;unit&#39;        : (string) Signal unit of measurement
+                    }
+                  ]
+                }
+    &#34;&#34;&#34;   
+    template, args = self._msg_template()
+    if signal_type is None:
+       args.update({&#39;cmd&#39;:&#39;context/get_signals&#39;})
+    else:
+       args.update({&#39;cmd&#39;:&#39;context/get_signals&#39;,&#39;signal_type_name&#39;:signal_type})
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.get_timeseries_context"><code class="name flex">
+<span>def <span class="ident">get_timeseries_context</span></span>(<span>self, ts_ids)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Retrieve the context for a list of ts_ids</p>
+<h2 id="parameters">Parameters</h2>
+<p>ts_ids (list)
+: List of ts_id (string) ['ts_id1','ts_id2',&hellip;]</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>output</code></strong> :&ensp;<code>list</code></dt>
+<dd>[{'ts_id':'ts_id1','context':{'entity_name':<val>,'signal_name':<val>},&hellip;]</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def get_timeseries_context(self, ts_ids):
+    &#34;&#34;&#34;
+    Retrieve the context for a list of ts_ids
+    Parameters:
+        ts_ids (list)      : List of ts_id (string) [&#39;ts_id1&#39;,&#39;ts_id2&#39;,...]
+    Returns:
+        output (list): [{&#39;ts_id&#39;:&#39;ts_id1&#39;,&#39;context&#39;:{&#39;entity_name&#39;:&lt;val&gt;,&#39;signal_name&#39;:&lt;val&gt;},...]
+    &#34;&#34;&#34;
+    template, args = self._msg_template()
+    args.update({&#39;cmd&#39;:&#39;get_timeseries_context&#39;,&#39;ts_ids&#39;:ts_ids})
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.get_timeseries_data"><code class="name flex">
+<span>def <span class="ident">get_timeseries_data</span></span>(<span>self, signal, entity, from_date, to_date, asof=None, asof_all=False)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Get timeseries values for a signal &amp; entity, over a specified time range.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt>signal (string)
+: Context signal name.</dt>
+<dt>entity (string)
+: Context entity name.</dt>
+<dt><strong><code>fromDate</code></strong> :&ensp;<code>string</code></dt>
+<dd>Start of time range (inclusive); format: 'YYYY-MM-DDThh:mm:ss+00:00'</dd>
+</dl>
+<p>toDate (string)
+: End of time range (inclusive); format: 'YYYY-MM-DDThh:mm:ss+00:00'
+asof (string)
+: Optional 'as of' dateime; format: 'YYYY-MM-DDThh:mm:ss+00:00'
+asof_all (Boolean) : If False (default) only most recent forecasts for every timestamp are returned, otherwise all.</p>
+<h2 id="returns">Returns</h2>
+<p>(dict): {
+'fields' : [
+'observed_timestamp',
+'added_timestamp',
+'value',
+'adhoc'
+],
+'values' : [
+[
+(string) '2019-02-01T13:00:00+00:00',
+(string) '2019-02-01T13:02:00+00:00',
+(float)
+239.2,
+(string) 'SomeValueMetadata'
+],
+&hellip;more&hellip;
+]
+}</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def get_timeseries_data(self, signal, entity,from_date, to_date, asof=None,asof_all=False):
+    &#34;&#34;&#34;
+    Get timeseries values for a signal &amp; entity, over a specified time range.
+    Parameters:
+        signal (string)  : Context signal name.
+        entity (string)  : Context entity name.
+        fromDate (string): Start of time range (inclusive); format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+        toDate (string)  : End of time range (inclusive); format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+        asof (string)    : Optional &#39;as of&#39; dateime; format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+        asof_all (Boolean) : If False (default) only most recent forecasts for every timestamp are returned, otherwise all.
+    Returns:
+        (dict): {
+                  &#39;fields&#39; : [
+                    &#39;observed_timestamp&#39;,
+                    &#39;added_timestamp&#39;,
+                    &#39;value&#39;,
+                    &#39;adhoc&#39;
+                  ],
+                  &#39;values&#39; : [
+                    [
+                      (string) &#39;2019-02-01T13:00:00+00:00&#39;,
+                      (string) &#39;2019-02-01T13:02:00+00:00&#39;,
+                      (float)  239.2,
+                      (string) &#39;SomeValueMetadata&#39;
+                    ],
+                    ...more...
+                  ]
+                }
+    &#34;&#34;&#34;
+
+    template, args = self._msg_template()
+    args.update({&#39;cmd&#39;:&#39;get_timeseries_values&#39;, 
+                 &#39;context&#39;: {
+                    &#39;signal_name&#39;: signal,
+                    &#39;entity_name&#39;: entity
+                 },
+                 &#39;from&#39;: from_date, 
+                 &#39;to&#39;: to_date})
+    if asof is not None:
+       args[&#39;asof&#39;] = asof
+    if asof_all:
+       args[&#39;all&#39;] = asof_all
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.get_timeseries_id"><code class="name flex">
+<span>def <span class="ident">get_timeseries_id</span></span>(<span>self, contexts)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Retrieve ts_id for a given list of contexts</p>
+<h2 id="parameters">Parameters</h2>
+<p>contexts (list)
+: list of objects [{'entity_name':<val>,'signal_name':<val>},&hellip;]</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>A</code> <code>list</code>: [{<code>'context'</code>:{<code>'entity_name'</code>:&lt;<code>val</code>&gt;,<code>'signal_name'</code>:&lt;<code>val</code>&gt;,<code>'ts_id'</code>:&lt;<code>val</code>&gt;},<code>...</code>]</dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def get_timeseries_id(self, contexts):
+    &#34;&#34;&#34;
+    Retrieve ts_id for a given list of contexts
+    Parameters:
+        contexts (list)    : list of objects [{&#39;entity_name&#39;:&lt;val&gt;,&#39;signal_name&#39;:&lt;val&gt;},...]
+    Returns:
+        A list: [{&#39;context&#39;:{&#39;entity_name&#39;:&lt;val&gt;,&#39;signal_name&#39;:&lt;val&gt;,&#39;ts_id&#39;:&lt;val&gt;},...]
+    &#34;&#34;&#34;
+    template, args = self._msg_template()
+    args.update({&#39;cmd&#39;:&#39;get_timeseries&#39;,&#39;context&#39;:contexts})
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.key_value_service"><code class="name flex">
+<span>def <span class="ident">key_value_service</span></span>(<span>self, cmd, keys)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Format message for interacting with the key/value service</p>
+<h2 id="throws">Throws</h2>
+<p>An exception if not successful</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Dict</code> - <code>The</code> <code>message</code> <code>to</code> <code>send</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def key_value_service(self, cmd, keys):
+    &#34;&#34;&#34;
+        Format message for interacting with the key/value service
+
+        Throws:
+            An exception if not successful
+
+        Returns:
+            Dict - The message to send
+    &#34;&#34;&#34;
+    template, args = self._msg_template(&#39;KeyValueService&#39;)
+    args.update({&#39;cmd&#39;: cmd, &#39;keys&#39;: keys})
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.register_model"><code class="name flex">
+<span>def <span class="ident">register_model</span></span>(<span>self, model_name, entity_name, signal_name)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Format message for registering an external model</p>
+<h2 id="throws">Throws</h2>
+<p>An exception if not successful</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Dict</code> - <code>The</code> <code>message</code> <code>to</code> <code>send</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def register_model(self, model_name, entity_name, signal_name):
+    &#34;&#34;&#34;
+        Format message for registering an external model
+
+        Throws:
+            An exception if not successful
+
+        Returns:
+            Dict - The message to send
+    &#34;&#34;&#34;
+    template, args = self._msg_template()
+    args.update({&#39;cmd&#39;:&#39;register_model&#39;, &#39;model_name&#39;: model_name,
+                 &#39;entity&#39;: entity_name, &#39;signal&#39;: signal_name})
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.request_model_time_series"><code class="name flex">
+<span>def <span class="ident">request_model_time_series</span></span>(<span>self, model_name, entity_name, signal_name)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Format message for retrieving a models timeseries is</p>
+<h2 id="throws">Throws</h2>
+<p>An exception if not successful</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Dict</code> - <code>The</code> <code>message</code> <code>to</code> <code>send</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def request_model_time_series(self, model_name, entity_name, signal_name):
+    &#34;&#34;&#34;
+        Format message for retrieving a models timeseries is
+
+        Throws:
+            An exception if not successful
+
+        Returns:
+            Dict - The message to send
+    &#34;&#34;&#34;
+    template, args = self._msg_template()
+    args.update({&#39;cmd&#39;:&#39;get_model_time_series&#39;,
+                 &#39;model_name&#39;: model_name, &#39;entity&#39;: entity_name,
+                 &#39;signal&#39;: signal_name})
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.request_sensor_data"><code class="name flex">
+<span>def <span class="ident">request_sensor_data</span></span>(<span>self, meter, from_date, to_date)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Format message for retrieving sensor data</p>
+<h2 id="throws">Throws</h2>
+<p>An exception if not successful</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Dict</code> - <code>The</code> <code>message</code> <code>to</code> <code>send</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def request_sensor_data(self, meter, from_date, to_date):
+    &#34;&#34;&#34;
+        Format message for retrieving sensor data
+
+        Throws:
+            An exception if not successful
+
+        Returns:
+            Dict - The message to send
+    &#34;&#34;&#34;
+    template, args = self._msg_template()
+    args.update({&#39;cmd&#39;:&#39;ts/get_timeseries_values&#39;, &#39;device_id&#39;: meter,
+                 &#39;from&#39;: from_date, &#39;to&#39;: to_date})
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.request_sensor_data_batch"><code class="name flex">
+<span>def <span class="ident">request_sensor_data_batch</span></span>(<span>self, meter_ids, from_date, to_date, asof=None, asof_all=False)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Format message for retrieving sensor data for a list of meter_ids</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>meter_ids</code></strong> :&ensp;<code>list</code> of <code>string</code></dt>
+<dd>Timeseries IDs.</dd>
+</dl>
+<p>from_date (string)
+: Start of datetime range (inclusive); format: 'YYYY-MM-DDThh:mm:ss+00:00'
+to_date (string)
+: End of datetime range (inclusive); format: 'YYYY-MM-DDThh:mm:ss+00:00'
+asof (string)
+: Optional 'as of' dateime; format: 'YYYY-MM-DDThh:mm:ss+00:00'
+asof_all (Boolean) : If False (default) only most recent forecasts for every timestamp are returned, otherwise all.</p>
+<h2 id="returns">Returns</h2>
+<p>(dict): {
+'fields' : [
+'observed_timestamp',
+'added_timestamp',
+'value',
+'adhoc'
+],
+'batches' : [
+{
+'ts_id'
+: (string) 'Timeseries ID',
+'values' : [
+(string) '2019-02-01T13:00:00+00:00',
+(string) '2019-02-01T13:02:00+00:00',
+(float)
+239.2,
+(string) 'SomeValueMetadata'
+],
+&hellip;more&hellip;
+},
+&hellip; more&hellip;
+]
+}</p></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def request_sensor_data_batch(self, meter_ids, from_date, to_date, asof=None, asof_all=False):
+    &#34;&#34;&#34;
+       Format message for retrieving sensor data for a list of meter_ids
+    Parameters:
+        meter_ids (list of string): Timeseries IDs.
+        from_date (string)      : Start of datetime range (inclusive); format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+        to_date (string)        : End of datetime range (inclusive); format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+        asof (string)    : Optional &#39;as of&#39; dateime; format: &#39;YYYY-MM-DDThh:mm:ss+00:00&#39;
+        asof_all (Boolean) : If False (default) only most recent forecasts for every timestamp are returned, otherwise all.
+    Returns:
+        (dict): {
+                  &#39;fields&#39; : [
+                    &#39;observed_timestamp&#39;,
+                    &#39;added_timestamp&#39;,
+                    &#39;value&#39;,
+                    &#39;adhoc&#39;
+                  ],
+                  &#39;batches&#39; : [
+                    {
+                      &#39;ts_id&#39;  : (string) &#39;Timeseries ID&#39;,
+                      &#39;values&#39; : [
+                        (string) &#39;2019-02-01T13:00:00+00:00&#39;,
+                        (string) &#39;2019-02-01T13:02:00+00:00&#39;,
+                        (float)  239.2,
+                        (string) &#39;SomeValueMetadata&#39;
+                      ],
+                      ...more...
+                    },
+                    ... more...
+                  ]
+                }
+    &#34;&#34;&#34;
+    template, args = self._msg_template()
+    args.update({&#39;cmd&#39;:&#39;ts/get_timeseries_values_batch&#39;, 
+                 &#39;ts_ids&#39;: meter_ids,
+                 &#39;from&#39;: from_date, &#39;to&#39;: to_date})
+    if asof is not None:
+       args.update({&#39;asof&#39;: asof})
+    if asof_all:
+       args.update({&#39;all&#39;: asof_all})
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.request_sensor_list"><code class="name flex">
+<span>def <span class="ident">request_sensor_list</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Format message for retrieving sensor listing</p>
+<h2 id="throws">Throws</h2>
+<p>An exception if not successful</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Dict</code> - <code>The</code> <code>message</code> <code>to</code> <code>send</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def request_sensor_list(self):
+    &#34;&#34;&#34;
+        Format message for retrieving sensor listing
+
+        Throws:
+            An exception if not successful
+
+        Returns:
+            Dict - The message to send
+    &#34;&#34;&#34;
+    template, args = self._msg_template()
+    args.update({&#39;cmd&#39;:&#39;ts/get_time_series&#39;})
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.store_time_series"><code class="name flex">
+<span>def <span class="ident">store_time_series</span></span>(<span>self, values)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Format message for storing sensor observations</p>
+<h2 id="throws">Throws</h2>
+<p>An exception if not successful</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Dict</code> - <code>The</code> <code>message</code> <code>to</code> <code>send</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def store_time_series(self, values):
+    &#34;&#34;&#34;
+        Format message for storing sensor observations
+
+        Throws:
+            An exception if not successful
+
+        Returns:
+            Dict - The message to send
+    &#34;&#34;&#34;
+    template, args = self._msg_template()
+    args.update({&#39;cmd&#39;:&#39;ts/store_timeseries_values&#39;, &#39;values&#39;: values})
+    return template</code></pre>
+</details>
+</dd>
+<dt id="message_catalog.MessageCatalog.weather_service_hourly"><code class="name flex">
+<span>def <span class="ident">weather_service_hourly</span></span>(<span>self, api_key, lat, lng)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Format message for interacting with the weather service</p>
+<h2 id="throws">Throws</h2>
+<p>An exception if not successful</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Dict</code> - <code>The</code> <code>message</code> <code>to</code> <code>send</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>Source code</summary>
+<pre><code class="python">def weather_service_hourly(self, api_key, lat, lng):
+    &#34;&#34;&#34;
+        Format message for interacting with the weather service
+
+        Throws:
+            An exception if not successful
+
+        Returns:
+            Dict - The message to send
+    &#34;&#34;&#34;
+    template, args = self._msg_template(&#39;WeatherService-TwoDayHourlyForecast-External&#39;)
+    args.update({&#39;apiKey&#39;: api_key, &#39;latitude&#39;: lat, &#39;longitude&#39;: lng})
+    return template</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="message_catalog.MessageCatalog" href="#message_catalog.MessageCatalog">MessageCatalog</a></code></h4>
+<ul class="">
+<li><code><a title="message_catalog.MessageCatalog.average_time_series" href="#message_catalog.MessageCatalog.average_time_series">average_time_series</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.deploy_model" href="#message_catalog.MessageCatalog.deploy_model">deploy_model</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.get_entities" href="#message_catalog.MessageCatalog.get_entities">get_entities</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.get_entities_connectivity" href="#message_catalog.MessageCatalog.get_entities_connectivity">get_entities_connectivity</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.get_entity_types" href="#message_catalog.MessageCatalog.get_entity_types">get_entity_types</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.get_model_data" href="#message_catalog.MessageCatalog.get_model_data">get_model_data</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.get_model_deployment" href="#message_catalog.MessageCatalog.get_model_deployment">get_model_deployment</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.get_model_version_deployment" href="#message_catalog.MessageCatalog.get_model_version_deployment">get_model_version_deployment</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.get_models" href="#message_catalog.MessageCatalog.get_models">get_models</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.get_signal_types" href="#message_catalog.MessageCatalog.get_signal_types">get_signal_types</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.get_signals" href="#message_catalog.MessageCatalog.get_signals">get_signals</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.get_timeseries_context" href="#message_catalog.MessageCatalog.get_timeseries_context">get_timeseries_context</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.get_timeseries_data" href="#message_catalog.MessageCatalog.get_timeseries_data">get_timeseries_data</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.get_timeseries_id" href="#message_catalog.MessageCatalog.get_timeseries_id">get_timeseries_id</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.key_value_service" href="#message_catalog.MessageCatalog.key_value_service">key_value_service</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.register_model" href="#message_catalog.MessageCatalog.register_model">register_model</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.request_model_time_series" href="#message_catalog.MessageCatalog.request_model_time_series">request_model_time_series</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.request_sensor_data" href="#message_catalog.MessageCatalog.request_sensor_data">request_sensor_data</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.request_sensor_data_batch" href="#message_catalog.MessageCatalog.request_sensor_data_batch">request_sensor_data_batch</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.request_sensor_list" href="#message_catalog.MessageCatalog.request_sensor_list">request_sensor_list</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.store_time_series" href="#message_catalog.MessageCatalog.store_time_series">store_time_series</a></code></li>
+<li><code><a title="message_catalog.MessageCatalog.weather_service_hourly" href="#message_catalog.MessageCatalog.weather_service_hourly">weather_service_hourly</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.6.4</a>.</p>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad()</script>
+</body>
+</html>
