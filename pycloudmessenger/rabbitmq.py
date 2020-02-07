@@ -86,7 +86,11 @@ class RabbitContext():
         raise Exception(f'{possibilities} missing from arguments.')
 
     @classmethod
-    def from_credentials_file(self, cred_file: str, user: str = None, password: str = None):
+    def from_args(cls, args: dict, user: str = None, password: str = None):
+        return cls(args, user, password)
+
+    @classmethod
+    def from_credentials_file(cls, cred_file: str, user: str = None, password: str = None, **kwargs):
         """
             Construct a RabbitContext object from the arguments provided
 
@@ -96,19 +100,20 @@ class RabbitContext():
             Returns:
                 The new RabbitContext object
         """
+        args = None
+
         with open(cred_file) as creds:
             args = json.load(creds)
 
         #First, we need to support legacy credential formats
-        if 'broker' in args:
+        if args and 'broker' in args:
             args['broker_host'] = args.pop('broker')
             args['broker_port'] = args.pop('port')
             args['broker_vhost'] = args.pop('vhost')
             args['broker_user'] = args.pop('client_user')
             args['broker_password'] = args.pop('client_pwd')
-            args['broker_cert_b64'] = args.pop('cert_b64')
 
-        return RabbitContext(args, user, password)
+        return cls(args, user, password, **kwargs)
 
     def user(self):
         """ Return user, default to None"""
