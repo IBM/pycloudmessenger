@@ -137,7 +137,24 @@ class Notification(str, Enum):
 class Context(rabbitmq.RabbitContext):
     """
     Class holding connection details for an FFL service
+        :param download_models: whether downloaded model file name or model url
+                                should be returned by receive function
+        :type download_models: `bool`
+        :param dispatch_threshold: max model size to embed, or upload
+        :type dispatch_threshold: `int`
     """
+    def __init__(self, args: dict, user: str = None, password: str = None,
+                 download_models: bool = False, dispatch_threshold: int = 1024*5):
+        super().__init__(args, user, password)
+        self.args['download_models'] = download_models
+        self.args['dispatch_threshold'] = dispatch_threshold
+
+    def download_models(self):
+        """ Return user, default to None"""
+        return self.args.get('download_models', False)
+    def dispatch_threshold(self):
+        """ Return user, default to None"""
+        return self.args.get('dispatch_threshold', None)
 
 
 class TimedOutException(rabbitmq.RabbitTimedOutException):
@@ -190,6 +207,9 @@ class Messenger(rabbitmq.RabbitDualClient):
             self.command_queue = super().mktemp_queue()
         else:
             self.command_queue = self.subscriber.sub_queue
+
+        # List of messages/models downloaded
+        self.model_files = []
 
     def __enter__(self):
         """
@@ -299,7 +319,11 @@ class Messenger(rabbitmq.RabbitDualClient):
         if task_name:
             message = self.catalog.msg_bin_upload_object(task_name)
         else:
-            message = self.catalog.msg_bin_uploader()
+            blob = json.dumps(model)
+            if len(blob) > self.context.dispatch_threshold():
+                message = self.catalog.msg_bin_uploader()
+            else:
+                return {'model': model}
 
         upload_info = self._invoke_service(message)
 
@@ -388,6 +412,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         :param model: update to be sent
         :type model: `dict`
         """
+        self.model_files.clear()
         model_message = self._dispatch_model(model=model)
 
         message = self.catalog.msg_task_assignment_update(
@@ -487,6 +512,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         :param model: model to be sent as part of the message
         :type model: `dict`
         """
+        self.model_files.clear()
         model_message = self._dispatch_model(model=model)
         message = self.catalog.msg_task_start(task_name, model_message)
         self._send(message)
@@ -504,11 +530,64 @@ class Messenger(rabbitmq.RabbitDualClient):
         self._send(message)
 
 
+    def task_notification(self, timeout: int = 0, flavours: list = None) -> dict:
+        """
+        Wait for a message to arrive or until timeout.
+        If message is received, check whether its notification type matches
+        element in given list of notification flavours.
+        Throws: An exception on failure
+        :param timeout: timeout in seconds
+        :type timeout: `int`
+        :param flavours: expected notification types
+        :type flavours: `list`
+        :return: received message
+        :rtype: `dict`
+        """
+        msg = self.receive(timeout)
+
+        if 'notification' not in msg:
+            raise Exception(f"Malformed object: {msg}")
+
+        if 'type' not in msg['notification']:
+            raise Exception(f"Malformed object: {msg['notification']}")
+
+        try:
+            if Notification(msg['notification']['type']) not in flavours:
+                raise ValueError
+        except:
+            raise Exception(f"Unexpected notification " \
+                f"{msg['notification']['type']}, expecting {flavours}")
+
+        #if 'params' in msg:
+        #    if msg['params'] and 'model' in msg['params']:
+        #        return msg['params']['model']
+
+        if self.context.download_models():
+            msg = self.get_model(msg)
+        return msg
+
+    def get_model(self, model_info: dict) -> dict:
+        """
+        Download a model if the given information contains the correct details.
+        Throws: An exception on failure
+        :param model_info: information with details for downloading the model
+        :type model_info: `dict`
+        :return: updated information containing the name of the downloaded file
+        :rtype: `dict`
+        """
+        if 'params' in model_info:
+            if model_info['params'] and 'url' in model_info['params']:
+                url = model_info['params']['url']
+                if url:
+                    self.model_files.append(utils.FileDownloader(url))
+                    model_info['params'].update({'model': self.model_files[-1].name()})
+        return model_info
+
+
 class BasicParticipant():
     """ Base class for an FFL general user """
 
-    def __init__(self, context: Context, task_name: str = None,
-                 download_models: bool = True):
+    def __init__(self, context: Context, task_name: str = None):
         """
         Class initializer.
         Throws: An exception on failure
@@ -525,13 +604,9 @@ class BasicParticipant():
 
         self.messenger = None
 
-        # List of messages/models downloaded
-        self.model_files = []
-
         self.context = context
         self.task_name = task_name
         self.queue = None
-        self.download = download_models
 
     def __enter__(self):
         """
@@ -580,41 +655,8 @@ class BasicParticipant():
         :return: received message
         :rtype: `dict`
         """
-        msg = self.messenger.receive(timeout)
-
-        if 'notification' not in msg:
-            raise Exception(f"Malformed object: {msg}")
-
-        if 'type' not in msg['notification']:
-            raise Exception(f"Malformed object: {msg['notification']}")
-
-        try:
-            if Notification(msg['notification']['type']) not in flavours:
-                raise ValueError
-        except:
-            raise Exception(f"Unexpected notification " \
-                f"{msg['notification']['type']}, expecting {flavours}")
-
-        if self.download:
-            msg = self.get_model(msg)
+        msg = self.messenger.task_notification(timeout, flavours)
         return msg
-
-    def get_model(self, model_info: dict) -> dict:
-        """
-        Download a model if the given information contains the correct details.
-        Throws: An exception on failure
-        :param model_info: information with details for downloading the model
-        :type model_info: `dict`
-        :return: updated information containing the name of the downloaded file
-        :rtype: `dict`
-        """
-        if 'params' in model_info:
-            if model_info['params'] and 'url' in model_info['params']:
-                url = model_info['params']['url']
-                if url:
-                    self.model_files.append(utils.FileDownloader(url))
-                    model_info['params'].update({'model': self.model_files[-1].name()})
-        return model_info
 
 
 class User(BasicParticipant):
@@ -681,8 +723,7 @@ class Participant(BasicParticipant):
     """ This class provides the functionality needed by the
         participants of a federated learning task.  """
 
-    def __init__(self, context: Context, task_name: str = None,
-                 download_models: bool = True):
+    def __init__(self, context: Context, task_name: str = None):
         """
         Class initializer.
         Throws: An exception on failure
@@ -694,7 +735,7 @@ class Participant(BasicParticipant):
                                 be returned by receive function
         :type download_models: `bool`
         """
-        super().__init__(context, task_name, download_models)
+        super().__init__(context, task_name)
 
         messenger = Messenger(self.context)
         result = messenger.task_assignment_info(self.task_name)
@@ -712,7 +753,6 @@ class Participant(BasicParticipant):
         :param message: message to be sent (needs to be serializable into json string)
         :type message: `dict`
         """
-        self.model_files.clear()
         self.messenger.task_assignment_update(self.task_name, message)
 
     def receive(self, timeout: int = 0) -> dict:
@@ -724,8 +764,10 @@ class Participant(BasicParticipant):
         :return: received message
         :rtype: `dict`
         """
-        return self._receive(timeout, [Notification.aggregator_started,
-                                       Notification.aggregator_stopped])
+        return self.messenger.task_notification(timeout, [
+            Notification.aggregator_started,
+            Notification.aggregator_stopped]
+        )
 
     def leave_task(self) -> None:
         """
@@ -739,8 +781,7 @@ class Aggregator(BasicParticipant):
     """ This class provides the functionality needed by the
         aggregator of a federated learning task. """
 
-    def __init__(self, context: Context, task_name: str = None,
-                 download_models: bool = True):
+    def __init__(self, context: Context, task_name: str = None):
         """
         Class initializer.
         Throws: An exception on failure
@@ -752,7 +793,7 @@ class Aggregator(BasicParticipant):
                                 be returned by receive function
         :type download_models: `bool`
         """
-        super().__init__(context, task_name, download_models)
+        super().__init__(context, task_name)
 
         messenger = Messenger(self.context)
 
@@ -781,7 +822,6 @@ class Aggregator(BasicParticipant):
         :param message: message to be sent (needs to be serializable into json string)
         :type message: `dict`
         """
-        self.model_files.clear()
         self.messenger.task_start(self.task_name, message)
 
     def receive(self, timeout: int = 0) -> dict:
@@ -793,9 +833,12 @@ class Aggregator(BasicParticipant):
         :return: received message
         :rtype: `dict`
         """
-        msg = self._receive(timeout, [Notification.participant_joined,
-                                      Notification.participant_updated,
-                                      Notification.participant_left])
+        msg = self.messenger.task_notification(timeout, [
+            Notification.participant_joined,
+            Notification.participant_updated,
+            Notification.participant_left]
+        )
+
         flavour = msg['notification']
         if flavour is Notification.participant_left:
             self._del_participant(flavour['participant'])
