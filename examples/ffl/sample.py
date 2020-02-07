@@ -48,14 +48,14 @@ def main():
     cmdline = parser.parse_args()
 
     LOGGER.info("Starting...")
-    context = fflapi.Context.from_credentials_file(cmdline.credentials, cmdline.broker_user, cmdline.broker_password)
+    context = fflapi.Context.from_credentials_file(cmdline.credentials, cmdline.broker_user, cmdline.broker_password, dispatch_threshold=1)
 
     try:
         with fflapi.Messenger(context, cmdline.feed_queue, cmdline.reply_queue) as ffl:
             result = ffl.task_listing()
             LOGGER.info(f"Received: {result}")
-            LOGGER.info(f"Received: {result[0]['TASK_NAME']}")
-            result = ffl.task_info(result[0]['TASK_NAME'])
+            LOGGER.info(f"Received: {result[0]['task_name']}")
+            result = ffl.task_info(result[0]['task_name'])
             LOGGER.info(f"Received: {result}")
             result = ffl.user_assignments()
             LOGGER.info(f"Received: {result}")
