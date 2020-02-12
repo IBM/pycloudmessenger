@@ -25,7 +25,6 @@ in DRL funded by the European Union under the Horizon 2020 Program.
 
 # pylint: disable=R0903, R0913
 
-import json
 import logging
 from enum import Enum
 import requests
@@ -148,12 +147,16 @@ class Context(rabbitmq.RabbitContext):
         super().__init__(args, user, password)
         self.args['download_models'] = download_models
         self.args['dispatch_threshold'] = dispatch_threshold
+        self.encoder = serializer.Serializer
 
+    def serializer(self):
+        """ Return serializer"""
+        return self.encoder
     def download_models(self):
-        """ Return user, default to None"""
+        """ Return setting, default to False"""
         return self.args.get('download_models', False)
     def dispatch_threshold(self):
-        """ Return user, default to None"""
+        """ Return setting default to None"""
         return self.args.get('dispatch_threshold', None)
 
 
@@ -236,7 +239,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         :param queue: name of the publish queue
         :type queue: `str`
         """
-        message = serializer.Serializer.serialize(message)
+        message = self.context.serializer().serialize(message)
         if len(message) > self.max_msg_size:
             raise BufferError(f"Messenger: payload too large: {len(message)}.")
 
@@ -261,7 +264,7 @@ class Messenger(rabbitmq.RabbitDualClient):
             raise TimedOutException(exc) from exc
         except rabbitmq.RabbitConsumerException as exc:
             raise ConsumerException(exc) from exc
-        return serializer.Serializer.deserialize(self.last_recv_msg)
+        return self.context.serializer().deserialize(self.last_recv_msg)
 
     def _invoke_service(self, message: dict, timeout: int = 0) -> dict:
         """
@@ -281,10 +284,11 @@ class Messenger(rabbitmq.RabbitDualClient):
             #Need a reply, so add this to the request message
             message = self.catalog.msg_assign_reply(message, self.command_queue.name)
 
-            message = serializer.Serializer.serialize(message)
+            message = self.context.serializer().serialize(message)
             if len(message) > self.max_msg_size:
                 raise BufferError(f"Messenger: payload too large: {len(message)}.")
-            result = super(Messenger, self).invoke_service(message, timeout, queue=self.command_queue)
+            result = super(Messenger, self).invoke_service(message, timeout,
+                                                           queue=self.command_queue)
         except rabbitmq.RabbitTimedOutException as exc:
             raise TimedOutException(exc) from exc
         except rabbitmq.RabbitConsumerException as exc:
@@ -292,7 +296,7 @@ class Messenger(rabbitmq.RabbitDualClient):
 
         if not result:
             raise Exception(f"Malformed object: None")
-        result = serializer.Serializer.deserialize(result)
+        result = self.context.serializer().deserialize(result)
 
         if 'error' in result:
             raise Exception(f"Server Error ({result['activation']}): {result['error']}")
@@ -315,15 +319,16 @@ class Messenger(rabbitmq.RabbitDualClient):
         if not model:
             return {}
 
+        blob = self.context.serializer().serialize(model)
+
         # First, obtain the upload location/keys
         if task_name:
             message = self.catalog.msg_bin_upload_object(task_name)
         else:
-            blob = json.dumps(model)
             if len(blob) > self.context.dispatch_threshold():
                 message = self.catalog.msg_bin_uploader()
             else:
-                return {'model': model}
+                return blob
 
         upload_info = self._invoke_service(message)
 
@@ -334,7 +339,7 @@ class Messenger(rabbitmq.RabbitDualClient):
             with rabbitmq.RabbitHeartbeat(self.subscriber):
                 # And then perform the upload
                 response = requests.post(upload_info['url'],
-                                         files={'file': json.dumps(model)},
+                                         files={'file': blob},
                                          data=upload_info['fields'],
                                          headers=None)
                 response.raise_for_status()
@@ -750,7 +755,7 @@ class Participant(BasicParticipant):
         """
         Send a message to the aggregator and return immediately (not waiting for a reply).
         Throws: An exception on failure
-        :param message: message to be sent (needs to be serializable into json string)
+        :param message: message to be sent (needs to be serializable)
         :type message: `dict`
         """
         self.messenger.task_assignment_update(self.task_name, message)
@@ -765,9 +770,9 @@ class Participant(BasicParticipant):
         :rtype: `dict`
         """
         return self.messenger.task_notification(timeout, [
-            Notification.aggregator_started,
-            Notification.aggregator_stopped]
-        )
+                        Notification.aggregator_started,
+                        Notification.aggregator_stopped
+                ])
 
     def leave_task(self) -> None:
         """
@@ -819,7 +824,7 @@ class Aggregator(BasicParticipant):
         """
         Send a message to all task participants and return immediately (not waiting for a reply).
         Throws: An exception on failure
-        :param message: message to be sent (needs to be serializable into json string)
+        :param message: message to be sent (needs to be serializable)
         :type message: `dict`
         """
         self.messenger.task_start(self.task_name, message)
@@ -836,8 +841,8 @@ class Aggregator(BasicParticipant):
         msg = self.messenger.task_notification(timeout, [
             Notification.participant_joined,
             Notification.participant_updated,
-            Notification.participant_left]
-        )
+            Notification.participant_left
+        ])
 
         flavour = msg['notification']
         if flavour is Notification.participant_left:

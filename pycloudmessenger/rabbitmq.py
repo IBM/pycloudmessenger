@@ -90,7 +90,8 @@ class RabbitContext():
         return cls(args, user, password)
 
     @classmethod
-    def from_credentials_file(cls, cred_file: str, user: str = None, password: str = None, **kwargs):
+    def from_credentials_file(cls, cred_file: str,
+                              user: str = None, password: str = None, **kwargs):
         """
             Construct a RabbitContext object from the arguments provided
 
