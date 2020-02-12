@@ -143,11 +143,12 @@ class Context(rabbitmq.RabbitContext):
         :type dispatch_threshold: `int`
     """
     def __init__(self, args: dict, user: str = None, password: str = None,
+                 encoder: serializer.SerializerABC = serializer.JsonPickleSerializer,
                  download_models: bool = False, dispatch_threshold: int = 1024*1024*5):
         super().__init__(args, user, password)
         self.args['download_models'] = download_models
         self.args['dispatch_threshold'] = dispatch_threshold
-        self.encoder = serializer.Serializer
+        self.encoder = encoder
 
     def serializer(self):
         """ Return serializer"""
