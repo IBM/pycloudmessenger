@@ -14,7 +14,9 @@ import logging
 import unittest
 import json
 import pytest
+import numpy as np
 import pycloudmessenger.rabbitmq as rabbitmq
+import pycloudmessenger.serializer as serializer
 
 #Set up logger
 logging.basicConfig(
@@ -42,6 +44,22 @@ class MessengerTests(unittest.TestCase):
     def tearDown(self):
         pass
 
+    def test_numpy_serializer(self):
+        a = np.array([2,3,4])
+
+        #Standard serializer should fail for numpy
+        with self.assertRaises(TypeError):
+            serializer.Serializer.serialize(a)
+
+        b = serializer.JsonPickleSerializer.serialize(a)
+        c = serializer.JsonPickleSerializer.deserialize(b)
+        self.assertTrue(np.array_equal(a, c))
+
+        d = serializer.Serializer.serialize(b)
+        e = serializer.Serializer.deserialize(d)
+        f = serializer.JsonPickleSerializer.deserialize(e)
+        self.assertTrue(np.array_equal(a, f))
+
     #@unittest.skip("temporarily skipping")
     def test_users(self):
         context = rabbitmq.RabbitContext.from_credentials_file(self.credentials)
@@ -52,7 +70,7 @@ class MessengerTests(unittest.TestCase):
                              subscribe=rabbitmq.RabbitQueue(context.replies()))
                 message = {'action': 'Outbound', 'payload': 'some data'}
                 LOGGER.info(f'Client sending: {message}')
-                client.publish(json.dumps(message))#, delay=5)
+                client.publish(json.dumps(message))
 
                 #Now start the server side and handle the message
                 with rabbitmq.RabbitClient(context) as server:

@@ -23,13 +23,24 @@ Please note that the following code was developed for the project MUSKETEER
 in DRL funded by the European Union under the Horizon 2020 Program.
 """
 
-# pylint: disable=W1203
-
 import json
+import jsonpickle
 
 
-class Serializer:
-    '''Basic json serialization'''
+class SerializerABC:
+    '''Basic serialization'''
+
+    @staticmethod
+    def serialize(message: dict) -> str:
+        '''Convert message to serializable format'''
+
+    @staticmethod
+    def deserialize(message) -> dict:
+        '''Convert serialized message to dict'''
+
+
+class Serializer(SerializerABC):
+    '''json serialization'''
 
     @staticmethod
     def serialize(message: dict) -> str:
@@ -40,3 +51,17 @@ class Serializer:
     def deserialize(message) -> dict:
         '''Convert serialized message to dict'''
         return json.loads(message)
+
+
+class JsonPickleSerializer(SerializerABC):
+    '''Json pickle serialization'''
+
+    @staticmethod
+    def serialize(message: dict) -> str:
+        '''Convert message to serializable format'''
+        return jsonpickle.encode(message)
+
+    @staticmethod
+    def deserialize(message) -> dict:
+        '''Convert serialized message to dict'''
+        return jsonpickle.decode(message)
