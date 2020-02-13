@@ -737,9 +737,6 @@ class Participant(BasicParticipant):
         :type context: :class:`.Context`
         :param task_name: name of the task (the user needs to be a participant of this task).
         :type task_name: `str`
-        :param download_models: whether downloaded model file name or model url should
-                                be returned by receive function
-        :type download_models: `bool`
         """
         super().__init__(context, task_name)
 
