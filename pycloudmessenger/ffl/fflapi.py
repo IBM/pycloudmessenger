@@ -319,7 +319,7 @@ class Messenger(rabbitmq.RabbitDualClient):
             if len(blob) > self.context.dispatch_threshold():
                 message = self.catalog.msg_bin_uploader()
             else:
-                return blob
+                return model
 
         upload_info = self._invoke_service(message)
 
