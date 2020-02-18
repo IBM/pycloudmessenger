@@ -179,20 +179,15 @@ class Messenger(rabbitmq.RabbitDualClient):
     """
 
     def __init__(self, context: Context, publish_queue: str = None,
-                 subscribe_queue: str = None, max_msg_size: int = 2*1024*1024):
+                 subscribe_queue: str = None):
         """
         Class initializer
         :param context: connection details
         :type context: :class:`.Context`
         :param publish_queue: name of the publish queue
         :type publish_queue: `str`
-        :param max_msg_size: maximum permissible message length
-        :type max_msg_size: `int`
         """
         super(Messenger, self).__init__(context)
-
-        # Max size of a message for dispatch
-        self.max_msg_size = max_msg_size
 
         # Keep a copy here - lots of re-use
         self.timeout = context.timeout()
@@ -241,9 +236,6 @@ class Messenger(rabbitmq.RabbitDualClient):
         :type queue: `str`
         """
         message = self.context.serializer().serialize(message)
-        if len(message) > self.max_msg_size:
-            raise BufferError(f"Messenger: payload too large: {len(message)}.")
-
         pub_queue = rabbitmq.RabbitQueue(queue) if queue else None
         super(Messenger, self).send_message(message, pub_queue)
 
@@ -286,8 +278,6 @@ class Messenger(rabbitmq.RabbitDualClient):
             message = self.catalog.msg_assign_reply(message, self.command_queue.name)
 
             message = self.context.serializer().serialize(message)
-            if len(message) > self.max_msg_size:
-                raise BufferError(f"Messenger: payload too large: {len(message)}.")
             result = super(Messenger, self).invoke_service(message, timeout,
                                                            queue=self.command_queue)
         except rabbitmq.RabbitTimedOutException as exc:
