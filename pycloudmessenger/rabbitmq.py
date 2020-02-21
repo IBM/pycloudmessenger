@@ -306,6 +306,16 @@ class AbstractRabbitMessenger(ABC):
             Start the client connection to the broker
         """
 
+    @abstractmethod
+    def publish(self, message, queue: RabbitQueue = None, exchange: str = None,
+                mode: int = 1, delay: int = 0):
+        """"""
+
+    @abstractmethod
+    def receive(self, handler=None, timeout: int = 30, max_messages: int = 0,
+                queue: RabbitQueue = None) -> str:
+        """"""
+
 
 class RabbitTimedOutException(Exception):
     """ Exception for timeouts """
