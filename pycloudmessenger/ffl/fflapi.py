@@ -144,7 +144,7 @@ class Context(rabbitmq.RabbitContext):
     """
     def __init__(self, args: dict, user: str = None, password: str = None,
                  encoder: serializer.SerializerABC = serializer.JsonPickleSerializer,
-                 download_models: bool = False, dispatch_threshold: int = 1024*1024*5):
+                 download_models: bool = True, dispatch_threshold: int = 1024*1024*5):
         super().__init__(args, user, password)
         self.args['download_models'] = download_models
         self.args['dispatch_threshold'] = dispatch_threshold
@@ -576,7 +576,15 @@ class Messenger(rabbitmq.RabbitDualClient):
                 url = model_info['params']['url']
                 if url:
                     self.model_files.append(utils.FileDownloader(url))
-                    model_info['params'].update({'model': self.model_files[-1].name()})
+
+                    with open(self.model_files[-1].name(), 'rb') as model_file:
+                        buff = model_file.read()
+                        blob = self.context.serializer().deserialize(buff)
+                        model_info['params'].update(blob)
+
+                    if 'key' in model_info['params']:
+                        del model_info['params']['key']
+                    del model_info['params']['url']
         return model_info
 
 
