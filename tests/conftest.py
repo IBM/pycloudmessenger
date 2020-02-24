@@ -10,7 +10,6 @@ Multi-Beneficiary General Model Grant Agreement of the Program, the above limita
 """
 
 import pytest
-import pyfflmessenger.utils as utils
 
 
 def pytest_addoption(parser):
