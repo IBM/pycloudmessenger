@@ -11,7 +11,7 @@ setup(
     python_requires='>=3.6',
     install_requires=[
         'pika==0.13.0',
-        'requests',
+        'requests>=2.18.4',
         'jsonpickle'
     ],
     url='https://github.com/IBM/pycloudmessenger'
