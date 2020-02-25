@@ -117,9 +117,9 @@ class MessageCatalog():
         args.append({'cmd': 'task_quit', 'params': [task_name, self.user_name]})
         return template
 
-    def msg_task_start(self, task_name: str, model: dict = None) -> dict:
+    def msg_task_start(self, task_name: str, model: dict = None, participant: str = None) -> dict:
         template, args = self._msg_template()
-        args.append({'cmd': 'task_start', 'params': [task_name, self.user_name, model]})
+        args.append({'cmd': 'task_start', 'params': [task_name, self.user_name, model, participant]})
         return template
 
     def msg_task_stop(self, task_name: str, model: dict = None) -> dict:
