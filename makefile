@@ -31,5 +31,9 @@ configure: depend
 clean:
 	-docker rm -f $(shell docker ps -a | grep rabbit_mq | cut -d' ' -f1)
 
+ffl_test:
+	python3 -m pytest tests/ffl/ffl.py -srx -s --credentials=$(creds)
+
 test: creds configure
+	python3 -m pytest tests/ffl/ffl.py -srx -s --credentials=$(creds)
 	python3 -m pytest tests/basic/test_basic.py -srx -s --credentials=$(creds)
