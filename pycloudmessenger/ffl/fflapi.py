@@ -32,10 +32,11 @@ import pycloudmessenger.utils as utils
 import pycloudmessenger.rabbitmq as rabbitmq
 import pycloudmessenger.serializer as serializer
 import pycloudmessenger.ffl.message_catalog as catalog
+import pycloudmessenger.ffl.abstractions as fflabc
 
 logging.getLogger("pika").setLevel(logging.CRITICAL)
 
-
+'''
 class Topology(str, Enum):
     """ Class representing FFL task topologies """
 
@@ -43,7 +44,7 @@ class Topology(str, Enum):
 
     def __str__(self):
         return self.value
-
+'''
 
 class Notification(str, Enum):
     """ Notifications that can be received """
@@ -663,7 +664,7 @@ class BasicParticipant():
         return msg
 
 
-class User(BasicParticipant):
+class User(fflabc.AbstractUser, BasicParticipant):
     """ Class that allows a general user to avail of the FFL platform services """
 
     def create_user(self, user_name: str, password: str, organisation: str) -> dict:
@@ -681,7 +682,7 @@ class User(BasicParticipant):
         """
         return self.messenger.user_create(user_name, password, organisation)
 
-    def create_task(self, topology: Topology, definition: dict) -> dict:
+    def create_task(self, topology: fflabc.Topology, definition: dict) -> dict:
         """
         Creates a task with the given definition and returns a dictionary
         with the details of the created tasks.
@@ -723,7 +724,7 @@ class User(BasicParticipant):
         return self.messenger.task_listing()
 
 
-class Participant(BasicParticipant):
+class Participant(fflabc.AbstractParticipant, BasicParticipant):
     """ This class provides the functionality needed by the
         participants of a federated learning task.  """
 
@@ -778,7 +779,7 @@ class Participant(BasicParticipant):
         return self.messenger.task_quit(self.task_name)
 
 
-class Aggregator(BasicParticipant):
+class Aggregator(fflabc.AbstractAggregator, BasicParticipant):
     """ This class provides the functionality needed by the
         aggregator of a federated learning task. """
 
