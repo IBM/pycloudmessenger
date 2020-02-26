@@ -189,17 +189,30 @@ class AbstractAggregator(ABC):
 
 
 class Factory():
+    """ Implements factory methods for registering implementations and
+    constructing concrete instances of the abstract base classes """
+
     types = {}
 
     @classmethod
-    def register(cls, key: str, context: AbstractContext, user: AbstractUser, aggr: AbstractAggregator, part: AbstractParticipant):
+    def register(cls, key: str, context: AbstractContext, user: AbstractUser,
+                 aggr: AbstractAggregator, part: AbstractParticipant):
+        """
+        Registers a platform implementation, with concrete classes
+        Throws: An exception on failure
+        """
         if not key:
             raise Exception('A registration key must be provided')
 
-        cls.types[key] = {'context': context, 'user': user, 'aggregator': aggr, 'participant': part}        
+        cls.types[key] = {'context': context, 'user': user, 'aggregator': aggr, 'participant': part}
+        return cls
 
     @classmethod
     def context(cls, key: str, config_file: str, *args, **kwargs) -> AbstractContext:
+        """
+        Constructs a concrete instance of AbstractContext
+        Throws: An exception on failure
+        """
         if not key:
             raise Exception('A registration key must be provided')
 
@@ -207,7 +220,7 @@ class Factory():
         if not target:
             raise Exception('A context class must be provided')
 
-        args = {}
+        config = {}
         if config_file:
             with open(config_file) as cfg:
                 config = json.load(cfg)
@@ -217,7 +230,11 @@ class Factory():
         return context
 
     @classmethod
-    def instantiate(cls, context: AbstractContext, class_name: str, base_class):
+    def _instantiate(cls, context: AbstractContext, class_name: str, base_class):
+        """
+        Helper to construct a concrete instances of Abstract base classes
+        Throws: An exception on failure
+        """
         target = context.classes[class_name]
         if not target:
             raise Exception(f'Class must be provided: {base_class}')
@@ -226,8 +243,11 @@ class Factory():
             raise Exception(f'Not a subclass: {target} of {base_class}')
 
         return target(context)
-    
+
     @classmethod
     def user(cls, context: AbstractContext) -> AbstractUser:
-        return cls.instantiate(context, 'user', AbstractUser)
-
+        """
+        Constructs a concrete instance of AbstractUser
+        Throws: An exception on failure
+        """
+        return cls._instantiate(context, 'user', AbstractUser)
