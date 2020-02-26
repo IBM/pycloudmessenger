@@ -23,6 +23,7 @@ Please note that the following code was developed for the project MUSKETEER
 in DRL funded by the European Union under the Horizon 2020 Program.
 """
 
+import json
 from enum import Enum
 from abc import ABC, abstractmethod
 
@@ -34,6 +35,12 @@ class Topology(str, Enum):
 
     def __str__(self):
         return self.value
+
+
+class AbstractContext(ABC):
+    """Class for basic context management"""
+    def __init__(self):
+        self.classes = None
 
 
 class AbstractUser(ABC):
@@ -90,6 +97,15 @@ class AbstractUser(ABC):
     def get_tasks(self) -> list:
         """
         Returns a list with all the available tasks.
+        Throws: An exception on failure
+        :return: list of all the available tasks
+        :rtype: `list`
+        """
+
+    @abstractmethod
+    def get_joined_tasks(self) -> list:
+        """
+        Returns a list with all the joined tasks.
         Throws: An exception on failure
         :return: list of all the available tasks
         :rtype: `list`
@@ -169,3 +185,49 @@ class AbstractAggregator(ABC):
         The status of the task will be changed to 'COMPLETE'.
         Throws: An exception on failure
         """
+
+
+
+class Factory():
+    types = {}
+
+    @classmethod
+    def register(cls, key: str, context: AbstractContext, user: AbstractUser, aggr: AbstractAggregator, part: AbstractParticipant):
+        if not key:
+            raise Exception('A registration key must be provided')
+
+        cls.types[key] = {'context': context, 'user': user, 'aggregator': aggr, 'participant': part}        
+
+    @classmethod
+    def context(cls, key: str, config_file: str, *args, **kwargs) -> AbstractContext:
+        if not key:
+            raise Exception('A registration key must be provided')
+
+        target = cls.types[key]['context']
+        if not target:
+            raise Exception('A context class must be provided')
+
+        args = {}
+        if config_file:
+            with open(config_file) as cfg:
+                config = json.load(cfg)
+
+        context = target(config, *args, **kwargs)
+        context.classes = cls.types[key]
+        return context
+
+    @classmethod
+    def instantiate(cls, context: AbstractContext, class_name: str, base_class):
+        target = context.classes[class_name]
+        if not target:
+            raise Exception(f'Class must be provided: {base_class}')
+
+        if not issubclass(target, base_class):
+            raise Exception(f'Not a subclass: {target} of {base_class}')
+
+        return target(context)
+    
+    @classmethod
+    def user(cls, context: AbstractContext) -> AbstractUser:
+        return cls.instantiate(context, 'user', AbstractUser)
+

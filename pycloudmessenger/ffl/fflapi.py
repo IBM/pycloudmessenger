@@ -36,15 +36,6 @@ import pycloudmessenger.ffl.abstractions as fflabc
 
 logging.getLogger("pika").setLevel(logging.CRITICAL)
 
-'''
-class Topology(str, Enum):
-    """ Class representing FFL task topologies """
-
-    star = "STAR"
-
-    def __str__(self):
-        return self.value
-'''
 
 class Notification(str, Enum):
     """ Notifications that can be received """
@@ -722,6 +713,15 @@ class User(fflabc.AbstractUser, BasicParticipant):
         :rtype: `list`
         """
         return self.messenger.task_listing()
+
+    def get_joined_tasks(self) -> list:
+        """
+        Returns a list with all the joined tasks.
+        Throws: An exception on failure
+        :return: list of all the available tasks
+        :rtype: `list`
+        """
+        return self.messenger.user_assignments()
 
 
 class Participant(fflabc.AbstractParticipant, BasicParticipant):
