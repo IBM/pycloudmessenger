@@ -213,8 +213,11 @@ class Factory():
 
         config = {}
         if config_file:
-            with open(config_file) as cfg:
-                config = json.load(cfg)
+            if isinstance(config_file, str):
+                with open(config_file) as cfg:
+                    config = json.load(cfg)
+            elif isinstance(config_file, dict):
+                config = config_file
 
         context = target(config, *args, **kwargs)
         context.classes = cls.types[key]
