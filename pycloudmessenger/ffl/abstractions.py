@@ -208,7 +208,7 @@ class Factory():
         return cls
 
     @classmethod
-    def context(cls, key: str, config_file: str, *args, **kwargs) -> AbstractContext:
+    def context(cls, key: str, config_file: str = None, *args, **kwargs) -> AbstractContext:
         """
         Constructs a concrete instance of AbstractContext
         Throws: An exception on failure
@@ -230,7 +230,7 @@ class Factory():
         return context
 
     @classmethod
-    def _instantiate(cls, context: AbstractContext, class_name: str, base_class):
+    def _instantiate(cls, context: AbstractContext, class_name: str, base_class, *args, **kwargs):
         """
         Helper to construct a concrete instances of Abstract base classes
         Throws: An exception on failure
@@ -242,12 +242,28 @@ class Factory():
         if not issubclass(target, base_class):
             raise Exception(f'Not a subclass: {target} of {base_class}')
 
-        return target(context)
+        return target(context, *args, **kwargs)
 
     @classmethod
-    def user(cls, context: AbstractContext) -> AbstractUser:
+    def user(cls, context: AbstractContext, *args, **kwargs) -> AbstractUser:
         """
         Constructs a concrete instance of AbstractUser
         Throws: An exception on failure
         """
-        return cls._instantiate(context, 'user', AbstractUser)
+        return cls._instantiate(context, 'user', AbstractUser, *args, **kwargs)
+
+    @classmethod
+    def aggregator(cls, context: AbstractContext, *args, **kwargs) -> AbstractAggregator:
+        """
+        Constructs a concrete instance of AbstractAggregator
+        Throws: An exception on failure
+        """
+        return cls._instantiate(context, 'aggregator', AbstractAggregator, *args, **kwargs)
+
+    @classmethod
+    def participant(cls, context: AbstractContext, *args, **kwargs) -> AbstractParticipant:
+        """
+        Constructs a concrete instance of AbstractParticipant
+        Throws: An exception on failure
+        """
+        return cls._instantiate(context, 'participant', AbstractParticipant, *args, **kwargs)
