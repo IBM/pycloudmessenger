@@ -24,17 +24,8 @@ in DRL funded by the European Union under the Horizon 2020 Program.
 """
 
 import json
-from enum import Enum
 from abc import ABC, abstractmethod
 
-
-class Topology(str, Enum):
-    """ Class representing FFL task topologies """
-
-    star = "STAR"
-
-    def __str__(self):
-        return self.value
 
 
 class AbstractContext(ABC):
@@ -62,7 +53,7 @@ class AbstractUser(ABC):
         """
 
     @abstractmethod
-    def create_task(self, topology: Topology, definition: dict) -> dict:
+    def create_task(self, topology: str, definition: dict) -> dict:
         """
         Creates a task with the given definition and returns a dictionary
         with the details of the created tasks.
