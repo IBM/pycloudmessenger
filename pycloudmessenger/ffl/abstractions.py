@@ -24,8 +24,106 @@ in DRL funded by the European Union under the Horizon 2020 Program.
 """
 
 import json
+from enum import Enum
 from abc import ABC, abstractmethod
 
+
+class Topology(str):
+    """ Class representing FFL task topologies """
+
+    star = "STAR"
+
+    def __str__(self):
+        return self.value
+
+
+class Notification(str, Enum):
+    """ Notifications that can be received """
+
+    aggregator_started = 'aggregator_started'
+    aggregator_stopped = 'aggregator_stopped'
+    participant_joined = 'participant_joined'
+    participant_updated = 'participant_updated'
+    participant_left = 'participant_left'
+
+    @classmethod
+    def is_notification(cls, msg: dict, notification) -> bool:
+        """
+        Check if msg is a particular notification.
+        :param msg: message to be checked
+        :type msg: `dict`
+        :param notification: notification to be compared against
+        :type notification: `str`
+        :return: True if yes, False otherwise
+        :rtype: `bool`
+        """
+        try:
+            ntype = msg['notification']['type']
+            return cls(ntype) is notification
+        except:
+            # not a notification
+            pass
+
+        return False
+
+    @classmethod
+    def is_aggregator_started(cls, msg: dict) -> bool:
+        """
+        Check if msg is an 'aggregator_started' notification.
+        :param msg: message to be checked
+        :type msg: `dict`
+        :return: True if yes, False otherwise
+        :rtype: `bool`
+        """
+        return cls.is_notification(msg, cls.aggregator_started)
+
+    @classmethod
+    def is_aggregator_stopped(cls, msg: dict) -> bool:
+        """
+        Check if msg is an 'aggregator_stopped' notification.
+        :param msg: message to be checked
+        :type msg: `dict`
+        :return: True if yes, False otherwise
+        :rtype: `bool`
+        """
+        return cls.is_notification(msg, cls.aggregator_stopped)
+
+
+    @classmethod
+    def is_participant_joined(cls, msg: dict) -> bool:
+        """
+        Check if msg is a 'participant_joined' notification.
+        :param msg: message to be checked
+        :type msg: `dict`
+        :return: True if yes, False otherwise
+        :rtype: `bool`
+        """
+        return cls.is_notification(msg, cls.participant_joined)
+
+    @classmethod
+    def is_participant_left(cls, msg: dict) -> bool:
+        """
+        Check if msg is a 'participant_left' notification.
+        :param msg: message to be checked
+        :type msg: `dict`
+        :return: True if yes, False otherwise
+        :rtype: `bool`
+        """
+        return cls.is_notification(msg, cls.participant_left)
+
+    @classmethod
+    def is_participant_updated(cls, msg: dict) -> bool:
+        """
+        Check if msg is a 'participant_updated' notification.
+        :param msg: message to be checked
+        :type msg: `dict`
+        :return: True if yes, False otherwise
+        :rtype: `bool`
+        """
+        return cls.is_notification(msg, cls.participant_updated)
+
+    def __str__(self):
+        return self.value
 
 
 class AbstractContext(ABC):

@@ -26,7 +26,6 @@ in DRL funded by the European Union under the Horizon 2020 Program.
 # pylint: disable=R0903, R0913
 
 import logging
-from enum import Enum
 import requests
 import pycloudmessenger.utils as utils
 import pycloudmessenger.rabbitmq as rabbitmq
@@ -36,102 +35,6 @@ import pycloudmessenger.ffl.abstractions as fflabc
 
 logging.getLogger("pika").setLevel(logging.CRITICAL)
 
-
-class Topology(str):
-    """ Class representing FFL task topologies """
-
-    star = "STAR"
-
-    def __str__(self):
-        return self.value
-
-
-class Notification(str, Enum):
-    """ Notifications that can be received """
-
-    aggregator_started = 'aggregator_started'
-    aggregator_stopped = 'aggregator_stopped'
-    participant_joined = 'participant_joined'
-    participant_updated = 'participant_updated'
-    participant_left = 'participant_left'
-
-    @classmethod
-    def is_notification(cls, msg: dict, notification) -> bool:
-        """
-        Check if msg is a particular notification.
-        :param msg: message to be checked
-        :type msg: `dict`
-        :param notification: notification to be compared against
-        :type notification: `str`
-        :return: True if yes, False otherwise
-        :rtype: `bool`
-        """
-        try:
-            ntype = msg['notification']['type']
-            return cls(ntype) is notification
-        except:
-            # not a notification
-            pass
-
-        return False
-
-    @classmethod
-    def is_aggregator_started(cls, msg: dict) -> bool:
-        """
-        Check if msg is an 'aggregator_started' notification.
-        :param msg: message to be checked
-        :type msg: `dict`
-        :return: True if yes, False otherwise
-        :rtype: `bool`
-        """
-        return cls.is_notification(msg, cls.aggregator_started)
-
-    @classmethod
-    def is_aggregator_stopped(cls, msg: dict) -> bool:
-        """
-        Check if msg is an 'aggregator_stopped' notification.
-        :param msg: message to be checked
-        :type msg: `dict`
-        :return: True if yes, False otherwise
-        :rtype: `bool`
-        """
-        return cls.is_notification(msg, cls.aggregator_stopped)
-
-    @classmethod
-    def is_participant_joined(cls, msg: dict) -> bool:
-        """
-        Check if msg is a 'participant_joined' notification.
-        :param msg: message to be checked
-        :type msg: `dict`
-        :return: True if yes, False otherwise
-        :rtype: `bool`
-        """
-        return cls.is_notification(msg, cls.participant_joined)
-
-    @classmethod
-    def is_participant_left(cls, msg: dict) -> bool:
-        """
-        Check if msg is a 'participant_left' notification.
-        :param msg: message to be checked
-        :type msg: `dict`
-        :return: True if yes, False otherwise
-        :rtype: `bool`
-        """
-        return cls.is_notification(msg, cls.participant_left)
-
-    @classmethod
-    def is_participant_updated(cls, msg: dict) -> bool:
-        """
-        Check if msg is a 'participant_updated' notification.
-        :param msg: message to be checked
-        :type msg: `dict`
-        :return: True if yes, False otherwise
-        :rtype: `bool`
-        """
-        return cls.is_notification(msg, cls.participant_updated)
-
-    def __str__(self):
-        return self.value
 
 
 class Context(rabbitmq.RabbitContext):
@@ -163,15 +66,11 @@ class Context(rabbitmq.RabbitContext):
 
 
 class TimedOutException(rabbitmq.RabbitTimedOutException):
-    """
-    Over-ride exception
-    """
+    """Over-ride exception"""
 
 
 class ConsumerException(rabbitmq.RabbitConsumerException):
-    """
-    Over-ride exception
-    """
+    """Over-ride exception"""
 
 
 class Messenger(rabbitmq.RabbitDualClient):
@@ -549,7 +448,7 @@ class Messenger(rabbitmq.RabbitDualClient):
             raise Exception(f"Malformed object: {msg['notification']}")
 
         try:
-            if Notification(msg['notification']['type']) not in flavours:
+            if fflabc.Notification(msg['notification']['type']) not in flavours:
                 raise ValueError
         except:
             raise Exception(f"Unexpected notification " \
@@ -776,8 +675,8 @@ class Participant(fflabc.AbstractParticipant, BasicParticipant):
         :rtype: `dict`
         """
         return self.messenger.task_notification(timeout, [
-                        Notification.aggregator_started,
-                        Notification.aggregator_stopped
+                        fflabc.Notification.aggregator_started,
+                        fflabc.Notification.aggregator_stopped
                 ])
 
     def leave_task(self) -> None:
@@ -845,13 +744,13 @@ class Aggregator(fflabc.AbstractAggregator, BasicParticipant):
         :rtype: `dict`
         """
         msg = self.messenger.task_notification(timeout, [
-            Notification.participant_joined,
-            Notification.participant_updated,
-            Notification.participant_left
+            fflabc.Notification.participant_joined,
+            fflabc.Notification.participant_updated,
+            fflabc.Notification.participant_left
         ])
 
         flavour = msg['notification']
-        if flavour is Notification.participant_left:
+        if flavour is fflabc.Notification.participant_left:
             self._del_participant(flavour['participant'])
         else:
             self._add_participant(flavour['participant'], flavour)
