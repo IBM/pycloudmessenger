@@ -28,6 +28,7 @@ import argparse
 import logging
 import random
 import pycloudmessenger.ffl.fflapi as fflapi
+import pycloudmessenger.ffl.abstractions as ffl
 
 #Set up logger
 logging.basicConfig(
@@ -41,24 +42,25 @@ LOGGER = logging.getLogger(__package__)
 def main():
     parser = argparse.ArgumentParser(description='Messaging Client')
     parser.add_argument('--credentials', required=True)
-    parser.add_argument('--feed_queue', help='Defaults to credentials file')
-    parser.add_argument('--reply_queue', help='Defaults to auto-generated')
     parser.add_argument('--broker_user', help='Defaults to credentials file')
     parser.add_argument('--broker_password', help='Defaults to credentials file')
     cmdline = parser.parse_args()
 
     LOGGER.info("Starting...")
-    context = fflapi.Context.from_credentials_file(cmdline.credentials, cmdline.broker_user, cmdline.broker_password, dispatch_threshold=1)
+
+    ffl.Factory.register('cloud', fflapi.Context, fflapi.User, fflapi.Aggregator, fflapi.Participant)
+
+    context = ffl.Factory.context('cloud', cmdline.credentials, cmdline.broker_user, cmdline.broker_password)
+    user = ffl.Factory.user(context)
 
     try:
-        with fflapi.Messenger(context, cmdline.feed_queue, cmdline.reply_queue) as ffl:
-            result = ffl.task_listing()
-            LOGGER.info(f"Received: {result}")
-            LOGGER.info(f"Received: {result[0]['task_name']}")
-            result = ffl.task_info(result[0]['task_name'])
-            LOGGER.info(f"Received: {result}")
-            result = ffl.user_assignments()
-            LOGGER.info(f"Received: {result}")
+        with user:
+            result = user.get_tasks()
+            for r in result:
+                LOGGER.info(f"|{r['task_name']}|")
+
+            #result = user.get_joined_tasks()
+            #LOGGER.info(f"Received: {result}")
     except Exception as err:
         LOGGER.error(err)
         raise err
