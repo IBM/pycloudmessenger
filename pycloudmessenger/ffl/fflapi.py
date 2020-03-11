@@ -710,6 +710,9 @@ class Aggregator(fflabc.AbstractAggregator, BasicParticipant):
         # Get the task info for subscribe queue etc
         result = messenger.task_info(self.task_name)
 
+        if 'status' in result and result['status'] == 'COMPLETE':
+            raise Exception("Task is already finished.")
+
         if 'queue' not in result:
             raise Exception("Task not created by this user.")
 
