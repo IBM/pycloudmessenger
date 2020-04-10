@@ -26,6 +26,7 @@ in DRL funded by the European Union under the Horizon 2020 Program.
 import json
 from enum import Enum
 from abc import ABC, abstractmethod
+from typing import NamedTuple
 
 
 class Topology(str):
@@ -47,7 +48,7 @@ class Notification(str, Enum):
     participant_left = 'participant_left'
 
     @classmethod
-    def is_notification(cls, msg: dict, notification) -> bool:
+    def is_notification(cls, notification: dict, wanted) -> bool:
         """
         Check if msg is a particular notification.
         :param msg: message to be checked
@@ -58,8 +59,8 @@ class Notification(str, Enum):
         :rtype: `bool`
         """
         try:
-            ntype = msg['notification']['type']
-            return cls(ntype) is notification
+            ntype = notification['type']
+            return cls(ntype) is wanted
         except:
             # not a notification
             pass
@@ -124,6 +125,14 @@ class Notification(str, Enum):
 
     def __str__(self):
         return self.value
+
+
+
+class Response(NamedTuple):
+    """Class for delivering models/notifications to callers"""
+    notification: Notification
+    model: any
+
 
 
 class AbstractContext(ABC):
@@ -216,7 +225,7 @@ class AbstractParticipant(ABC):
         """
 
     @abstractmethod
-    def receive(self, timeout: int = 0) -> dict:
+    def receive(self, timeout: int = 0) -> Response:
         """
         Wait for a message to arrive or until timeout period is exceeded.
         Throws: An exception on failure
@@ -248,7 +257,7 @@ class AbstractAggregator(ABC):
         """
 
     @abstractmethod
-    def receive(self, timeout: int = 0) -> dict:
+    def receive(self, timeout: int = 0) -> Response:
         """
         Wait for a message to arrive or until timeout period is exceeded.
         Throws: An exception on failure
