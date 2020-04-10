@@ -188,8 +188,7 @@ class Messenger(rabbitmq.RabbitDualClient):
             raise TimedOutException(exc) from exc
         except rabbitmq.RabbitConsumerException as exc:
             raise ConsumerException(exc) from exc
-        message = self.context.serializer().deserialize(self.last_recv_msg)
-        return message
+        return self.context.serializer().deserialize(self.last_recv_msg)
 
     def _invoke_service(self, message: dict, timeout: int = 0) -> dict:
         """
@@ -459,7 +458,6 @@ class Messenger(rabbitmq.RabbitDualClient):
         """
         model_message = self._dispatch_model(task_name=task_name, model=model)
         message = self.catalog.msg_task_stop(task_name, model_message)
-        #self._send(message)
         return self._invoke_service(message)
 
 
