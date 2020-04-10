@@ -27,6 +27,7 @@ in DRL funded by the European Union under the Horizon 2020 Program.
 
 import logging
 import requests
+from typing import NamedTuple
 import pycloudmessenger.utils as utils
 import pycloudmessenger.rabbitmq as rabbitmq
 import pycloudmessenger.serializer as serializer
@@ -35,6 +36,29 @@ import pycloudmessenger.ffl.abstractions as fflabc
 
 logging.getLogger("pika").setLevel(logging.CRITICAL)
 
+
+class ModelWrapper(NamedTuple):
+    """Class for packaging a model prior to dispatch"""
+    wrapping: dict
+    blob: str
+
+    @classmethod
+    def wrap(cls, model: any, encoder: serializer.SerializerABC = None) -> dict:
+        if encoder and model:
+            blob = encoder.serialize(model)
+        else:
+            blob = model
+        return ModelWrapper({'model': blob }, blob)
+
+    @classmethod
+    def unwrap(cls, model: dict, encoder: serializer.SerializerABC = None) -> any:
+        blob = None
+        if model and 'model' in model:
+            if isinstance(model['model'], dict):
+                model = model['model']
+            elif encoder:
+                blob = encoder.deserialize(model['model'])
+        return ModelWrapper(model, blob)
 
 
 class Context(rabbitmq.RabbitContext):
@@ -52,14 +76,21 @@ class Context(rabbitmq.RabbitContext):
         super().__init__(args, user, password)
         self.args['download_models'] = download_models
         self.args['dispatch_threshold'] = dispatch_threshold
-        self.encoder = encoder
+        self.model_encoder = encoder
+        self.encoder = serializer.JsonPickleSerializer
 
     def serializer(self):
         """ Return serializer"""
         return self.encoder
+
+    def model_serializer(self):
+        """ Return serializer"""
+        return self.model_encoder
+
     def download_models(self):
         """ Return setting, default to False"""
         return self.args.get('download_models', False)
+
     def dispatch_threshold(self):
         """ Return setting default to None"""
         return self.args.get('dispatch_threshold', None)
@@ -157,7 +188,8 @@ class Messenger(rabbitmq.RabbitDualClient):
             raise TimedOutException(exc) from exc
         except rabbitmq.RabbitConsumerException as exc:
             raise ConsumerException(exc) from exc
-        return self.context.serializer().deserialize(self.last_recv_msg)
+        message = self.context.serializer().deserialize(self.last_recv_msg)
+        return message
 
     def _invoke_service(self, message: dict, timeout: int = 0) -> dict:
         """
@@ -207,30 +239,33 @@ class Messenger(rabbitmq.RabbitDualClient):
         :return: download location information
         :rtype: `dict`
         """
-        if not model:
-            return {}
 
-        blob = self.context.serializer().serialize(model)
+        wrapper = ModelWrapper.wrap(model, self.context.model_serializer())
+        if not model:
+            return wrapper.wrapping
 
         # First, obtain the upload location/keys
         if task_name:
             message = self.catalog.msg_bin_upload_object(task_name)
         else:
-            if len(blob) > self.context.dispatch_threshold():
+            if len(wrapper.blob) > self.context.dispatch_threshold():
                 message = self.catalog.msg_bin_uploader()
             else:
-                return model
+                #Small model - embed it
+                return wrapper.wrapping
 
         upload_info = self._invoke_service(message)
 
         if 'key' not in upload_info['fields']:
             raise Exception('Update Error: Malformed URL.')
 
+        key = upload_info['fields']['key']
+
         try:
             with rabbitmq.RabbitHeartbeat(self.subscriber):
                 # And then perform the upload
                 response = requests.post(upload_info['url'],
-                                         files={'file': blob},
+                                         files={'file': wrapper.blob},
                                          data=upload_info['fields'],
                                          headers=None)
                 response.raise_for_status()
@@ -241,12 +276,13 @@ class Messenger(rabbitmq.RabbitDualClient):
 
         # Now obtain the download location/keys
         if task_name:
-            message = self.catalog.msg_bin_download_object(upload_info['fields']['key'])
+            message = self.catalog.msg_bin_download_object(key)
         else:
-            message = self.catalog.msg_bin_downloader(upload_info['fields']['key'])
+            message = self.catalog.msg_bin_downloader(key)
 
         download_info = self._invoke_service(message)
-        return {'url': download_info, 'key': upload_info['fields']['key']}
+        wrapper = ModelWrapper.wrap({'url': download_info, 'key': key})
+        return wrapper.wrapping
 
     # Public methods
 
@@ -423,7 +459,8 @@ class Messenger(rabbitmq.RabbitDualClient):
         """
         model_message = self._dispatch_model(task_name=task_name, model=model)
         message = self.catalog.msg_task_stop(task_name, model_message)
-        self._send(message)
+        #self._send(message)
+        return self._invoke_service(message)
 
 
     def task_notification(self, timeout: int = 0, flavours: list = None) -> dict:
@@ -454,38 +491,35 @@ class Messenger(rabbitmq.RabbitDualClient):
             raise Exception(f"Unexpected notification " \
                 f"{msg['notification']['type']}, expecting {flavours}")
 
-        #if 'params' in msg:
-        #    if msg['params'] and 'model' in msg['params']:
-        #        return msg['params']['model']
+        if 'params' not in msg:
+            raise Exception(f"Malformed payload: {msg}")
 
-        if self.context.download_models():
-            msg = self.get_model(msg)
-        return msg
+        model = None
 
-    def get_model(self, model_info: dict) -> dict:
-        """
-        Download a model if the given information contains the correct details.
-        Throws: An exception on failure
-        :param model_info: information with details for downloading the model
-        :type model_info: `dict`
-        :return: updated information containing the name of the downloaded file
-        :rtype: `dict`
-        """
-        if 'params' in model_info:
-            if model_info['params'] and 'url' in model_info['params']:
-                url = model_info['params']['url']
-                if url:
+        if msg['params']:
+            model = ModelWrapper.unwrap(msg['params'], self.context.model_serializer())
+
+            if model.blob:
+                #Embedded model
+                model = model.blob
+            else:
+                #Download from bin store
+                url = model.wrapping.get('url', None)
+                if not url:
+                    raise Exception(f"Malformed wrapping: {model.wrapping}")
+
+                #Download from bin store
+                if self.context.download_models():
                     self.model_files.append(utils.FileDownloader(url))
 
                     with open(self.model_files[-1].name(), 'rb') as model_file:
                         buff = model_file.read()
-                        blob = self.context.serializer().deserialize(buff)
-                        model_info['params'].update(blob)
+                        model = self.context.model_serializer().deserialize(buff)
+                else:
+                    #Let user decide what to do
+                    model = model.wrapping
 
-                    if 'key' in model_info['params']:
-                        del model_info['params']['key']
-                    del model_info['params']['url']
-        return model_info
+        return fflabc.Response(msg['notification'], model)
 
 
 class BasicParticipant():
@@ -499,9 +533,6 @@ class BasicParticipant():
         :type context: :class:`.Context`
         :param task_name: name of the task
         :type task_name: `str`
-        :param download_models: whether downloaded model file name or model url
-                                should be returned by receive function
-        :type download_models: `bool`
         """
         if not context:
             raise Exception('Credentials must be specified.')
@@ -545,22 +576,6 @@ class BasicParticipant():
         """
         self.messenger.stop()
         self.messenger = None
-
-    def _receive(self, timeout: int = 0, flavours: list = None) -> dict:
-        """
-        Wait for a message to arrive or until timeout.
-        If message is received, check whether its notification type matches
-        element in given list of notification flavours.
-        Throws: An exception on failure
-        :param timeout: timeout in seconds
-        :type timeout: `int`
-        :param flavours: expected notification types
-        :type flavours: `list`
-        :return: received message
-        :rtype: `dict`
-        """
-        msg = self.messenger.task_notification(timeout, flavours)
-        return msg
 
 
 class User(fflabc.AbstractUser, BasicParticipant):
@@ -665,14 +680,14 @@ class Participant(fflabc.AbstractParticipant, BasicParticipant):
         """
         self.messenger.task_assignment_update(self.task_name, message)
 
-    def receive(self, timeout: int = 0) -> dict:
+    def receive(self, timeout: int = 0) -> fflabc.Response:
         """
         Wait for a message to arrive or until timeout period is exceeded.
         Throws: An exception on failure
         :param timeout: timeout in seconds
         :type timeout: `int`
         :return: received message
-        :rtype: `dict`
+        :rtype: `fflabc.Response`
         """
         return self.messenger.task_notification(timeout, [
                         fflabc.Notification.aggregator_started,
@@ -699,9 +714,6 @@ class Aggregator(fflabc.AbstractAggregator, BasicParticipant):
         :type context: :class:`.Context`
         :param task_name: Name of the task (note: the user must be the creator of this task)
         :type task_name: `str`
-        :param download_models: Whether downloaded model file name or model url should
-                                be returned by receive function
-        :type download_models: `bool`
         """
         super().__init__(context, task_name)
 
@@ -737,14 +749,14 @@ class Aggregator(fflabc.AbstractAggregator, BasicParticipant):
         """
         self.messenger.task_start(self.task_name, message, participant)
 
-    def receive(self, timeout: int = 0) -> dict:
+    def receive(self, timeout: int = 0) -> fflabc.Response:
         """
         Wait for a message to arrive or until timeout period is exceeded.
         Throws: An exception on failure
         :param timeout: timeout in seconds
         :type timeout: `int`
         :return: received message
-        :rtype: `dict`
+        :rtype: `fflabc.Response`
         """
         msg = self.messenger.task_notification(timeout, [
             fflabc.Notification.participant_joined,
@@ -752,7 +764,7 @@ class Aggregator(fflabc.AbstractAggregator, BasicParticipant):
             fflabc.Notification.participant_left
         ])
 
-        flavour = msg['notification']
+        flavour = msg.notification
         if flavour is fflabc.Notification.participant_left:
             self._del_participant(flavour['participant'])
         else:
