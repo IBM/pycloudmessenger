@@ -687,7 +687,7 @@ class Participant(fflabc.AbstractParticipant, BasicParticipant):
         :param timeout: timeout in seconds
         :type timeout: `int`
         :return: received message
-        :rtype: `fflabc.Response`
+        :rtype: `class Response`
         """
         return self.messenger.task_notification(timeout, [
                         fflabc.Notification.aggregator_started,
@@ -756,7 +756,7 @@ class Aggregator(fflabc.AbstractAggregator, BasicParticipant):
         :param timeout: timeout in seconds
         :type timeout: `int`
         :return: received message
-        :rtype: `fflabc.Response`
+        :rtype: `class Response`
         """
         msg = self.messenger.task_notification(timeout, [
             fflabc.Notification.participant_joined,

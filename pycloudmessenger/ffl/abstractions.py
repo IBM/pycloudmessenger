@@ -50,11 +50,11 @@ class Notification(str, Enum):
     @classmethod
     def is_notification(cls, notification: dict, wanted) -> bool:
         """
-        Check if msg is a particular notification.
-        :param msg: message to be checked
-        :type msg: `dict`
-        :param notification: notification to be compared against
-        :type notification: `str`
+        Check if notification is a particular notification.
+        :param notification: message to be checked
+        :type notification: `dict`
+        :param wanted: notification to be compared against
+        :type wanted: `str`
         :return: True if yes, False otherwise
         :rtype: `bool`
         """
@@ -232,7 +232,7 @@ class AbstractParticipant(ABC):
         :param timeout: timeout in seconds
         :type timeout: `int`
         :return: received message
-        :rtype: `dict`
+        :rtype: `class Response`
         """
 
     @abstractmethod
@@ -264,7 +264,7 @@ class AbstractAggregator(ABC):
         :param timeout: timeout in seconds
         :type timeout: `int`
         :return: received message
-        :rtype: `dict`
+        :rtype: `class Response`
         """
 
     @abstractmethod
