@@ -31,11 +31,8 @@ from typing import NamedTuple
 
 class Topology(str):
     """ Class representing FFL task topologies """
-
     star = "STAR"
 
-    def __str__(self):
-        return self.value
 
 
 class Notification(str, Enum):
