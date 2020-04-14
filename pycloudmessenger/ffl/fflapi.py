@@ -25,9 +25,9 @@ in DRL funded by the European Union under the Horizon 2020 Program.
 
 # pylint: disable=R0903, R0913
 
+from typing import NamedTuple
 import logging
 import requests
-from typing import NamedTuple
 import pycloudmessenger.utils as utils
 import pycloudmessenger.rabbitmq as rabbitmq
 import pycloudmessenger.serializer as serializer
@@ -44,14 +44,16 @@ class ModelWrapper(NamedTuple):
 
     @classmethod
     def wrap(cls, model: any, encoder: serializer.SerializerABC = None) -> dict:
+        """ Wrap content in meta data """
         if encoder and model:
             blob = encoder.serialize(model)
         else:
             blob = model
-        return ModelWrapper({'model': blob }, blob)
+        return ModelWrapper({'model': blob}, blob)
 
     @classmethod
     def unwrap(cls, model: dict, encoder: serializer.SerializerABC = None) -> any:
+        """ Unwrap meta data """
         blob = None
         if model and 'model' in model:
             if isinstance(model['model'], dict):
@@ -76,8 +78,8 @@ class Context(rabbitmq.RabbitContext):
         super().__init__(args, user, password)
         self.args['download_models'] = download_models
         self.args['dispatch_threshold'] = dispatch_threshold
-        self.model_encoder = encoder
-        self.encoder = serializer.JsonPickleSerializer
+        self.model_encoder = encoder()
+        self.encoder = serializer.JsonPickleSerializer()
 
     def serializer(self):
         """ Return serializer"""

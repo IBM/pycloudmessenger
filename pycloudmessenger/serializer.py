@@ -27,30 +27,29 @@ import pickle
 import base64
 import json
 import jsonpickle
+from abc import ABC, abstractmethod
 
 
-class SerializerABC:
+class SerializerABC(ABC):
     '''Basic serialization'''
 
-    @staticmethod
-    def serialize(message: any) -> str:
+    @abstractmethod
+    def serialize(self, message: any) -> str:
         '''Convert message to serializable format'''
 
-    @staticmethod
-    def deserialize(message: bytes) -> any:
+    @abstractmethod
+    def deserialize(self, message: bytes) -> any:
         '''Convert serialized message to dict'''
 
 
-class Serializer(SerializerABC):
+class JsonSerializer(SerializerABC):
     '''json serialization'''
 
-    @staticmethod
-    def serialize(message: any) -> str:
+    def serialize(self, message: any) -> str:
         '''Convert message to serializable format'''
         return json.dumps(message)
 
-    @staticmethod
-    def deserialize(message: bytes) -> any:
+    def deserialize(self, message: bytes) -> any:
         '''Convert serialized message to dict'''
         return json.loads(message)
 
@@ -58,13 +57,11 @@ class Serializer(SerializerABC):
 class JsonPickleSerializer(SerializerABC):
     '''Json pickle serialization'''
 
-    @staticmethod
-    def serialize(message: any) -> str:
+    def serialize(self, message: any) -> str:
         '''Convert message to serializable format'''
         return jsonpickle.encode(message)
 
-    @staticmethod
-    def deserialize(message: bytes) -> any:
+    def deserialize(self, message: bytes) -> any:
         '''Convert serialized message to dict'''
         return jsonpickle.decode(message)
 
@@ -72,13 +69,10 @@ class JsonPickleSerializer(SerializerABC):
 class Base64Serializer(SerializerABC):
     '''Base64 encoder'''
 
-    @staticmethod
-    def serialize(message: any) -> str:
+    def serialize(self, message: any) -> str:
         '''Convert message to serializable format'''
         return base64.b64encode(pickle.dumps(message)).decode('utf-8')
 
-    @staticmethod
-    def deserialize(message: bytes) -> any:
+    def deserialize(self, message: bytes) -> any:
         '''Convert serialized message to dict'''
         return pickle.loads(base64.b64decode(message))
-        #return pickle.loads(base64.b64decode(message.encode()))
