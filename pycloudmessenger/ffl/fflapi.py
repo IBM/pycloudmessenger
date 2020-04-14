@@ -525,22 +525,18 @@ class Messenger(rabbitmq.RabbitDualClient):
 class BasicParticipant():
     """ Base class for an FFL general user """
 
-    def __init__(self, context: Context, task_name: str = None):
+    def __init__(self, context: Context):
         """
         Class initializer.
         Throws: An exception on failure
         :param context: connection details
         :type context: :class:`.Context`
-        :param task_name: name of the task
-        :type task_name: `str`
         """
         if not context:
             raise Exception('Credentials must be specified.')
 
         self.messenger = None
-
         self.context = context
-        self.task_name = task_name
         self.queue = None
 
     def __enter__(self):
@@ -596,11 +592,13 @@ class User(fflabc.AbstractUser, BasicParticipant):
         """
         return self.messenger.user_create(user_name, password, organisation)
 
-    def create_task(self, topology: str, definition: dict) -> dict:
+    def create_task(self, task_name: str, topology: str, definition: dict) -> dict:
         """
         Creates a task with the given definition and returns a dictionary
         with the details of the created tasks.
         Throws: An exception on failure
+        :param task_name: name of the task to create
+        :type task_name: `str`
         :param topology: topology of the task participants' communication network
         :type topology: `str`
         :param definition: definition of the task to be created
@@ -608,25 +606,29 @@ class User(fflabc.AbstractUser, BasicParticipant):
         :return: details of the created task
         :rtype: `dict`
         """
-        return self.messenger.task_create(self.task_name, topology, definition)
+        return self.messenger.task_create(task_name, topology, definition)
 
-    def join_task(self) -> dict:
+    def join_task(self, task_name: str) -> dict:
         """
         As a potential task participant, try to join an existing task that has yet to start.
         Throws: An exception on failure
+        :param task_name: name of the task to join
+        :type task_name: `str`
         :return: details of the task assignment
         :rtype: `dict`
         """
-        return self.messenger.task_assignment_join(self.task_name)
+        return self.messenger.task_assignment_join(task_name)
 
-    def task_info(self) -> dict:
+    def task_info(self, task_name: str) -> dict:
         """
         Returns the details of a given task.
         Throws: An exception on failure
+        :param task_name: name of the task to join
+        :type task_name: `str`
         :return: details of the task
         :rtype: `dict`
         """
-        return self.messenger.task_info(self.task_name)
+        return self.messenger.task_info(task_name)
 
     def get_tasks(self) -> list:
         """
@@ -660,8 +662,9 @@ class Participant(fflabc.AbstractParticipant, BasicParticipant):
         :param task_name: name of the task (the user needs to be a participant of this task).
         :type task_name: `str`
         """
-        super().__init__(context, task_name)
+        super().__init__(context)
 
+        self.task_name = task_name
         messenger = Messenger(self.context)
         result = messenger.task_assignment_info(self.task_name)
 
@@ -715,8 +718,9 @@ class Aggregator(fflabc.AbstractAggregator, BasicParticipant):
         :param task_name: Name of the task (note: the user must be the creator of this task)
         :type task_name: `str`
         """
-        super().__init__(context, task_name)
+        super().__init__(context)
 
+        self.task_name = task_name
         messenger = Messenger(self.context)
 
         # Get the task info for subscribe queue etc

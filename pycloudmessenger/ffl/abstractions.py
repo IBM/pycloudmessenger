@@ -157,11 +157,13 @@ class AbstractUser(ABC):
         """
 
     @abstractmethod
-    def create_task(self, topology: str, definition: dict) -> dict:
+    def create_task(self, task_name: str, topology: str, definition: dict) -> dict:
         """
         Creates a task with the given definition and returns a dictionary
         with the details of the created tasks.
         Throws: An exception on failure
+        :param task_name: Name of the task to create
+        :type task_name: `str`
         :param topology: topology of the task participants' communication network
         :type topology: `str`
         :param definition: definition of the task to be created
@@ -171,19 +173,23 @@ class AbstractUser(ABC):
         """
 
     @abstractmethod
-    def join_task(self) -> dict:
+    def join_task(self, task_name: str) -> dict:
         """
         As a potential task participant, try to join an existing task that has yet to start.
         Throws: An exception on failure
+        :param task_name: Name of the task to join
+        :type task_name: `str`
         :return: details of the task assignment
         :rtype: `dict`
         """
 
     @abstractmethod
-    def task_info(self) -> dict:
+    def task_info(self, task_name: str) -> dict:
         """
         Returns the details of a given task.
         Throws: An exception on failure
+        :param task_name: Name of the task to request information
+        :type task_name: `str`
         :return: details of the task
         :rtype: `dict`
         """
