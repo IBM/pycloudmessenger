@@ -131,7 +131,7 @@ class Notification(str, Enum):
 class Response(NamedTuple):
     """Class for delivering models/notifications to callers"""
     notification: Notification
-    model: any
+    content: any
 
 
 
