@@ -15,6 +15,7 @@ import unittest
 import pytest
 import pycloudmessenger.ffl.fflapi as fflapi
 import pycloudmessenger.ffl.abstractions as ffl
+import pycloudmessenger.serializer as serializer
 
 
 #Set up logger
@@ -123,22 +124,34 @@ class FFLTests(unittest.TestCase):
 
     #@unittest.skip("temporarily skipping")
     def test_enum(self):
-        self.assertTrue(fflapi.Notification('aggregator_started') is fflapi.Notification.aggregator_started)
+        self.assertTrue(ffl.Notification('aggregator_started') is ffl.Notification.aggregator_started)
 
         with self.assertRaises(ValueError):
-            self.assertTrue(fflapi.Notification('start') is fflapi.Notification.aggregator_started)
+            self.assertTrue(ffl.Notification('start') is ffl.Notification.aggregator_started)
 
         with self.assertRaises(ValueError):
-            self.assertTrue(fflapi.Notification('started') is fflapi.Notification.aggregator_started)
+            self.assertTrue(ffl.Notification('started') is ffl.Notification.aggregator_started)
 
         #Check list searching
-        arr = [fflapi.Notification.aggregator_started, fflapi.Notification.aggregator_stopped]
-        self.assertTrue(fflapi.Notification('aggregator_started') in arr)
-        self.assertTrue(fflapi.Notification('participant_joined') not in arr)
+        arr = [ffl.Notification.aggregator_started, ffl.Notification.aggregator_stopped]
+        self.assertTrue(ffl.Notification('aggregator_started') in arr)
+        self.assertTrue(ffl.Notification('participant_joined') not in arr)
 
-        #Ensure json serializability
-        notify = {'type': fflapi.Notification.participant_joined}
-        serialized = json.dumps(notify)
+    #@unittest.skip("temporarily skipping")
+    def test_serializer(self):
+        #Ensure serializability
+        notify = {'type': ffl.Notification.participant_joined}
+        s = serializer.JsonSerializer()
+        serialized = s.serialize(notify)
+        deserialized = s.deserialize(serialized)
+        self.assertTrue(ffl.Notification(deserialized['type']) is ffl.Notification.participant_joined)
 
-        deserialized = json.loads(serialized)
-        self.assertTrue(fflapi.Notification(deserialized['type']) is fflapi.Notification.participant_joined)
+        s = serializer.JsonPickleSerializer()
+        serialized = s.serialize(notify)
+        deserialized = s.deserialize(serialized)
+        self.assertTrue(ffl.Notification(deserialized['type']) is ffl.Notification.participant_joined)
+
+        s = serializer.Base64Serializer()
+        serialized = s.serialize(notify)
+        deserialized = s.deserialize(serialized)
+        self.assertTrue(ffl.Notification(deserialized['type']) is ffl.Notification.participant_joined)
