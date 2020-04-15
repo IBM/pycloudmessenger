@@ -303,6 +303,15 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_user_create(user_name, password, organisation)
         return self._invoke_service(message)
 
+    def user_tasks(self) -> list:
+        """
+        Returns all the tasks the user is participating in.
+        :return: list of all the tasks, each of which is a dictionary
+        :rtype: `list`
+        """
+        message = self.catalog.msg_user_tasks()
+        return self._invoke_service(message)
+
     def user_assignments(self) -> list:
         """
         Returns all the tasks the user is participating in.
@@ -647,6 +656,15 @@ class User(fflabc.AbstractUser, BasicParticipant):
         :rtype: `list`
         """
         return self.messenger.user_assignments()
+
+    def get_created_tasks(self) -> list:
+        """
+        Returns a list with all the tasks created by the current user.
+        Throws: An exception on failure
+        :return: list of all the available tasks
+        :rtype: `list`
+        """
+        return self.messenger.user_tasks()
 
 
 class Participant(fflabc.AbstractParticipant, BasicParticipant):
