@@ -23,7 +23,7 @@ Unit tests are contained in the `tests <tests>`_ directory.
 
 To run the unit tests, a local RabbitMQ container is launched automatically. Settings and credentials to match the latest RabbitMQ docker image are also provided. To run the test:
 
-.. code-block::
+.. code-block:: bash
 
 	creds=local.json make test 
 
@@ -33,17 +33,17 @@ Examples
 
 Sample code for basic messaging as well as federated learning and castor are contained in the `examples <examples>_` directory.
 
-.. code-block::
+.. code-block:: bash
 
 	creds=local.json make basic
 
-.. code-block::
+.. code-block:: bash
 
 	creds=credentials.json make ffl
 
-.. code-block::
+.. code-block:: bash
 
-	creds=*credentials.json* make castor
+	creds=credentials.json make castor
 
 **Note:** For live platforms, **credentials.json** must be available. Please request from the IBM team.
 
