@@ -19,7 +19,7 @@ It is assumed that all development takes place in Python, using at least version
 Testing
 ---------------------------------
 
-Unit tests are contained in the tests directory.
+Unit tests are contained in the tests_ directory.
 
 To run the unit tests, a local RabbitMQ container is launched automatically. Settings and credentials to match the latest RabbitMQ docker image are also provided. To run the test:
 
@@ -31,7 +31,7 @@ To run the unit tests, a local RabbitMQ container is launched automatically. Set
 Examples
 ---------------------------------
 
-Sample code for basic messaging as well as federated learning and castor are contained in the examples directory.
+Sample code for basic messaging as well as federated learning and castor are contained in the examples_ directory.
 
 .. code-block::
 
