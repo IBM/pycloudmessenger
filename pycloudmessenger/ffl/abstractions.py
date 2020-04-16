@@ -29,10 +29,25 @@ from abc import ABC, abstractmethod
 from typing import NamedTuple
 
 
+class ServerException(Exception):
+    """ Class for exceptions received from the platform """
+
+class MalformedResponseException(Exception):
+    """ Class for exceptions when receiving data due to malformed payloads """
+
+class DispatchException(Exception):
+    """ Class for exceptions when sending data """
+
+class BadNotificationException(Exception):
+    """ Class for exceptions when processing notifications """
+
+class TaskException(Exception):
+    """ Class for exceptions relating to tasks """
+
+
 class Topology(str):
     """ Class representing FFL task topologies """
     star = "STAR"
-
 
 
 class Notification(str, Enum):
@@ -303,7 +318,7 @@ class Factory():
         Throws: An exception on failure
         """
         if not key:
-            raise Exception('A registration key must be provided')
+            raise ValueError('A registration key must be provided')
 
         cls.types[key] = {'context': context, 'user': user, 'aggregator': aggr, 'participant': part}
         return cls
@@ -315,11 +330,11 @@ class Factory():
         Throws: An exception on failure
         """
         if not key:
-            raise Exception('A registration key must be provided')
+            raise ValueError('A registration key must be provided')
 
         target = cls.types[key]['context']
         if not target:
-            raise Exception('A context class must be provided')
+            raise ValueError('A context class must be provided')
 
         config = {}
         if config_file:
@@ -341,10 +356,10 @@ class Factory():
         """
         target = context.classes[class_name]
         if not target:
-            raise Exception(f'Class must be provided: {base_class}')
+            raise ValueError(f'Class must be provided: {base_class}')
 
         if not issubclass(target, base_class):
-            raise Exception(f'Not a subclass: {target} of {base_class}')
+            raise ValueError(f'Not a subclass: {target} of {base_class}')
 
         return target(context, *args, **kwargs)
 

@@ -219,14 +219,14 @@ class Messenger(rabbitmq.RabbitDualClient):
             raise ConsumerException(exc) from exc
 
         if not result:
-            raise Exception(f"Malformed object: None")
+            raise MalformedResponseException(f"Malformed object: None")
         result = self.context.serializer().deserialize(result)
 
         if 'error' in result:
-            raise Exception(f"Server Error ({result['activation']}): {result['error']}")
+            raise ServerException(f"Server Error ({result['activation']}): {result['error']}")
 
         if 'calls' not in result:
-            raise Exception(f"Malformed object: {result}")
+            raise MalformedResponseException(f"Malformed object: {result}")
 
         results = result['calls'][0]['count']  # calls[0] will always succeed
         return result['calls'][0]['data'] if results else []
@@ -258,7 +258,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         upload_info = self._invoke_service(message)
 
         if 'key' not in upload_info['fields']:
-            raise Exception('Update Error: Malformed URL.')
+            raise MalformedResponseException('Update Error: Malformed URL')
 
         key = upload_info['fields']['key']
 
@@ -271,9 +271,9 @@ class Messenger(rabbitmq.RabbitDualClient):
                                          headers=None)
                 response.raise_for_status()
         except requests.exceptions.RequestException as err:
-            raise Exception(f'Update Error: {err.response.status_code}')
+            raise DispatchException(err) from err
         except:
-            raise Exception(f'General Update Error')
+            raise DispatchException(f'General Update Error')
 
         # Now obtain the download location/keys
         if task_name:
@@ -488,20 +488,20 @@ class Messenger(rabbitmq.RabbitDualClient):
         msg = self.receive(timeout)
 
         if 'notification' not in msg:
-            raise Exception(f"Malformed object: {msg}")
+            raise BadNotificationException(f"Malformed object: {msg}")
 
         if 'type' not in msg['notification']:
-            raise Exception(f"Malformed object: {msg['notification']}")
+            raise BadNotificationException(f"Malformed object: {msg['notification']}")
 
         try:
             if fflabc.Notification(msg['notification']['type']) not in flavours:
                 raise ValueError
         except:
-            raise Exception(f"Unexpected notification " \
+            raise BadNotificationException(f"Unexpected notification " \
                 f"{msg['notification']['type']}, expecting {flavours}")
 
         if 'params' not in msg:
-            raise Exception(f"Malformed payload: {msg}")
+            raise BadNotificationException(f"Malformed payload: {msg}")
 
         model = None
 
@@ -515,7 +515,7 @@ class Messenger(rabbitmq.RabbitDualClient):
                 #Download from bin store
                 url = model.wrapping.get('url', None)
                 if not url:
-                    raise Exception(f"Malformed wrapping: {model.wrapping}")
+                    raise MalformedResponseException(f"Malformed wrapping: {model.wrapping}")
 
                 #Download from bin store
                 if self.context.download_models():
@@ -687,7 +687,7 @@ class Participant(fflabc.AbstractParticipant, BasicParticipant):
         result = messenger.task_assignment_info(self.task_name)
 
         if 'queue' not in result:
-            raise Exception("Task not joined by this user.")
+            raise TaskException("Task not joined by this user.")
 
         self.queue = result['queue']
         messenger.stop()
@@ -745,10 +745,10 @@ class Aggregator(fflabc.AbstractAggregator, BasicParticipant):
         result = messenger.task_info(self.task_name)
 
         if 'status' in result and result['status'] == 'COMPLETE':
-            raise Exception("Task is already finished.")
+            raise TaskException("Task is already finished.")
 
         if 'queue' not in result:
-            raise Exception("Task not created by this user.")
+            raise TaskException("Task not created by this user.")
 
         self.queue = result['queue']
 
