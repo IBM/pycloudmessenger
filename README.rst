@@ -31,7 +31,7 @@ To run the unit tests, a local RabbitMQ container is launched automatically. Set
 Examples
 ---------------------------------
 
-Sample code for basic messaging as well as federated learning and castor are contained in the examples_ directory.
+Sample code for basic messaging as well as federated learning and castor are contained in the `examples <examples>_` directory.
 
 .. code-block::
 
@@ -43,7 +43,7 @@ Sample code for basic messaging as well as federated learning and castor are con
 
 .. code-block::
 
-	creds=credentials.json make castor
+	creds=*credentials.json* make castor
 
 **Note:** For live platforms, **credentials.json** must be available. Please request from the IBM team.
 
