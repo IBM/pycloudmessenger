@@ -1,10 +1,10 @@
 |travis-badge|_
 
-.. |travis-badge| image:: https://travis-ci.com/IBM/pycloudmessenger.svg?branch=master
+.. |travis-badge| image:: https://travis-ci.com/IBM/pycloudmessenger.svg?branch=ModelBlob
 .. _travis-badge: https://travis-ci.com/IBM/pycloudmessenger/
 
 ========================
-## pycloudmessenger
+pycloudmessenger
 ========================
 
 The purpose of this project is to provide sample code for interacting with various messaging based cloud platforms provided by IBM Research Ireland.
