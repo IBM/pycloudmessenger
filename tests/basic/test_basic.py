@@ -47,17 +47,20 @@ class MessengerTests(unittest.TestCase):
     def test_numpy_serializer(self):
         a = np.array([2,3,4])
 
+        serializer1 = serializer.JsonSerializer()
+
         #Standard serializer should fail for numpy
         with self.assertRaises(TypeError):
-            serializer.Serializer.serialize(a)
+            serializer1.serialize(a)
 
-        b = serializer.JsonPickleSerializer.serialize(a)
-        c = serializer.JsonPickleSerializer.deserialize(b)
+        serializer2 = serializer.JsonPickleSerializer()
+        b = serializer2.serialize(a)
+        c = serializer2.deserialize(b)
         self.assertTrue(np.array_equal(a, c))
 
-        d = serializer.Serializer.serialize(b)
-        e = serializer.Serializer.deserialize(d)
-        f = serializer.JsonPickleSerializer.deserialize(e)
+        d = serializer2.serialize(b)
+        e = serializer2.deserialize(d)
+        f = serializer2.deserialize(e)
         self.assertTrue(np.array_equal(a, f))
 
     #@unittest.skip("temporarily skipping")

@@ -2,10 +2,8 @@
   
 all: test
 
-creds:
-	ifeq ($(creds), )
-		$(error 'creds' variable is not set)
-	endif
+credentials:
+	test -f $(creds)
 
 depend:
 	@command -v jq >/dev/null 2>&1 || { echo >&2 "Error - package jq required, but not available."; exit 1; }
@@ -34,6 +32,6 @@ clean:
 ffl_test:
 	python3 -m pytest tests/ffl/ffl.py -srx -s --credentials=$(creds)
 
-test: creds configure
+test: credentials configure
 	python3 -m pytest tests/ffl/ffl.py -srx -s --credentials=$(creds)
 	python3 -m pytest tests/basic/test_basic.py -srx -s --credentials=$(creds)
