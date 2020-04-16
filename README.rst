@@ -1,6 +1,6 @@
 |travis-badge|_
 
-.. |travis-badge| image:: https://travis-ci.com/IBM/pycloudmessenger.svg?branch=ModelBlob
+.. |travis-badge| image:: https://travis-ci.com/IBM/pycloudmessenger.svg?branch=master
 .. _travis-badge: https://travis-ci.com/IBM/pycloudmessenger/
 
 ========================
@@ -16,16 +16,28 @@ Prerequisites
 It is assumed that all development takes place in Python, using at least version 3.6.
 
 
-Examples and Testing
+Testing
 ---------------------------------
 
-Unit tests are contained in the tests directory and example code for basic messaging as well as ffl and castor are contained in the examples directory.
+Unit tests are contained in the tests directory.
 
 To run the unit tests, a local RabbitMQ container is launched automatically. Settings and credentials to match the latest RabbitMQ docker image are also provided. To run the test:
 
 .. code-block::
 
 	creds=local.json make test 
+
+
+Examples
+---------------------------------
+
+Sample code for basic messaging as well as federated learning and castor are contained in the examples directory.
+
+.. code-block::
+
+	creds=credentials.json make ffl
+
+**Note:** For live platforms, **credentials.json** must be available. Please request from the IBM team.
 
 
 References 
