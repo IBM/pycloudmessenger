@@ -41,7 +41,7 @@ Sample code for basic messaging as well as federated learning and castor are con
 .. code-block:: bash
 
 	# The federated learning sample
-	creds=<pre><i>credentials.json</i></pre> make ffl
+	creds=credentials.json make ffl
 
 .. code-block:: bash
 
