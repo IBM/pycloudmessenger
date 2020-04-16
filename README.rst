@@ -31,18 +31,21 @@ To run the unit tests, a local RabbitMQ container is launched automatically. Set
 Examples
 ---------------------------------
 
-Sample code for basic messaging as well as federated learning and castor are contained in the `examples <examples>_` directory.
+Sample code for basic messaging as well as federated learning and castor are contained in the `examples <examples>`_ directory. To run various samples, invoke the appropriate make target, as follows.
 
 .. code-block:: bash
 
+	# The basic messaging sample
 	creds=local.json make basic
 
 .. code-block:: bash
 
+	# The federated learning sample
 	creds=credentials.json make ffl
 
 .. code-block:: bash
 
+	# The castor sample
 	creds=credentials.json make castor
 
 **Note:** For live platforms, **credentials.json** must be available. Please request from the IBM team.
