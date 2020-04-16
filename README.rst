@@ -35,7 +35,15 @@ Sample code for basic messaging as well as federated learning and castor are con
 
 .. code-block::
 
+	creds=local.json make basic
+
+.. code-block::
+
 	creds=credentials.json make ffl
+
+.. code-block::
+
+	creds=credentials.json make castor
 
 **Note:** For live platforms, **credentials.json** must be available. Please request from the IBM team.
 
