@@ -274,9 +274,11 @@ class AbstractRabbitMessenger(ABC):
 
         headers = {"x-delay": 1000 * delay} if delay else None
 
+        properties = pika.BasicProperties(delivery_mode=mode,
+                                          headers=headers,
+                                          user_id = self.context.user())
         self.channel.basic_publish(
-            exchange=exchange, routing_key=queue, body=message,
-            properties=pika.BasicProperties(delivery_mode=mode, headers=headers))
+            exchange=exchange, routing_key=queue, body=message, properties=properties)
         self.outbound += 1
 
     def stop(self):
@@ -353,6 +355,7 @@ class RabbitClient(AbstractRabbitMessenger):
 
         if self.pub_queue:
             self.declare_queue(self.pub_queue)
+            self.channel.confirm_delivery()
 
         if self.sub_queue:
             self.declare_queue(self.sub_queue)

@@ -92,12 +92,13 @@ class MessengerTests(unittest.TestCase):
                 message = {'action': 'Outbound', 'payload': 'some data'}
                 LOGGER.info(f'Client sending: {message}')
                 client.publish(json.dumps(message))
+                LOGGER.info(f'Client sent: {message}')
 
                 #Now start the server side and handle the message
                 with rabbitmq.RabbitClient(context) as server:
                     server.start(subscribe=rabbitmq.RabbitQueue(context.feeds()))
 
-                    recv = server.receive()
+                    recv = server.receive(timeout=5)
                     LOGGER.info(f'Server received: {recv}')
 
                     #And send a reply to the client
@@ -109,6 +110,6 @@ class MessengerTests(unittest.TestCase):
                 message = client.receive()
                 LOGGER.info(f"Client received: {message}")
         except Exception as err:
-            LOGGER.info("Error %r", err)
+            LOGGER.info(f"Error: {err}")
             raise err
 
