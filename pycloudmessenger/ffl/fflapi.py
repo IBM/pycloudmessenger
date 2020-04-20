@@ -63,7 +63,7 @@ class ModelWrapper(NamedTuple):
         return ModelWrapper(model, blob)
 
 
-class Context(rabbitmq.RabbitContext):
+class Context(rabbitmq.RabbitContext, fflabc.AbstractContext):
     """
     Class holding connection details for an FFL service
         :param download_models: whether downloaded model file name or model url
@@ -74,8 +74,9 @@ class Context(rabbitmq.RabbitContext):
     """
     def __init__(self, args: dict, user: str = None, password: str = None,
                  encoder: serializer.SerializerABC = serializer.JsonPickleSerializer,
-                 download_models: bool = True, dispatch_threshold: int = 1024*1024*5):
-        super().__init__(args, user, password)
+                 user_dispatch: bool = True, download_models: bool = True,
+                 dispatch_threshold: int = 1024*1024*5):
+        super().__init__(args, user, password, user_dispatch)
         self.args['download_models'] = download_models
         self.args['dispatch_threshold'] = dispatch_threshold
         self.model_encoder = encoder()
@@ -219,14 +220,14 @@ class Messenger(rabbitmq.RabbitDualClient):
             raise ConsumerException(exc) from exc
 
         if not result:
-            raise MalformedResponseException(f"Malformed object: None")
+            raise fflabc.MalformedResponseException(f"Malformed object: None")
         result = self.context.serializer().deserialize(result)
 
         if 'error' in result:
-            raise ServerException(f"Server Error ({result['activation']}): {result['error']}")
+            raise fflabc.ServerException(f"Server Error ({result['activation']}): {result['error']}")
 
         if 'calls' not in result:
-            raise MalformedResponseException(f"Malformed object: {result}")
+            raise fflabc.MalformedResponseException(f"Malformed object: {result}")
 
         results = result['calls'][0]['count']  # calls[0] will always succeed
         return result['calls'][0]['data'] if results else []
@@ -258,7 +259,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         upload_info = self._invoke_service(message)
 
         if 'key' not in upload_info['fields']:
-            raise MalformedResponseException('Update Error: Malformed URL')
+            raise fflabc.MalformedResponseException('Update Error: Malformed URL')
 
         key = upload_info['fields']['key']
 
@@ -271,9 +272,9 @@ class Messenger(rabbitmq.RabbitDualClient):
                                          headers=None)
                 response.raise_for_status()
         except requests.exceptions.RequestException as err:
-            raise DispatchException(err) from err
+            raise fflabc.DispatchException(err) from err
         except:
-            raise DispatchException(f'General Update Error')
+            raise fflabc.DispatchException(f'General Update Error')
 
         # Now obtain the download location/keys
         if task_name:
@@ -488,20 +489,20 @@ class Messenger(rabbitmq.RabbitDualClient):
         msg = self.receive(timeout)
 
         if 'notification' not in msg:
-            raise BadNotificationException(f"Malformed object: {msg}")
+            raise fflabc.BadNotificationException(f"Malformed object: {msg}")
 
         if 'type' not in msg['notification']:
-            raise BadNotificationException(f"Malformed object: {msg['notification']}")
+            raise fflabc.BadNotificationException(f"Malformed object: {msg['notification']}")
 
         try:
             if fflabc.Notification(msg['notification']['type']) not in flavours:
                 raise ValueError
         except:
-            raise BadNotificationException(f"Unexpected notification " \
+            raise fflabc.BadNotificationException(f"Unexpected notification " \
                 f"{msg['notification']['type']}, expecting {flavours}")
 
         if 'params' not in msg:
-            raise BadNotificationException(f"Malformed payload: {msg}")
+            raise fflabc.BadNotificationException(f"Malformed payload: {msg}")
 
         model = None
 
@@ -515,7 +516,7 @@ class Messenger(rabbitmq.RabbitDualClient):
                 #Download from bin store
                 url = model.wrapping.get('url', None)
                 if not url:
-                    raise MalformedResponseException(f"Malformed wrapping: {model.wrapping}")
+                    raise fflabc.MalformedResponseException(f"Malformed wrapping: {model.wrapping}")
 
                 #Download from bin store
                 if self.context.download_models():
@@ -687,7 +688,7 @@ class Participant(fflabc.AbstractParticipant, BasicParticipant):
         result = messenger.task_assignment_info(self.task_name)
 
         if 'queue' not in result:
-            raise TaskException("Task not joined by this user.")
+            raise fflabc.TaskException("Task not joined by this user.")
 
         self.queue = result['queue']
         messenger.stop()
@@ -745,10 +746,10 @@ class Aggregator(fflabc.AbstractAggregator, BasicParticipant):
         result = messenger.task_info(self.task_name)
 
         if 'status' in result and result['status'] == 'COMPLETE':
-            raise TaskException("Task is already finished.")
+            raise fflabc.TaskException("Task is already finished.")
 
         if 'queue' not in result:
-            raise TaskException("Task not created by this user.")
+            raise fflabc.TaskException("Task not created by this user.")
 
         self.queue = result['queue']
 
