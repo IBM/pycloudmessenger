@@ -1,6 +1,24 @@
 #!/usr/bin/env python3
 #author markpurcell@ie.ibm.com
 
+"""RabbitMQ helper class.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+"""
 """
 IBM-Review-Requirement: Art30.3 - DO NOT TRANSFER OR EXCLUSIVELY LICENSE THE FOLLOWING CODE UNTIL 30/11/2025!
 Please note that the following code was developed for the project MUSKETEER in DRL funded by the European Union
@@ -15,6 +33,7 @@ import unittest
 import pytest
 import pycloudmessenger.ffl.fflapi as fflapi
 import pycloudmessenger.ffl.abstractions as ffl
+import pycloudmessenger.serializer as serializer
 
 
 #Set up logger
@@ -123,22 +142,34 @@ class FFLTests(unittest.TestCase):
 
     #@unittest.skip("temporarily skipping")
     def test_enum(self):
-        self.assertTrue(fflapi.Notification('aggregator_started') is fflapi.Notification.aggregator_started)
+        self.assertTrue(ffl.Notification('aggregator_started') is ffl.Notification.aggregator_started)
 
         with self.assertRaises(ValueError):
-            self.assertTrue(fflapi.Notification('start') is fflapi.Notification.aggregator_started)
+            self.assertTrue(ffl.Notification('start') is ffl.Notification.aggregator_started)
 
         with self.assertRaises(ValueError):
-            self.assertTrue(fflapi.Notification('started') is fflapi.Notification.aggregator_started)
+            self.assertTrue(ffl.Notification('started') is ffl.Notification.aggregator_started)
 
         #Check list searching
-        arr = [fflapi.Notification.aggregator_started, fflapi.Notification.aggregator_stopped]
-        self.assertTrue(fflapi.Notification('aggregator_started') in arr)
-        self.assertTrue(fflapi.Notification('participant_joined') not in arr)
+        arr = [ffl.Notification.aggregator_started, ffl.Notification.aggregator_stopped]
+        self.assertTrue(ffl.Notification('aggregator_started') in arr)
+        self.assertTrue(ffl.Notification('participant_joined') not in arr)
 
-        #Ensure json serializability
-        notify = {'type': fflapi.Notification.participant_joined}
-        serialized = json.dumps(notify)
+    #@unittest.skip("temporarily skipping")
+    def test_serializer(self):
+        #Ensure serializability
+        notify = {'type': ffl.Notification.participant_joined}
+        s = serializer.JsonSerializer()
+        serialized = s.serialize(notify)
+        deserialized = s.deserialize(serialized)
+        self.assertTrue(ffl.Notification(deserialized['type']) is ffl.Notification.participant_joined)
 
-        deserialized = json.loads(serialized)
-        self.assertTrue(fflapi.Notification(deserialized['type']) is fflapi.Notification.participant_joined)
+        s = serializer.JsonPickleSerializer()
+        serialized = s.serialize(notify)
+        deserialized = s.deserialize(serialized)
+        self.assertTrue(ffl.Notification(deserialized['type']) is ffl.Notification.participant_joined)
+
+        s = serializer.Base64Serializer()
+        serialized = s.serialize(notify)
+        deserialized = s.deserialize(serialized)
+        self.assertTrue(ffl.Notification(deserialized['type']) is ffl.Notification.participant_joined)

@@ -82,6 +82,11 @@ class MessageCatalog():
         args.append({'cmd': 'user_assignments', 'params': [self.user_name]})
         return template
 
+    def msg_user_tasks(self) -> dict:
+        template, args = self._msg_template()
+        args.append({'cmd': 'user_tasks', 'params': [self.user_name]})
+        return template
+
     def msg_task_listing(self) -> dict:
         template, args = self._msg_template()
         args.append({'cmd': 'task_listing'})

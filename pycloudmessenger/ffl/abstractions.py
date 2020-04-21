@@ -26,15 +26,28 @@ in DRL funded by the European Union under the Horizon 2020 Program.
 import json
 from enum import Enum
 from abc import ABC, abstractmethod
+from typing import NamedTuple
+
+
+class ServerException(Exception):
+    """ Class for exceptions received from the platform """
+
+class MalformedResponseException(Exception):
+    """ Class for exceptions when receiving data due to malformed payloads """
+
+class DispatchException(Exception):
+    """ Class for exceptions when sending data """
+
+class BadNotificationException(Exception):
+    """ Class for exceptions when processing notifications """
+
+class TaskException(Exception):
+    """ Class for exceptions relating to tasks """
 
 
 class Topology(str):
     """ Class representing FFL task topologies """
-
     star = "STAR"
-
-    def __str__(self):
-        return self.value
 
 
 class Notification(str, Enum):
@@ -47,19 +60,19 @@ class Notification(str, Enum):
     participant_left = 'participant_left'
 
     @classmethod
-    def is_notification(cls, msg: dict, notification) -> bool:
+    def is_notification(cls, notification: dict, wanted) -> bool:
         """
-        Check if msg is a particular notification.
-        :param msg: message to be checked
-        :type msg: `dict`
-        :param notification: notification to be compared against
-        :type notification: `str`
+        Check if notification is a particular notification.
+        :param notification: message to be checked
+        :type notification: `dict`
+        :param wanted: notification to be compared against
+        :type wanted: `str`
         :return: True if yes, False otherwise
         :rtype: `bool`
         """
         try:
-            ntype = msg['notification']['type']
-            return cls(ntype) is notification
+            ntype = notification['type']
+            return cls(ntype) is wanted
         except:
             # not a notification
             pass
@@ -126,6 +139,14 @@ class Notification(str, Enum):
         return self.value
 
 
+
+class Response(NamedTuple):
+    """Class for delivering models/notifications to callers"""
+    notification: Notification
+    content: any
+
+
+
 class AbstractContext(ABC):
     """Class for basic context management"""
     def __init__(self):
@@ -151,11 +172,13 @@ class AbstractUser(ABC):
         """
 
     @abstractmethod
-    def create_task(self, topology: str, definition: dict) -> dict:
+    def create_task(self, task_name: str, topology: str, definition: dict) -> dict:
         """
         Creates a task with the given definition and returns a dictionary
         with the details of the created tasks.
         Throws: An exception on failure
+        :param task_name: Name of the task to create
+        :type task_name: `str`
         :param topology: topology of the task participants' communication network
         :type topology: `str`
         :param definition: definition of the task to be created
@@ -165,19 +188,23 @@ class AbstractUser(ABC):
         """
 
     @abstractmethod
-    def join_task(self) -> dict:
+    def join_task(self, task_name: str) -> dict:
         """
         As a potential task participant, try to join an existing task that has yet to start.
         Throws: An exception on failure
+        :param task_name: Name of the task to join
+        :type task_name: `str`
         :return: details of the task assignment
         :rtype: `dict`
         """
 
     @abstractmethod
-    def task_info(self) -> dict:
+    def task_info(self, task_name: str) -> dict:
         """
         Returns the details of a given task.
         Throws: An exception on failure
+        :param task_name: Name of the task to request information
+        :type task_name: `str`
         :return: details of the task
         :rtype: `dict`
         """
@@ -216,14 +243,14 @@ class AbstractParticipant(ABC):
         """
 
     @abstractmethod
-    def receive(self, timeout: int = 0) -> dict:
+    def receive(self, timeout: int = 0) -> Response:
         """
         Wait for a message to arrive or until timeout period is exceeded.
         Throws: An exception on failure
         :param timeout: timeout in seconds
         :type timeout: `int`
         :return: received message
-        :rtype: `dict`
+        :rtype: `class Response`
         """
 
     @abstractmethod
@@ -248,14 +275,14 @@ class AbstractAggregator(ABC):
         """
 
     @abstractmethod
-    def receive(self, timeout: int = 0) -> dict:
+    def receive(self, timeout: int = 0) -> Response:
         """
         Wait for a message to arrive or until timeout period is exceeded.
         Throws: An exception on failure
         :param timeout: timeout in seconds
         :type timeout: `int`
         :return: received message
-        :rtype: `dict`
+        :rtype: `class Response`
         """
 
     @abstractmethod
@@ -291,7 +318,7 @@ class Factory():
         Throws: An exception on failure
         """
         if not key:
-            raise Exception('A registration key must be provided')
+            raise ValueError('A registration key must be provided')
 
         cls.types[key] = {'context': context, 'user': user, 'aggregator': aggr, 'participant': part}
         return cls
@@ -303,11 +330,11 @@ class Factory():
         Throws: An exception on failure
         """
         if not key:
-            raise Exception('A registration key must be provided')
+            raise ValueError('A registration key must be provided')
 
         target = cls.types[key]['context']
         if not target:
-            raise Exception('A context class must be provided')
+            raise ValueError('A context class must be provided')
 
         config = {}
         if config_file:
@@ -329,10 +356,10 @@ class Factory():
         """
         target = context.classes[class_name]
         if not target:
-            raise Exception(f'Class must be provided: {base_class}')
+            raise ValueError(f'Class must be provided: {base_class}')
 
         if not issubclass(target, base_class):
-            raise Exception(f'Not a subclass: {target} of {base_class}')
+            raise ValueError(f'Not a subclass: {target} of {base_class}')
 
         return target(context, *args, **kwargs)
 

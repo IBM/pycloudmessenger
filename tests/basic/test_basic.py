@@ -1,6 +1,24 @@
 #!/usr/bin/env python3
 #author markpurcell@ie.ibm.com
 
+"""RabbitMQ helper class.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+"""
 """
 IBM-Review-Requirement: Art30.3 - DO NOT TRANSFER OR EXCLUSIVELY LICENSE THE FOLLOWING CODE UNTIL 30/11/2025!
 Please note that the following code was developed for the project MUSKETEER in DRL funded by the European Union
@@ -47,17 +65,20 @@ class MessengerTests(unittest.TestCase):
     def test_numpy_serializer(self):
         a = np.array([2,3,4])
 
+        serializer1 = serializer.JsonSerializer()
+
         #Standard serializer should fail for numpy
         with self.assertRaises(TypeError):
-            serializer.Serializer.serialize(a)
+            serializer1.serialize(a)
 
-        b = serializer.JsonPickleSerializer.serialize(a)
-        c = serializer.JsonPickleSerializer.deserialize(b)
+        serializer2 = serializer.JsonPickleSerializer()
+        b = serializer2.serialize(a)
+        c = serializer2.deserialize(b)
         self.assertTrue(np.array_equal(a, c))
 
-        d = serializer.Serializer.serialize(b)
-        e = serializer.Serializer.deserialize(d)
-        f = serializer.JsonPickleSerializer.deserialize(e)
+        d = serializer2.serialize(b)
+        e = serializer2.deserialize(d)
+        f = serializer2.deserialize(e)
         self.assertTrue(np.array_equal(a, f))
 
     #@unittest.skip("temporarily skipping")
@@ -71,12 +92,13 @@ class MessengerTests(unittest.TestCase):
                 message = {'action': 'Outbound', 'payload': 'some data'}
                 LOGGER.info(f'Client sending: {message}')
                 client.publish(json.dumps(message))
+                LOGGER.info(f'Client sent: {message}')
 
                 #Now start the server side and handle the message
                 with rabbitmq.RabbitClient(context) as server:
                     server.start(subscribe=rabbitmq.RabbitQueue(context.feeds()))
 
-                    recv = server.receive()
+                    recv = server.receive(timeout=5)
                     LOGGER.info(f'Server received: {recv}')
 
                     #And send a reply to the client
@@ -88,6 +110,6 @@ class MessengerTests(unittest.TestCase):
                 message = client.receive()
                 LOGGER.info(f"Client received: {message}")
         except Exception as err:
-            LOGGER.info("Error %r", err)
+            LOGGER.info(f"Error: {err}")
             raise err
 

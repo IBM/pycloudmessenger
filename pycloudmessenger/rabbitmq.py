@@ -39,21 +39,32 @@ class RabbitContext():
     """
         Holds connection details for a RabbitMQ service
     """
-    def __init__(self, args: dict, user: str = None, password: str = None):
+    def __init__(self, args: dict, user: str = None, password: str = None,
+                 user_dispatch: bool = True):
         self.cert_file = None
         self.args = args.copy()
+        self.args['user_dispatch'] = user_dispatch
 
         #First set up some defaults
         if 'broker_timeout' not in self.args:
             self.args['broker_timeout'] = 60.0
 
-        self.args['broker_user'] = user if user else self.arg_value(
-            self.args, ['broker_user', 'broker_guest_user', 'client_user'])
-        self.args['broker_password'] = password if password else self.arg_value(
-            self.args, ['broker_password', 'broker_guest_password', 'client_pwd'])
+        if user:
+            self.args['broker_user'] = user
+        else:
+            options = ['broker_user', 'broker_guest_user', 'client_user']
+            self.args['broker_user'] = self.arg_value(self.args, options)
+
+        if password:
+            self.args['broker_password'] = password
+        else:
+            options = ['broker_password', 'broker_guest_password', 'client_pwd']
+            self.args['broker_password'] = self.arg_value(self.args, options)
+        if 'cert_b64' in self.args:
+            self.args['broker_cert_b64'] = self.args['cert_b64']
 
         if 'broker_cert_b64' in self.args:
-            self.cert_file = utils.Certificate(args['broker_cert_b64'])
+            self.cert_file = utils.Certificate(self.args['broker_cert_b64'])
             self.args['broker_pem_path'] = self.cert_file.filename
             self.args['broker_tls'] = True
         else:
@@ -116,6 +127,9 @@ class RabbitContext():
 
         return cls(args, user, password, **kwargs)
 
+    def user_dispatch(self):
+        """ Return user_dispatch, default to True"""
+        return self.args.get('user_dispatch', True)
     def user(self):
         """ Return user, default to None"""
         return self.args.get('broker_user', None)
@@ -273,10 +287,13 @@ class AbstractRabbitMessenger(ABC):
             exchange = ''
 
         headers = {"x-delay": 1000 * delay} if delay else None
+        user_id = self.context.user() if self.context.user_dispatch() else None
 
+        properties = pika.BasicProperties(delivery_mode=mode,
+                                          headers=headers,
+                                          user_id=user_id)
         self.channel.basic_publish(
-            exchange=exchange, routing_key=queue, body=message,
-            properties=pika.BasicProperties(delivery_mode=mode, headers=headers))
+            exchange=exchange, routing_key=queue, body=message, properties=properties)
         self.outbound += 1
 
     def stop(self):
@@ -353,6 +370,7 @@ class RabbitClient(AbstractRabbitMessenger):
 
         if self.pub_queue:
             self.declare_queue(self.pub_queue)
+            self.channel.confirm_delivery()
 
         if self.sub_queue:
             self.declare_queue(self.sub_queue)

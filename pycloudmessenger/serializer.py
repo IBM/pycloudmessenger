@@ -23,32 +23,33 @@ Please note that the following code was developed for the project MUSKETEER
 in DRL funded by the European Union under the Horizon 2020 Program.
 """
 
+import pickle
+import base64
 import json
 import jsonpickle
+from abc import ABC, abstractmethod
 
 
-class SerializerABC:
+class SerializerABC(ABC):
     '''Basic serialization'''
 
-    @staticmethod
-    def serialize(message: dict) -> str:
+    @abstractmethod
+    def serialize(self, message: any) -> str:
         '''Convert message to serializable format'''
 
-    @staticmethod
-    def deserialize(message) -> dict:
+    @abstractmethod
+    def deserialize(self, message: bytes) -> any:
         '''Convert serialized message to dict'''
 
 
-class Serializer(SerializerABC):
+class JsonSerializer(SerializerABC):
     '''json serialization'''
 
-    @staticmethod
-    def serialize(message: dict) -> str:
+    def serialize(self, message: any) -> str:
         '''Convert message to serializable format'''
         return json.dumps(message)
 
-    @staticmethod
-    def deserialize(message) -> dict:
+    def deserialize(self, message: bytes) -> any:
         '''Convert serialized message to dict'''
         return json.loads(message)
 
@@ -56,12 +57,22 @@ class Serializer(SerializerABC):
 class JsonPickleSerializer(SerializerABC):
     '''Json pickle serialization'''
 
-    @staticmethod
-    def serialize(message: dict) -> str:
+    def serialize(self, message: any) -> str:
         '''Convert message to serializable format'''
         return jsonpickle.encode(message)
 
-    @staticmethod
-    def deserialize(message) -> dict:
+    def deserialize(self, message: bytes) -> any:
         '''Convert serialized message to dict'''
         return jsonpickle.decode(message)
+
+
+class Base64Serializer(SerializerABC):
+    '''Base64 encoder'''
+
+    def serialize(self, message: any) -> str:
+        '''Convert message to serializable format'''
+        return base64.b64encode(pickle.dumps(message)).decode('utf-8')
+
+    def deserialize(self, message: bytes) -> any:
+        '''Convert serialized message to dict'''
+        return pickle.loads(base64.b64decode(message))

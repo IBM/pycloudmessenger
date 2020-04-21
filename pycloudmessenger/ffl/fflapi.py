@@ -25,6 +25,7 @@ in DRL funded by the European Union under the Horizon 2020 Program.
 
 # pylint: disable=R0903, R0913
 
+from typing import NamedTuple
 import logging
 import requests
 import pycloudmessenger.utils as utils
@@ -36,8 +37,33 @@ import pycloudmessenger.ffl.abstractions as fflabc
 logging.getLogger("pika").setLevel(logging.CRITICAL)
 
 
+class ModelWrapper(NamedTuple):
+    """Class for packaging a model prior to dispatch"""
+    wrapping: dict
+    blob: str
 
-class Context(rabbitmq.RabbitContext):
+    @classmethod
+    def wrap(cls, model: any, encoder: serializer.SerializerABC = None) -> dict:
+        """ Wrap content in meta data """
+        if encoder and model:
+            blob = encoder.serialize(model)
+        else:
+            blob = model
+        return ModelWrapper({'model': blob}, blob)
+
+    @classmethod
+    def unwrap(cls, model: dict, encoder: serializer.SerializerABC = None) -> any:
+        """ Unwrap meta data """
+        blob = None
+        if model and 'model' in model:
+            if isinstance(model['model'], dict):
+                model = model['model']
+            elif encoder:
+                blob = encoder.deserialize(model['model'])
+        return ModelWrapper(model, blob)
+
+
+class Context(rabbitmq.RabbitContext, fflabc.AbstractContext):
     """
     Class holding connection details for an FFL service
         :param download_models: whether downloaded model file name or model url
@@ -48,18 +74,26 @@ class Context(rabbitmq.RabbitContext):
     """
     def __init__(self, args: dict, user: str = None, password: str = None,
                  encoder: serializer.SerializerABC = serializer.JsonPickleSerializer,
-                 download_models: bool = True, dispatch_threshold: int = 1024*1024*5):
-        super().__init__(args, user, password)
+                 user_dispatch: bool = True, download_models: bool = True,
+                 dispatch_threshold: int = 1024*1024*5):
+        super().__init__(args, user, password, user_dispatch)
         self.args['download_models'] = download_models
         self.args['dispatch_threshold'] = dispatch_threshold
-        self.encoder = encoder
+        self.model_encoder = encoder()
+        self.encoder = serializer.JsonPickleSerializer()
 
     def serializer(self):
         """ Return serializer"""
         return self.encoder
+
+    def model_serializer(self):
+        """ Return serializer"""
+        return self.model_encoder
+
     def download_models(self):
         """ Return setting, default to False"""
         return self.args.get('download_models', False)
+
     def dispatch_threshold(self):
         """ Return setting default to None"""
         return self.args.get('dispatch_threshold', None)
@@ -186,14 +220,14 @@ class Messenger(rabbitmq.RabbitDualClient):
             raise ConsumerException(exc) from exc
 
         if not result:
-            raise Exception(f"Malformed object: None")
+            raise fflabc.MalformedResponseException(f"Malformed object: None")
         result = self.context.serializer().deserialize(result)
 
         if 'error' in result:
-            raise Exception(f"Server Error ({result['activation']}): {result['error']}")
+            raise fflabc.ServerException(f"Server Error ({result['activation']}): {result['error']}")
 
         if 'calls' not in result:
-            raise Exception(f"Malformed object: {result}")
+            raise fflabc.MalformedResponseException(f"Malformed object: {result}")
 
         results = result['calls'][0]['count']  # calls[0] will always succeed
         return result['calls'][0]['data'] if results else []
@@ -207,46 +241,50 @@ class Messenger(rabbitmq.RabbitDualClient):
         :return: download location information
         :rtype: `dict`
         """
-        if not model:
-            return {}
 
-        blob = self.context.serializer().serialize(model)
+        wrapper = ModelWrapper.wrap(model, self.context.model_serializer())
+        if not model:
+            return wrapper.wrapping
 
         # First, obtain the upload location/keys
         if task_name:
             message = self.catalog.msg_bin_upload_object(task_name)
         else:
-            if len(blob) > self.context.dispatch_threshold():
+            if len(wrapper.blob) > self.context.dispatch_threshold():
                 message = self.catalog.msg_bin_uploader()
             else:
-                return model
+                #Small model - embed it
+                return wrapper.wrapping
 
         upload_info = self._invoke_service(message)
 
         if 'key' not in upload_info['fields']:
-            raise Exception('Update Error: Malformed URL.')
+            raise fflabc.MalformedResponseException('Update Error: Malformed URL')
+
+        key = upload_info['fields']['key']
 
         try:
             with rabbitmq.RabbitHeartbeat(self.subscriber):
                 # And then perform the upload
                 response = requests.post(upload_info['url'],
-                                         files={'file': blob},
+                                         files={'file': wrapper.blob},
                                          data=upload_info['fields'],
                                          headers=None)
                 response.raise_for_status()
         except requests.exceptions.RequestException as err:
-            raise Exception(f'Update Error: {err.response.status_code}')
+            raise fflabc.DispatchException(err) from err
         except:
-            raise Exception(f'General Update Error')
+            raise fflabc.DispatchException(f'General Update Error')
 
         # Now obtain the download location/keys
         if task_name:
-            message = self.catalog.msg_bin_download_object(upload_info['fields']['key'])
+            message = self.catalog.msg_bin_download_object(key)
         else:
-            message = self.catalog.msg_bin_downloader(upload_info['fields']['key'])
+            message = self.catalog.msg_bin_downloader(key)
 
         download_info = self._invoke_service(message)
-        return {'url': download_info, 'key': upload_info['fields']['key']}
+        wrapper = ModelWrapper.wrap({'url': download_info, 'key': key})
+        return wrapper.wrapping
 
     # Public methods
 
@@ -264,6 +302,15 @@ class Messenger(rabbitmq.RabbitDualClient):
         :type organisation: `str`
         """
         message = self.catalog.msg_user_create(user_name, password, organisation)
+        return self._invoke_service(message)
+
+    def user_tasks(self) -> list:
+        """
+        Returns all the tasks the user is participating in.
+        :return: list of all the tasks, each of which is a dictionary
+        :rtype: `list`
+        """
+        message = self.catalog.msg_user_tasks()
         return self._invoke_service(message)
 
     def user_assignments(self) -> list:
@@ -423,7 +470,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         """
         model_message = self._dispatch_model(task_name=task_name, model=model)
         message = self.catalog.msg_task_stop(task_name, model_message)
-        self._send(message)
+        return self._invoke_service(message)
 
 
     def task_notification(self, timeout: int = 0, flavours: list = None) -> dict:
@@ -442,74 +489,64 @@ class Messenger(rabbitmq.RabbitDualClient):
         msg = self.receive(timeout)
 
         if 'notification' not in msg:
-            raise Exception(f"Malformed object: {msg}")
+            raise fflabc.BadNotificationException(f"Malformed object: {msg}")
 
         if 'type' not in msg['notification']:
-            raise Exception(f"Malformed object: {msg['notification']}")
+            raise fflabc.BadNotificationException(f"Malformed object: {msg['notification']}")
 
         try:
             if fflabc.Notification(msg['notification']['type']) not in flavours:
                 raise ValueError
         except:
-            raise Exception(f"Unexpected notification " \
+            raise fflabc.BadNotificationException(f"Unexpected notification " \
                 f"{msg['notification']['type']}, expecting {flavours}")
 
-        #if 'params' in msg:
-        #    if msg['params'] and 'model' in msg['params']:
-        #        return msg['params']['model']
+        if 'params' not in msg:
+            raise fflabc.BadNotificationException(f"Malformed payload: {msg}")
 
-        if self.context.download_models():
-            msg = self.get_model(msg)
-        return msg
+        model = None
 
-    def get_model(self, model_info: dict) -> dict:
-        """
-        Download a model if the given information contains the correct details.
-        Throws: An exception on failure
-        :param model_info: information with details for downloading the model
-        :type model_info: `dict`
-        :return: updated information containing the name of the downloaded file
-        :rtype: `dict`
-        """
-        if 'params' in model_info:
-            if model_info['params'] and 'url' in model_info['params']:
-                url = model_info['params']['url']
-                if url:
+        if msg['params']:
+            model = ModelWrapper.unwrap(msg['params'], self.context.model_serializer())
+
+            if model.blob:
+                #Embedded model
+                model = model.blob
+            else:
+                #Download from bin store
+                url = model.wrapping.get('url', None)
+                if not url:
+                    raise fflabc.MalformedResponseException(f"Malformed wrapping: {model.wrapping}")
+
+                #Download from bin store
+                if self.context.download_models():
                     self.model_files.append(utils.FileDownloader(url))
 
                     with open(self.model_files[-1].name(), 'rb') as model_file:
                         buff = model_file.read()
-                        blob = self.context.serializer().deserialize(buff)
-                        model_info['params'].update(blob)
+                        model = self.context.model_serializer().deserialize(buff)
+                else:
+                    #Let user decide what to do
+                    model = model.wrapping
 
-                    if 'key' in model_info['params']:
-                        del model_info['params']['key']
-                    del model_info['params']['url']
-        return model_info
+        return fflabc.Response(msg['notification'], model)
 
 
 class BasicParticipant():
     """ Base class for an FFL general user """
 
-    def __init__(self, context: Context, task_name: str = None):
+    def __init__(self, context: Context):
         """
         Class initializer.
         Throws: An exception on failure
         :param context: connection details
         :type context: :class:`.Context`
-        :param task_name: name of the task
-        :type task_name: `str`
-        :param download_models: whether downloaded model file name or model url
-                                should be returned by receive function
-        :type download_models: `bool`
         """
         if not context:
             raise Exception('Credentials must be specified.')
 
         self.messenger = None
-
         self.context = context
-        self.task_name = task_name
         self.queue = None
 
     def __enter__(self):
@@ -546,22 +583,6 @@ class BasicParticipant():
         self.messenger.stop()
         self.messenger = None
 
-    def _receive(self, timeout: int = 0, flavours: list = None) -> dict:
-        """
-        Wait for a message to arrive or until timeout.
-        If message is received, check whether its notification type matches
-        element in given list of notification flavours.
-        Throws: An exception on failure
-        :param timeout: timeout in seconds
-        :type timeout: `int`
-        :param flavours: expected notification types
-        :type flavours: `list`
-        :return: received message
-        :rtype: `dict`
-        """
-        msg = self.messenger.task_notification(timeout, flavours)
-        return msg
-
 
 class User(fflabc.AbstractUser, BasicParticipant):
     """ Class that allows a general user to avail of the FFL platform services """
@@ -581,11 +602,13 @@ class User(fflabc.AbstractUser, BasicParticipant):
         """
         return self.messenger.user_create(user_name, password, organisation)
 
-    def create_task(self, topology: str, definition: dict) -> dict:
+    def create_task(self, task_name: str, topology: str, definition: dict) -> dict:
         """
         Creates a task with the given definition and returns a dictionary
         with the details of the created tasks.
         Throws: An exception on failure
+        :param task_name: name of the task to create
+        :type task_name: `str`
         :param topology: topology of the task participants' communication network
         :type topology: `str`
         :param definition: definition of the task to be created
@@ -593,25 +616,29 @@ class User(fflabc.AbstractUser, BasicParticipant):
         :return: details of the created task
         :rtype: `dict`
         """
-        return self.messenger.task_create(self.task_name, topology, definition)
+        return self.messenger.task_create(task_name, topology, definition)
 
-    def join_task(self) -> dict:
+    def join_task(self, task_name: str) -> dict:
         """
         As a potential task participant, try to join an existing task that has yet to start.
         Throws: An exception on failure
+        :param task_name: name of the task to join
+        :type task_name: `str`
         :return: details of the task assignment
         :rtype: `dict`
         """
-        return self.messenger.task_assignment_join(self.task_name)
+        return self.messenger.task_assignment_join(task_name)
 
-    def task_info(self) -> dict:
+    def task_info(self, task_name: str) -> dict:
         """
         Returns the details of a given task.
         Throws: An exception on failure
+        :param task_name: name of the task to join
+        :type task_name: `str`
         :return: details of the task
         :rtype: `dict`
         """
-        return self.messenger.task_info(self.task_name)
+        return self.messenger.task_info(task_name)
 
     def get_tasks(self) -> list:
         """
@@ -631,6 +658,15 @@ class User(fflabc.AbstractUser, BasicParticipant):
         """
         return self.messenger.user_assignments()
 
+    def get_created_tasks(self) -> list:
+        """
+        Returns a list with all the tasks created by the current user.
+        Throws: An exception on failure
+        :return: list of all the available tasks
+        :rtype: `list`
+        """
+        return self.messenger.user_tasks()
+
 
 class Participant(fflabc.AbstractParticipant, BasicParticipant):
     """ This class provides the functionality needed by the
@@ -645,13 +681,14 @@ class Participant(fflabc.AbstractParticipant, BasicParticipant):
         :param task_name: name of the task (the user needs to be a participant of this task).
         :type task_name: `str`
         """
-        super().__init__(context, task_name)
+        super().__init__(context)
 
+        self.task_name = task_name
         messenger = Messenger(self.context)
         result = messenger.task_assignment_info(self.task_name)
 
         if 'queue' not in result:
-            raise Exception("Task not joined by this user.")
+            raise fflabc.TaskException("Task not joined by this user.")
 
         self.queue = result['queue']
         messenger.stop()
@@ -665,14 +702,14 @@ class Participant(fflabc.AbstractParticipant, BasicParticipant):
         """
         self.messenger.task_assignment_update(self.task_name, message)
 
-    def receive(self, timeout: int = 0) -> dict:
+    def receive(self, timeout: int = 0) -> fflabc.Response:
         """
         Wait for a message to arrive or until timeout period is exceeded.
         Throws: An exception on failure
         :param timeout: timeout in seconds
         :type timeout: `int`
         :return: received message
-        :rtype: `dict`
+        :rtype: `class Response`
         """
         return self.messenger.task_notification(timeout, [
                         fflabc.Notification.aggregator_started,
@@ -699,22 +736,20 @@ class Aggregator(fflabc.AbstractAggregator, BasicParticipant):
         :type context: :class:`.Context`
         :param task_name: Name of the task (note: the user must be the creator of this task)
         :type task_name: `str`
-        :param download_models: Whether downloaded model file name or model url should
-                                be returned by receive function
-        :type download_models: `bool`
         """
-        super().__init__(context, task_name)
+        super().__init__(context)
 
+        self.task_name = task_name
         messenger = Messenger(self.context)
 
         # Get the task info for subscribe queue etc
         result = messenger.task_info(self.task_name)
 
         if 'status' in result and result['status'] == 'COMPLETE':
-            raise Exception("Task is already finished.")
+            raise fflabc.TaskException("Task is already finished.")
 
         if 'queue' not in result:
-            raise Exception("Task not created by this user.")
+            raise fflabc.TaskException("Task not created by this user.")
 
         self.queue = result['queue']
 
@@ -737,14 +772,14 @@ class Aggregator(fflabc.AbstractAggregator, BasicParticipant):
         """
         self.messenger.task_start(self.task_name, message, participant)
 
-    def receive(self, timeout: int = 0) -> dict:
+    def receive(self, timeout: int = 0) -> fflabc.Response:
         """
         Wait for a message to arrive or until timeout period is exceeded.
         Throws: An exception on failure
         :param timeout: timeout in seconds
         :type timeout: `int`
         :return: received message
-        :rtype: `dict`
+        :rtype: `class Response`
         """
         msg = self.messenger.task_notification(timeout, [
             fflabc.Notification.participant_joined,
@@ -752,7 +787,7 @@ class Aggregator(fflabc.AbstractAggregator, BasicParticipant):
             fflabc.Notification.participant_left
         ])
 
-        flavour = msg['notification']
+        flavour = msg.notification
         if flavour is fflabc.Notification.participant_left:
             self._del_participant(flavour['participant'])
         else:
