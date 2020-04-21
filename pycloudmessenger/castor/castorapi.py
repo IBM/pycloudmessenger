@@ -58,6 +58,7 @@ class CastorMessenger(rabbitmq.RabbitDualClient, api.CastorABC):
 
         self.publish_queue = publish_queue
         self.subscribe_queue = subscribe_queue
+        self.serializer = serializer.JsonSerializer()
 
     def __enter__(self):
         self.start_subscriber(queue=rabbitmq.RabbitQueue(self.subscribe_queue))
@@ -69,9 +70,9 @@ class CastorMessenger(rabbitmq.RabbitDualClient, api.CastorABC):
         self.stop()
         self.catalog = None
 
-    def invoke_service(self, message, timeout=60):
+    def invoke_service(self, message, timeout: int = 30, queue: rabbitmq.RabbitQueue = None) -> str:
         try:
-            message = serializer.Serializer.serialize(message)
+            message = self.serializer.serialize(message)
             result = super(CastorMessenger, self).invoke_service(message, timeout)
         except rabbitmq.RabbitTimedOutException as exc:
             raise TimedOutException(exc) from exc
@@ -80,7 +81,7 @@ class CastorMessenger(rabbitmq.RabbitDualClient, api.CastorABC):
 
         if not result:
             raise Exception(f"Malformed object: None")
-        result = serializer.Serializer.deserialize(result)
+        result = self.serializer.deserialize(result)
 
         if 'status' not in result['serviceResponse']['service']:
             raise Exception(f"Malformed object: {result}")
@@ -90,4 +91,3 @@ class CastorMessenger(rabbitmq.RabbitDualClient, api.CastorABC):
             raise Exception(msg)
 
         return result['serviceResponse']['service']['result']
-
