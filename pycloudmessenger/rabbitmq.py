@@ -60,9 +60,11 @@ class RabbitContext():
         else:
             options = ['broker_password', 'broker_guest_password', 'client_pwd']
             self.args['broker_password'] = self.arg_value(self.args, options)
+        if 'cert_b64' in self.args:
+            self.args['broker_cert_b64'] = self.args['cert_b64']
 
         if 'broker_cert_b64' in self.args:
-            self.cert_file = utils.Certificate(args['broker_cert_b64'])
+            self.cert_file = utils.Certificate(self.args['broker_cert_b64'])
             self.args['broker_pem_path'] = self.cert_file.filename
             self.args['broker_tls'] = True
         else:
