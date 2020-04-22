@@ -127,7 +127,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         self.timeout = context.timeout()
 
         # Initialise the catalog
-        self.catalog = catalog.MessageCatalog(context.user())
+        self.catalog = catalog.MessageCatalog()
 
         if not publish_queue:
             # Publish not over-ridden so use context version

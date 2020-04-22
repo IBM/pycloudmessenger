@@ -25,9 +25,8 @@ under the Horizon 2020 Program.
 
 
 class MessageCatalog():
-    def __init__(self, user_name: str):
+    def __init__(self):
         self.correlation = 0
-        self.user_name = user_name
 
     def _requestor(self):
         self.correlation += 1
@@ -54,22 +53,22 @@ class MessageCatalog():
 
     def msg_bin_upload_object(self, object_name: str) -> dict:
         template, args = self._msg_template(service_name='BinService')
-        args.append({'cmd': 'upload_object', 'params': [self.user_name, object_name]})
+        args.append({'cmd': 'upload_object', 'params': [object_name]})
         return template
 
     def msg_bin_download_object(self, object_name: str) -> dict:
         template, args = self._msg_template(service_name='BinService')
-        args.append({'cmd': 'download_object', 'params': [self.user_name, object_name]})
+        args.append({'cmd': 'download_object', 'params': [object_name]})
         return template
 
     def msg_bin_uploader(self, object_name: str = None) -> dict:
         template, args = self._msg_template(service_name='BinService')
-        args.append({'cmd': 'uploader', 'params': [self.user_name, object_name]})
+        args.append({'cmd': 'uploader', 'params': [object_name]})
         return template
 
     def msg_bin_downloader(self, object_name: str) -> dict:
         template, args = self._msg_template(service_name='BinService')
-        args.append({'cmd': 'downloader', 'params': [self.user_name, object_name]})
+        args.append({'cmd': 'downloader', 'params': [object_name]})
         return template
 
     def msg_user_create(self, username: str, password: str, organisation: str) -> dict:
@@ -79,12 +78,12 @@ class MessageCatalog():
 
     def msg_user_assignments(self) -> dict:
         template, args = self._msg_template()
-        args.append({'cmd': 'user_assignments', 'params': [self.user_name]})
+        args.append({'cmd': 'user_assignments'})
         return template
 
     def msg_user_tasks(self) -> dict:
         template, args = self._msg_template()
-        args.append({'cmd': 'user_tasks', 'params': [self.user_name]})
+        args.append({'cmd': 'user_tasks'})
         return template
 
     def msg_task_listing(self) -> dict:
@@ -94,50 +93,50 @@ class MessageCatalog():
 
     def msg_task_create(self, task_name: str, topology: str, definition: dict) -> dict:
         template, args = self._msg_template()
-        args.append({'cmd': 'task_create', 'params': [task_name, self.user_name, topology, definition]})
+        args.append({'cmd': 'task_create', 'params': [task_name, topology, definition]})
         return template
 
     def msg_task_update(self, task_name: str, topology: str, definition: dict, status: str) -> dict:
         template, args = self._msg_template()
-        args.append({'cmd': 'task_update', 'params': [task_name, self.user_name, topology, definition, status]})
+        args.append({'cmd': 'task_update', 'params': [task_name, topology, definition, status]})
         return template
 
     def msg_task_info(self, task_name: str) -> dict:
         template, args = self._msg_template()
-        args.append({'cmd': 'task_info', 'params': [task_name, self.user_name]})
+        args.append({'cmd': 'task_info', 'params': [task_name]})
         return template
 
     def msg_task_assignments(self, task_name: str) -> dict:
         template, args = self._msg_template()
-        args.append({'cmd': 'task_assignments', 'params': [task_name, self.user_name]})
+        args.append({'cmd': 'task_assignments', 'params': [task_name]})
         return template
 
     def msg_task_join(self, task_name: str) -> dict:
         template, args = self._msg_template()
-        args.append({'cmd': 'task_join', 'params': [task_name, self.user_name]})
+        args.append({'cmd': 'task_join', 'params': [task_name]})
         return template
 
     def msg_task_quit(self, task_name: str) -> dict:
         template, args = self._msg_template()
-        args.append({'cmd': 'task_quit', 'params': [task_name, self.user_name]})
+        args.append({'cmd': 'task_quit', 'params': [task_name]})
         return template
 
     def msg_task_start(self, task_name: str, model: dict = None, participant: str = None) -> dict:
         template, args = self._msg_template()
-        args.append({'cmd': 'task_start', 'params': [task_name, self.user_name, model, participant]})
+        args.append({'cmd': 'task_start', 'params': [task_name, model, participant]})
         return template
 
     def msg_task_stop(self, task_name: str, model: dict = None) -> dict:
         template, args = self._msg_template()
-        args.append({'cmd': 'task_stop', 'params': [task_name, self.user_name, model]})
+        args.append({'cmd': 'task_stop', 'params': [task_name, model]})
         return template
 
     def msg_task_assignment_update(self, task_name: str, status: str = None, model: dict = None):
         template, args = self._msg_template()
-        args.append({'cmd': 'task_assignment_update', 'params': [task_name, self.user_name, status, model]})
+        args.append({'cmd': 'task_assignment_update', 'params': [task_name, status, model]})
         return template
 
     def msg_task_assignment_info(self, task_name: str):
         template, args = self._msg_template()
-        args.append({'cmd': 'task_assignment_info', 'params': [task_name, self.user_name]})
+        args.append({'cmd': 'task_assignment_info', 'params': [task_name]})
         return template
