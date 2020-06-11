@@ -65,7 +65,7 @@ class DataParser():
         self.timezone = self.csv_config['timestamp_timezone']
 
     def anonymize(self, row):
-        #Funtion to anoymize a row
+        #Function to anoymize a row
         #Modify as appropriate
         return row
 
