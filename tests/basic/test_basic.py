@@ -81,7 +81,7 @@ class MessengerTests(unittest.TestCase):
         f = serializer2.deserialize(e)
         self.assertTrue(np.array_equal(a, f))
 
-    @unittest.skip("temporarily skipping")
+    #@unittest.skip("temporarily skipping")
     def test_timeout(self):
         context = rabbitmq.RabbitContext.from_credentials_file(self.credentials)
 
@@ -91,7 +91,7 @@ class MessengerTests(unittest.TestCase):
             with self.assertRaises(Exception):
                 message = client.receive(timeout=1)
 
-    @unittest.skip("temporarily skipping")
+    #@unittest.skip("temporarily skipping")
     def test_round_trip(self):
         context = rabbitmq.RabbitContext.from_credentials_file(self.credentials)
 
