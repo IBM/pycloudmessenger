@@ -29,6 +29,8 @@ import tempfile
 import weakref
 import base64
 import requests
+import time
+import tenacity
 
 
 class TempFile():
@@ -85,3 +87,17 @@ class Certificate(TempFile):
         pem = base64.b64decode(b64string).decode('utf-8')
         with open(self.filename, 'w') as pem_file:
             pem_file.write(pem)
+
+
+class Timer:
+    @classmethod
+    def retry(cls, timeout: float, callback, *args, **kwargs) -> any:
+        @tenacity.retry(wait=tenacity.wait_random(min=timeout/100, max=timeout/10),
+                        stop=tenacity.stop_after_delay(timeout))
+        def retry_impl(callback, *args, **kwargs):
+            result = callback(*args, **kwargs)
+            if result:
+                return result
+            raise Exception('Operation timed out')
+        return retry_impl(callback, *args, **kwargs)
+

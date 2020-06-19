@@ -186,12 +186,13 @@ class Messenger(rabbitmq.RabbitDualClient):
             timeout = self.timeout
 
         try:
-            super(Messenger, self).receive_message(self.internal_handler, timeout, 1)
+            result = super(Messenger, self).receive_message(timeout)
         except rabbitmq.RabbitTimedOutException as exc:
             raise TimedOutException(exc) from exc
         except rabbitmq.RabbitConsumerException as exc:
             raise ConsumerException(exc) from exc
-        return self.context.serializer().deserialize(self.last_recv_msg)
+
+        return self.context.serializer().deserialize(result)
 
     def _invoke_service(self, message: dict, timeout: int = 0) -> dict:
         """
