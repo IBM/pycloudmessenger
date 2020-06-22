@@ -92,7 +92,7 @@ class Certificate(TempFile):
 class Timer:
     @classmethod
     def retry(cls, timeout: float, callback, *args, **kwargs) -> any:
-        @tenacity.retry(wait=tenacity.wait_random(min=timeout/100, max=timeout/10),
+        @tenacity.retry(wait=tenacity.wait_random(min=timeout/1000, max=timeout/100),
                         stop=tenacity.stop_after_delay(timeout))
         def retry_impl(callback, *args, **kwargs):
             result = callback(*args, **kwargs)
