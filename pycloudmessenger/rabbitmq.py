@@ -432,18 +432,23 @@ class RabbitClient(AbstractRabbitMessenger):
         try:
             utils.Timer.retry(timeout, self.wait_for_message, queue)
         except Exception as exc:
-            raise RabbitTimedOutException("Operation timeout reached.") from exc
+            raise RabbitTimedOutException("Operation timed out.") from exc
 
-        method_frame, header_frame, body = self.channel.basic_get(queue.name)
-        if not method_frame:
-            raise RabbitTimedOutException("Unusual operation timeout reached.")
+        try:
+            method_frame, properties, body = self.channel.basic_get(queue.name)
+        except Exception as exc:
+            raise RabbitConsumerException('Cannot read message.') from exc
+
+        #A message is available on the queue
+        if not method_frame and not properties and not body:
+            raise RabbitConsumerException('Unusual consumer exception.')
 
         self.inbound += 1
         self.channel.basic_ack(method_frame.delivery_tag)
         return body
 
     def _receive_multiple(self, handler=None, timeout: int = 30, max_messages: int = 0,
-                queue: RabbitQueue = None) -> str:
+                          queue: RabbitQueue = None) -> str:
         """
             Start receiving messages, up to max_messages
 
@@ -615,22 +620,38 @@ class RabbitDualClient():
 
 class RabbitHeartbeat():
     """
-        Thread to keep the broker connection alive
+        Thread to keep broker connections alive
     """
-    def __init__(self, client: RabbitClient):
-        self.quit = None
-        self.thread = threading.Thread(target=self.heartbeat, args=(client.connection,))
+    def __init__(self, clients: list):
+        """
+            Start a thread to keep connections alive
+            clients: a list of RabbitClient objects
 
-    def heartbeat(self, connection):
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Nothing
+        """
+        self.quit = None
+
+        if clients:
+            self.thread = threading.Thread(target=self.heartbeat, args=(clients,))
+
+    def heartbeat(self, clients: list):
         """ Thread that periodically processes pika events """
-        while not self.quit.wait(1.0):
-            connection.process_data_events()
+        while not self.quit.wait(0.25):
+            for client in clients:
+                if isinstance(client, RabbitClient):
+                    client.connection.process_data_events()
 
     def __enter__(self):
+        """ Context manager start """
         self.quit = threading.Event()
         self.thread.start()
         return self
 
     def __exit__(self, *args):
+        """ Context manager stop """
         self.quit.set()
         self.thread.join()
