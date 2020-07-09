@@ -432,7 +432,7 @@ class RabbitClient(AbstractRabbitMessenger):
         try:
             utils.Timer.retry(timeout, self.wait_for_message, queue)
         except Exception as exc:
-            raise RabbitTimedOutException("Operation timed out.") from exc
+            raise RabbitTimedOutException("Operation timeout reached.") from exc
 
         try:
             method_frame, properties, body = self.channel.basic_get(queue.name)
