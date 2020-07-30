@@ -130,7 +130,7 @@ class MessengerTests(unittest.TestCase):
             client.send_message(json.dumps({'blah': 'blah'}))
 
             with rabbitmq.RabbitDualClient(context) as server:
-                server.start_publisher(queue=rabbitmq.RabbitQueue(context.replies()))
-                server.start_subscriber(queue=rabbitmq.RabbitQueue(context.feeds()))
+                server.start_publisher(queue=rabbitmq.RabbitQueue(context.replies(), durable=True))
+                server.start_subscriber(queue=rabbitmq.RabbitQueue(context.feeds(), durable=True))
                 message = server.receive_message(5)
                 LOGGER.info(message)
