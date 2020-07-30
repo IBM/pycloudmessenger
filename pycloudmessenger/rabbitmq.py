@@ -191,6 +191,12 @@ class RabbitQueue():
         if self.exclusive or self.durable:
             self.passive = False
 
+    def queryable(self):
+        return True if self.durable or self.exclusive else False
+
+    def __str__(self):
+        return "durable %s, passive %s, exclusive %s" % (self.durable, self.passive, self.exclusive)
+
 
 class AbstractRabbitMessenger(ABC):
     """
@@ -233,14 +239,15 @@ class AbstractRabbitMessenger(ABC):
 
         #Will not raise an exception if access rights insufficient on the queue
         #Exception only raised when channel consume takes place
-        result = self.channel.queue_declare(
-            queue=queue.name,
-            exclusive=queue.exclusive,
-            auto_delete=queue.auto_delete,
-            durable=queue.durable,
-            passive=queue.passive)
-        queue.name = result.method.queue
-        queue.message_count = result.method.message_count
+        if queue.exclusive or queue.durable:
+            result = self.channel.queue_declare(
+                queue=queue.name,
+                exclusive=queue.exclusive,
+                auto_delete=queue.auto_delete,
+                durable=queue.durable,
+                passive=queue.passive)
+            queue.name = result.method.queue
+            queue.message_count = result.method.message_count
 
         #Useful when testing - clear the queue
         if queue.purge:
@@ -422,7 +429,7 @@ class RabbitClient(AbstractRabbitMessenger):
             queue = self.sub_queue
 
         #Enter multiple message mode
-        if handler:
+        if handler or not queue.queryable():
             return self._receive_multiple(handler, timeout, max_messages, queue)
 
         #Single message mode
