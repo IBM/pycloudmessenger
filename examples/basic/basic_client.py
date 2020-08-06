@@ -72,12 +72,12 @@ def main():
                 server.receive(mh.handler, max_messages=1)
 
                 #And send a reply to the client
-                reply = {'action': 'Inbound', 'reply': 'the reply'}
+                reply = {'action': 'Inbound', 'reply': '0'*1024000}
                 server.publish(json.dumps(reply), rabbitmq.RabbitQueue(context.replies()))
 
             #Now catch the reply in the client
-            message = client.receive()
-            LOGGER.info(f"client got {message}")
+            message = client.receive(timeout=0)#.01)
+            #LOGGER.info(f"client got {message}")
     except Exception as err:
         LOGGER.info("Error %r", err)
         raise err

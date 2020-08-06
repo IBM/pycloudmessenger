@@ -82,34 +82,55 @@ class MessengerTests(unittest.TestCase):
         self.assertTrue(np.array_equal(a, f))
 
     #@unittest.skip("temporarily skipping")
-    def test_users(self):
+    def test_timeout(self):
         context = rabbitmq.RabbitContext.from_credentials_file(self.credentials)
 
-        try:
-            with rabbitmq.RabbitClient(context) as client:
-                client.start(publish=rabbitmq.RabbitQueue(context.feeds(), purge=True),
-                             subscribe=rabbitmq.RabbitQueue(context.replies()))
-                message = {'action': 'Outbound', 'payload': 'some data'}
-                LOGGER.info(f'Client sending: {message}')
-                client.publish(json.dumps(message))
-                LOGGER.info(f'Client sent: {message}')
+        with rabbitmq.RabbitClient(context) as client:
+            client.start(publish=rabbitmq.RabbitQueue(context.feeds(), purge=True, durable=True),
+                         subscribe=rabbitmq.RabbitQueue(context.replies(), durable=True))
+            with self.assertRaises(Exception):
+                message = client.receive(timeout=1)
 
-                #Now start the server side and handle the message
-                with rabbitmq.RabbitClient(context) as server:
-                    server.start(subscribe=rabbitmq.RabbitQueue(context.feeds()))
+    #@unittest.skip("temporarily skipping")
+    def test_round_trip(self):
+        context = rabbitmq.RabbitContext.from_credentials_file(self.credentials)
 
-                    recv = server.receive(timeout=5)
-                    LOGGER.info(f'Server received: {recv}')
+        with rabbitmq.RabbitClient(context) as client:
+            client.start(publish=rabbitmq.RabbitQueue(context.feeds(), purge=True, durable=True),
+                         subscribe=rabbitmq.RabbitQueue(context.replies(), durable=True))
+            message = {'action': 'Outbound', 'payload': '0'*1024*100}
+            #LOGGER.info(f'Client sending: {message}')
+            client.publish(json.dumps(message))
+            #LOGGER.info(f'Client sent: {message}')
 
-                    #And send a reply to the client
-                    reply = {'action': 'Inbound', 'reply': 'the reply'}
-                    LOGGER.info(f'Server sending: {reply}')
-                    server.publish(json.dumps(reply), rabbitmq.RabbitQueue(context.replies()))
+            #Now start the server side and handle the message
+            with rabbitmq.RabbitClient(context) as server:
+                server.start(subscribe=rabbitmq.RabbitQueue(context.feeds()))
 
-                #Now catch the reply in the client
-                message = client.receive()
-                LOGGER.info(f"Client received: {message}")
-        except Exception as err:
-            LOGGER.info(f"Error: {err}")
-            raise err
+                recv = server.receive(timeout=.01)
+                #LOGGER.info(f'Server received: {recv}')
 
+                #And send a reply to the client
+                reply = {'action': 'Inbound', 'reply': 'the reply'}
+                LOGGER.info(f'Server sending: {reply}')
+                server.publish(json.dumps(reply), rabbitmq.RabbitQueue(context.replies()))
+
+            #Now catch the reply in the client
+            message = client.receive(timeout=.1)
+            LOGGER.info(f"Client received: {message}")
+
+
+    #@unittest.skip("temporarily skipping")
+    def test_round_trip(self):
+        context = rabbitmq.RabbitContext.from_credentials_file(self.credentials)
+
+        with rabbitmq.RabbitDualClient(context) as client:
+            client.start_subscriber(queue=rabbitmq.RabbitQueue(context.replies(), durable=True))
+            client.start_publisher(queue=rabbitmq.RabbitQueue(context.feeds(), purge=True, durable=True))
+            client.send_message(json.dumps({'blah': 'blah'}))
+
+            with rabbitmq.RabbitDualClient(context) as server:
+                server.start_publisher(queue=rabbitmq.RabbitQueue(context.replies(), durable=True))
+                server.start_subscriber(queue=rabbitmq.RabbitQueue(context.feeds(), durable=True))
+                message = server.receive_message(5)
+                LOGGER.info(message)

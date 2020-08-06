@@ -186,12 +186,13 @@ class Messenger(rabbitmq.RabbitDualClient):
             timeout = self.timeout
 
         try:
-            super(Messenger, self).receive_message(self.internal_handler, timeout, 1)
+            result = super(Messenger, self).receive_message(timeout)
         except rabbitmq.RabbitTimedOutException as exc:
             raise TimedOutException(exc) from exc
         except rabbitmq.RabbitConsumerException as exc:
             raise ConsumerException(exc) from exc
-        return self.context.serializer().deserialize(self.last_recv_msg)
+
+        return self.context.serializer().deserialize(result)
 
     def _invoke_service(self, message: dict, timeout: int = 0) -> dict:
         """
@@ -264,7 +265,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         key = upload_info['fields']['key']
 
         try:
-            with rabbitmq.RabbitHeartbeat(self.subscriber):
+            with rabbitmq.RabbitHeartbeat([self.subscriber, self.publisher]):
                 # And then perform the upload
                 response = requests.post(upload_info['url'],
                                          files={'file': wrapper.blob},
@@ -520,11 +521,12 @@ class Messenger(rabbitmq.RabbitDualClient):
 
                 #Download from bin store
                 if self.context.download_models():
-                    self.model_files.append(utils.FileDownloader(url))
+                    with rabbitmq.RabbitHeartbeat([self.subscriber, self.publisher]):
+                        self.model_files.append(utils.FileDownloader(url))
 
-                    with open(self.model_files[-1].name(), 'rb') as model_file:
-                        buff = model_file.read()
-                        model = self.context.model_serializer().deserialize(buff)
+                        with open(self.model_files[-1].name(), 'rb') as model_file:
+                            buff = model_file.read()
+                            model = self.context.model_serializer().deserialize(buff)
                 else:
                     #Let user decide what to do
                     model = model.wrapping

@@ -175,6 +175,8 @@ class RabbitQueue():
         self.auto_delete = auto_delete
         self.purge = purge
         self.prefetch = prefetch
+        self.passive = True
+        self.message_count = 0
 
         #If no queue specified, create a temporary, exclusive queue
         #This will force a server generated queue name like 'amq.gen....'
@@ -185,6 +187,15 @@ class RabbitQueue():
             self.name = ''
             self.exclusive = True
         self.name = self.name.strip()
+
+        if self.exclusive or self.durable:
+            self.passive = False
+
+    def queryable(self):
+        return True if self.durable or self.exclusive else False
+
+    def __str__(self):
+        return "durable %s, passive %s, exclusive %s" % (self.durable, self.passive, self.exclusive)
 
 
 class AbstractRabbitMessenger(ABC):
@@ -226,15 +237,17 @@ class AbstractRabbitMessenger(ABC):
                 None
         """
 
+        #Will not raise an exception if access rights insufficient on the queue
+        #Exception only raised when channel consume takes place
         if queue.exclusive or queue.durable:
-            #Will not raise an exception if access rights insufficient on the queue
-            #Exception only raised when channel consume takes place
             result = self.channel.queue_declare(
                 queue=queue.name,
                 exclusive=queue.exclusive,
                 auto_delete=queue.auto_delete,
-                durable=queue.durable)
+                durable=queue.durable,
+                passive=queue.passive)
             queue.name = result.method.queue
+            queue.message_count = result.method.message_count
 
         #Useful when testing - clear the queue
         if queue.purge:
@@ -396,6 +409,10 @@ class RabbitClient(AbstractRabbitMessenger):
 
         super(RabbitClient, self).basic_publish(message, queue.name, exchange, mode, delay)
 
+    def wait_for_message(self, queue: RabbitQueue) -> int:
+        self.declare_queue(queue)
+        return queue.message_count
+
     def receive(self, handler=None, timeout: int = 30, max_messages: int = 0,
                 queue: RabbitQueue = None) -> str:
         """
@@ -407,11 +424,50 @@ class RabbitClient(AbstractRabbitMessenger):
             Returns:
                 The last message received
         """
-        msgs = 0
-        body = None
 
         if not queue:
             queue = self.sub_queue
+
+        #Enter multiple message mode
+        if handler or not queue.queryable():
+            return self._receive_multiple(handler, timeout, max_messages, queue)
+
+        #Single message mode
+        #Queue already created, changing now to only read queue properties
+        queue.passive = True
+
+        try:
+            utils.Timer.retry(timeout, self.wait_for_message, queue)
+        except Exception as exc:
+            raise RabbitTimedOutException("Operation timeout reached.") from exc
+
+        try:
+            method_frame, properties, body = self.channel.basic_get(queue.name)
+        except Exception as exc:
+            raise RabbitConsumerException('Cannot read message.') from exc
+
+        #A message is available on the queue
+        if not method_frame and not properties and not body:
+            raise RabbitConsumerException('Unusual consumer exception.')
+
+        self.inbound += 1
+        self.channel.basic_ack(method_frame.delivery_tag)
+        return body
+
+    def _receive_multiple(self, handler=None, timeout: int = 30, max_messages: int = 0,
+                          queue: RabbitQueue = None) -> str:
+        """
+            Start receiving messages, up to max_messages
+
+            Throws:
+                Exception if consume fails
+
+            Returns:
+                The last message received
+        """
+
+        msgs = 0
+        body = None
 
         try:
             for msg in self.channel.consume(
@@ -458,7 +514,22 @@ class RabbitDualClient():
         self.context = context
         self.subscriber = None
         self.publisher = None
-        self.last_recv_msg = None
+
+    def __enter__(self):
+        """
+        Context manager enters.
+        Throws: An exception on failure
+        :return: self
+        :rtype: :class:`.RabbitDualClient`
+        """
+        return self
+
+    def __exit__(self, *args):
+        """
+        Context manager exits - call stop.
+        Throws: An exception on failure
+        """
+        self.stop()
 
     def start_subscriber(self, queue: RabbitQueue, client=RabbitClient):
         """
@@ -502,7 +573,7 @@ class RabbitDualClient():
         """
         self.publisher.publish(message, queue, delay=delay)
 
-    def receive_message(self, handler, timeout: int, max_messages: int):
+    def receive_message(self, timeout: float = 0):
         """
             Receive messages
 
@@ -512,19 +583,7 @@ class RabbitDualClient():
             Returns:
                 Nothing
         """
-        self.subscriber.receive(handler, timeout, max_messages)
-
-    def internal_handler(self, message):
-        """
-            Handler for invoke_service method
-
-            Throws:
-                Nothing
-
-            Returns:
-                Nothing
-        """
-        self.last_recv_msg = message
+        return self.subscriber.receive(timeout=timeout)
 
     def invoke_service(self, message, timeout: int = 30, queue: RabbitQueue = None) -> str:
         """
@@ -536,15 +595,14 @@ class RabbitDualClient():
             Returns:
                 The reply dictionary
         """
-        self.last_recv_msg = None
         LOGGER.debug(f"Sending message: {message}")
         self.send_message(message)
 
-        LOGGER.debug("Waiting for reply...")
+        LOGGER.info(f"Waiting for reply on {queue.name}...")
         #Now wait for the reply
-        self.subscriber.receive(self.internal_handler, timeout, 1, queue)
-        LOGGER.debug(f"Received: {self.last_recv_msg}")
-        return self.last_recv_msg
+        result = self.subscriber.receive(timeout=timeout, queue=queue)
+        LOGGER.debug(f"Received: {result}")
+        return result
 
     def mktemp_queue(self) -> RabbitQueue:
         """ Create a temporary, broker defined queue """
@@ -569,22 +627,38 @@ class RabbitDualClient():
 
 class RabbitHeartbeat():
     """
-        Thread to keep the broker connection alive
+        Thread to keep broker connections alive
     """
-    def __init__(self, client: RabbitClient):
-        self.quit = None
-        self.thread = threading.Thread(target=self.heartbeat, args=(client.connection,))
+    def __init__(self, clients: list):
+        """
+            Start a thread to keep connections alive
+            clients: a list of RabbitClient objects
 
-    def heartbeat(self, connection):
+            Throws:
+                An exception if not successful
+
+            Returns:
+                Nothing
+        """
+        self.quit = None
+
+        if clients:
+            self.thread = threading.Thread(target=self.heartbeat, args=(clients,))
+
+    def heartbeat(self, clients: list):
         """ Thread that periodically processes pika events """
-        while not self.quit.wait(1.0):
-            connection.process_data_events()
+        while not self.quit.wait(0.25):
+            for client in clients:
+                if isinstance(client, RabbitClient):
+                    client.connection.process_data_events()
 
     def __enter__(self):
+        """ Context manager start """
         self.quit = threading.Event()
         self.thread.start()
         return self
 
     def __exit__(self, *args):
+        """ Context manager stop """
         self.quit.set()
         self.thread.join()
