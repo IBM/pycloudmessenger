@@ -598,7 +598,7 @@ class RabbitDualClient():
         LOGGER.debug(f"Sending message: {message}")
         self.send_message(message)
 
-        LOGGER.info(f"Waiting for reply on {queue.name}...")
+        LOGGER.debug(f"Waiting for reply on {queue.name}...")
         #Now wait for the reply
         result = self.subscriber.receive(timeout=timeout, queue=queue)
         LOGGER.debug(f"Received: {result}")
