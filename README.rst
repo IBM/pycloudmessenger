@@ -56,3 +56,8 @@ References
 
 * [IBM Research Blog](https://www.ibm.com/blogs/research/2018/11/forecasts-iot/)
 * [Castor: Contextual IoT Time Series Data and Model Management at Scale](https://arxiv.org/abs/1811.08566) Bei Chen, Bradley Eck, Francesco Fusco, Robert Gormally, Mark Purcell, Mathieu Sinn, Seshu Tirupathi. 2018 IEEE International Conference on Data Mining (ICDM workshops).
+
+
+This project has received funding from the European Union’s Horizon 2020 research and innovation programme under grant agreement No 824988. https://musketeer.eu/
+
+.. image:: /EU.png
