@@ -134,3 +134,20 @@ class MessengerTests(unittest.TestCase):
                 server.start_subscriber(queue=rabbitmq.RabbitQueue(context.feeds(), durable=True))
                 message = server.receive_message(5)
                 LOGGER.info(message)
+
+    #@unittest.skip("temporarily skipping")
+    def test_round_trip_no_declare(self):
+        context = rabbitmq.RabbitContext.from_credentials_file(self.credentials)
+
+        with rabbitmq.RabbitDualClient(context) as client:
+            subscribe = rabbitmq.RabbitQueue() #Force generation of temp exclusive queue
+            client.start_subscriber(queue=subscribe)
+            client.start_publisher(queue=rabbitmq.RabbitQueue(context.feeds(), purge=True, durable=True))
+            client.send_message(json.dumps({'blah': 'blah'}))
+
+            with rabbitmq.RabbitDualClient(context) as server:
+                #Ensure this queue is not redeclared as it is exclusive to the client
+                server.start_publisher(queue=rabbitmq.RabbitQueue(subscribe.name, declare=False))
+                server.start_subscriber(queue=rabbitmq.RabbitQueue(context.feeds(), durable=True))
+                message = server.receive_message(5)
+                LOGGER.info(message)
