@@ -170,10 +170,12 @@ class RabbitQueue():
         Holds configuration details for a RabbitMQ Queue
     """
     def __init__(self, queue: str = None, auto_delete: bool = False,
-                 durable: bool = False, purge: bool = False, prefetch: int = 1):
+                 durable: bool = False, purge: bool = False,
+                 declare: bool = True, prefetch: int = 1):
         self.durable = durable
         self.auto_delete = auto_delete
         self.purge = purge
+        self.declare = declare
         self.prefetch = prefetch
         self.passive = True
         self.message_count = 0
@@ -190,9 +192,6 @@ class RabbitQueue():
 
         if self.exclusive or self.durable:
             self.passive = False
-
-    def queryable(self):
-        return True if self.durable or self.exclusive else False
 
     def __str__(self):
         return "durable %s, passive %s, exclusive %s" % (self.durable, self.passive, self.exclusive)
@@ -239,7 +238,7 @@ class AbstractRabbitMessenger(ABC):
 
         #Will not raise an exception if access rights insufficient on the queue
         #Exception only raised when channel consume takes place
-        if queue.exclusive or queue.durable:
+        if queue.declare:
             result = self.channel.queue_declare(
                 queue=queue.name,
                 exclusive=queue.exclusive,
@@ -429,7 +428,7 @@ class RabbitClient(AbstractRabbitMessenger):
             queue = self.sub_queue
 
         #Enter multiple message mode
-        if handler or not queue.queryable():
+        if handler:
             return self._receive_multiple(handler, timeout, max_messages, queue)
 
         #Single message mode
@@ -598,7 +597,6 @@ class RabbitDualClient():
         LOGGER.debug(f"Sending message: {message}")
         self.send_message(message)
 
-        LOGGER.debug(f"Waiting for reply on {queue.name}...")
         #Now wait for the reply
         result = self.subscriber.receive(timeout=timeout, queue=queue)
         LOGGER.debug(f"Received: {result}")
