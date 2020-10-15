@@ -137,7 +137,7 @@ class Notification(str, Enum):
         return cls.is_notification(msg, cls.participant_updated)
 
     def __str__(self):
-        return self.value
+        return f'{self.value}'
 
 
 
