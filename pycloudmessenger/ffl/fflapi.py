@@ -121,7 +121,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         :param publish_queue: name of the publish queue
         :type publish_queue: `str`
         """
-        super(Messenger, self).__init__(context)
+        super().__init__(context)
 
         # Keep a copy here - lots of re-use
         self.timeout = context.timeout()
@@ -171,7 +171,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         """
         message = self.context.serializer().serialize(message)
         pub_queue = rabbitmq.RabbitQueue(queue) if queue else None
-        super(Messenger, self).send_message(message, pub_queue)
+        super().send_message(message, pub_queue)
 
     def receive(self, timeout: int = 0) -> dict:
         """
@@ -186,9 +186,7 @@ class Messenger(rabbitmq.RabbitDualClient):
             timeout = self.timeout
 
         try:
-            result = super(Messenger, self).receive_message(timeout)
-        except rabbitmq.RabbitTimedOutException as exc:
-            raise TimedOutException(exc) from exc
+            result = super().receive_message(timeout, throw=TimedOutException)
         except rabbitmq.RabbitConsumerException as exc:
             raise ConsumerException(exc) from exc
 
@@ -213,7 +211,7 @@ class Messenger(rabbitmq.RabbitDualClient):
             message = self.catalog.msg_assign_reply(message, self.command_queue.name)
 
             message = self.context.serializer().serialize(message)
-            result = super(Messenger, self).invoke_service(message, timeout,
+            result = super().invoke_service(message, timeout,
                                                            queue=self.command_queue)
         except rabbitmq.RabbitTimedOutException as exc:
             raise TimedOutException(exc) from exc
@@ -221,7 +219,7 @@ class Messenger(rabbitmq.RabbitDualClient):
             raise ConsumerException(exc) from exc
 
         if not result:
-            raise fflabc.MalformedResponseException(f"Malformed object: None")
+            raise fflabc.MalformedResponseException("Malformed object: None")
         result = self.context.serializer().deserialize(result)
 
         if 'error' in result:
@@ -275,7 +273,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         except requests.exceptions.RequestException as err:
             raise fflabc.DispatchException(err) from err
         except:
-            raise fflabc.DispatchException(f'General Update Error')
+            raise fflabc.DispatchException('General Update Error') from err
 
         # Now obtain the download location/keys
         if task_name:
@@ -303,6 +301,20 @@ class Messenger(rabbitmq.RabbitDualClient):
         :type organisation: `str`
         """
         message = self.catalog.msg_user_create(user_name, password, organisation)
+        return self._invoke_service(message)
+
+    def user_change_password(self, user_name: str, password: str) -> None:
+        """
+        Change the user password
+        Throws: An exception on failure
+        :param user_name: user name (must be a non-empty string and unique;
+                                     if a user with this name has not registered
+                                     before, an exception is thrown).
+        :type user_name: `str`
+        :param password: password (must be a non-empty string)
+        :type password: `str`
+        """
+        message = self.catalog.msg_user_change_password(user_name, password)
         return self._invoke_service(message)
 
     def user_tasks(self) -> list:
@@ -498,9 +510,9 @@ class Messenger(rabbitmq.RabbitDualClient):
         try:
             if fflabc.Notification(msg['notification']['type']) not in flavours:
                 raise ValueError
-        except:
+        except Exception as exc:
             raise fflabc.BadNotificationException(f"Unexpected notification " \
-                f"{msg['notification']['type']}, expecting {flavours}")
+                f"{msg['notification']['type']}, expecting {flavours}") from exc
 
         if 'params' not in msg:
             raise fflabc.BadNotificationException(f"Malformed payload: {msg}")
@@ -603,6 +615,19 @@ class User(fflabc.AbstractUser, BasicParticipant):
         :type organisation: `str`
         """
         return self.messenger.user_create(user_name, password, organisation)
+
+    def change_password(self, user_name: str, password: str) -> None:
+        """
+        Change user password
+        Throws: An exception on failure
+        :param user_name: user name (must be a non-empty string and unique;
+                                     if a user with this name has not registered
+                                     before, an exception is thrown).
+        :type user_name: `str`
+        :param password: password (must be a non-empty string)
+        :type password: `str`
+        """
+        return self.messenger.user_change_password(user_name, password)
 
     def create_task(self, task_name: str, topology: str, definition: dict) -> dict:
         """

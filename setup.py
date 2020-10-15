@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pycloudmessenger',
-    version='0.4.1',
+    version='0.5.0',
     description='Package for interacting with messaging based cloud services from IBM Research Ireland',
     author='Mark Purcell',
     author_email='markpurcell@ie.ibm.com,mkpurcell@yahoo.com',

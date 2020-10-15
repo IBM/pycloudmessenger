@@ -29,7 +29,6 @@ import tempfile
 import weakref
 import base64
 import requests
-import time
 import tenacity
 
 
@@ -91,13 +90,14 @@ class Certificate(TempFile):
 
 class Timer:
     @classmethod
-    def retry(cls, timeout: float, callback, *args, **kwargs) -> any:
+    def retry(cls, timeout: float, callback, throw: Exception, *args, **kwargs) -> any:
         @tenacity.retry(wait=tenacity.wait_random(min=timeout/1000, max=timeout/100),
-                        stop=tenacity.stop_after_delay(timeout))
+                        stop=tenacity.stop_after_delay(timeout),
+                        reraise=True)
         def retry_impl(callback, *args, **kwargs):
             result = callback(*args, **kwargs)
             if result:
                 return result
-            raise Exception('Operation timed out')
+            raise throw('Operation timed out')
         return retry_impl(callback, *args, **kwargs)
 
