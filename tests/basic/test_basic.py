@@ -88,7 +88,7 @@ class MessengerTests(unittest.TestCase):
         with rabbitmq.RabbitClient(context) as client:
             client.start(publish=rabbitmq.RabbitQueue(context.feeds(), purge=True, durable=True),
                          subscribe=rabbitmq.RabbitQueue(context.replies(), durable=True))
-            with self.assertRaises(Exception):
+            with self.assertRaises(rabbitmq.RabbitTimedOutException):
                 message = client.receive(timeout=1)
 
     #@unittest.skip("temporarily skipping")

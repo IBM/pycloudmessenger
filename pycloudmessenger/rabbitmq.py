@@ -342,7 +342,7 @@ class AbstractRabbitMessenger(ABC):
 
     @abstractmethod
     def receive(self, handler=None, timeout: int = 30, max_messages: int = 0,
-                queue: RabbitQueue = None) -> str:
+                queue: RabbitQueue = None, throw: Exception = None) -> str:
         """"""
 
 
@@ -378,7 +378,7 @@ class RabbitClient(AbstractRabbitMessenger):
         """
             Complete the connection request, declaring the publish queue
         """
-        super(RabbitClient, self).establish_connection(parameters)
+        super().establish_connection(parameters)
 
         if self.pub_queue:
             self.declare_queue(self.pub_queue)
@@ -406,14 +406,14 @@ class RabbitClient(AbstractRabbitMessenger):
         if not exchange:
             exchange = self.context.delayed_exchange() if delay else None
 
-        super(RabbitClient, self).basic_publish(message, queue.name, exchange, mode, delay)
+        super().basic_publish(message, queue.name, exchange, mode, delay)
 
     def wait_for_message(self, queue: RabbitQueue) -> int:
         self.declare_queue(queue)
         return queue.message_count
 
     def receive(self, handler=None, timeout: int = 30, max_messages: int = 0,
-                queue: RabbitQueue = None) -> str:
+                queue: RabbitQueue = None, throw: Exception = None) -> str:
         """
             Start receiving messages, up to max_messages
 
@@ -424,21 +424,20 @@ class RabbitClient(AbstractRabbitMessenger):
                 The last message received
         """
 
+        if not throw:
+            throw = RabbitTimedOutException
         if not queue:
             queue = self.sub_queue
 
         #Enter multiple message mode
         if handler:
-            return self._receive_multiple(handler, timeout, max_messages, queue)
+            return self._receive_multiple(throw, handler, timeout, max_messages, queue)
 
         #Single message mode
         #Queue already created, changing now to only read queue properties
         queue.passive = True
 
-        try:
-            utils.Timer.retry(timeout, self.wait_for_message, queue)
-        except Exception as exc:
-            raise RabbitTimedOutException("Operation timeout reached.") from exc
+        utils.Timer.retry(timeout, self.wait_for_message, throw, queue)
 
         try:
             method_frame, properties, body = self.channel.basic_get(queue.name)
@@ -453,7 +452,7 @@ class RabbitClient(AbstractRabbitMessenger):
         self.channel.basic_ack(method_frame.delivery_tag)
         return body
 
-    def _receive_multiple(self, handler=None, timeout: int = 30, max_messages: int = 0,
+    def _receive_multiple(self, throw: Exception, handler=None, timeout: int = 30, max_messages: int = 0,
                           queue: RabbitQueue = None) -> str:
         """
             Start receiving messages, up to max_messages
@@ -476,7 +475,7 @@ class RabbitClient(AbstractRabbitMessenger):
 
                 method_frame, properties, body = msg
                 if not method_frame and not properties and not body:
-                    raise RabbitTimedOutException("Operation timeout reached.")
+                    raise throw("Operation timeout reached.")
 
                 msgs += 1
                 self.inbound += 1
@@ -572,7 +571,7 @@ class RabbitDualClient():
         """
         self.publisher.publish(message, queue, delay=delay)
 
-    def receive_message(self, timeout: float = 0):
+    def receive_message(self, timeout: float = 0, throw: Exception = None):
         """
             Receive messages
 
@@ -582,7 +581,7 @@ class RabbitDualClient():
             Returns:
                 Nothing
         """
-        return self.subscriber.receive(timeout=timeout)
+        return self.subscriber.receive(timeout=timeout, throw=throw)
 
     def invoke_service(self, message, timeout: int = 30, queue: RabbitQueue = None) -> str:
         """
