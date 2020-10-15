@@ -48,6 +48,7 @@ class TaskException(Exception):
 class Topology(str):
     """ Class representing FFL task topologies """
     star = "STAR"
+    ring = "RING"
 
 
 class Notification(str, Enum):
