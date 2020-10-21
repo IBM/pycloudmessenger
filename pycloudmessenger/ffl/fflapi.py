@@ -457,7 +457,8 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_task_quit(task_name)
         return self._invoke_service(message)
 
-    def task_start(self, task_name: str, model: dict = None, participant: str = None) -> None:
+    def task_start(self, task_name: str, model: dict = None, participant: str = None,
+                    topology: str = None) -> None:
         """
         As a task creator, start the given task and optionally send message
         including the given model to all task
@@ -470,7 +471,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         """
         self.model_files.clear()
         model_message = self._dispatch_model(model=model)
-        message = self.catalog.msg_task_start(task_name, model_message, participant)
+        message = self.catalog.msg_task_start(task_name, model_message, participant, topology)
         self._send(message)
 
     def task_stop(self, task_name: str, model: dict = None) -> None:
@@ -790,14 +791,14 @@ class Aggregator(fflabc.AbstractAggregator, BasicParticipant):
         # Ready now for steady state modelling
         messenger.stop()
 
-    def send(self, message: dict = None, participant: str = None) -> None:
+    def send(self, message: dict = None, participant: str = None, topology: str = None) -> None:
         """
         Send a message to all task participants and return immediately (not waiting for a reply).
         Throws: An exception on failure
         :param message: message to be sent (needs to be serializable)
         :type message: `dict`
         """
-        self.messenger.task_start(self.task_name, message, participant)
+        self.messenger.task_start(self.task_name, message, participant, topology)
 
     def receive(self, timeout: int = 0) -> fflabc.Response:
         """

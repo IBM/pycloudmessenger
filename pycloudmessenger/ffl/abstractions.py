@@ -267,7 +267,7 @@ class AbstractAggregator(ABC):
         aggregator of a federated learning task. """
 
     @abstractmethod
-    def send(self, message: dict = None, participant: str = None) -> None:
+    def send(self, message: dict = None, participant: str = None, topology: str = None) -> None:
         """
         Send a message to all task participants and return immediately (not waiting for a reply).
         Throws: An exception on failure
