@@ -71,11 +71,6 @@ class MessageCatalog():
         args.append({'cmd': 'downloader', 'params': [object_name]})
         return template
 
-    def msg_user_create(self, username: str, password: str, organisation: str) -> dict:
-        template, args = self._msg_template()
-        args.append({'cmd': 'user_create', 'params': [username, password, organisation]})
-        return template
-
     def msg_user_change_password(self, username: str, password: str) -> dict:
         template, args = self._msg_template()
         args.append({'cmd': 'user_change_pw', 'params': [username, password]})

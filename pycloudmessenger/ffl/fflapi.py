@@ -26,6 +26,7 @@ in DRL funded by the European Union under the Horizon 2020 Program.
 # pylint: disable=R0903, R0913
 
 from typing import NamedTuple
+import json
 import logging
 import requests
 import pycloudmessenger.utils as utils
@@ -287,22 +288,6 @@ class Messenger(rabbitmq.RabbitDualClient):
 
     # Public methods
 
-    def user_create(self, user_name: str, password: str, organisation: str) -> dict:
-        """
-        Register a new user on the platform.
-        Throws: An exception on failure
-        :param user_name: user name (must be a non-empty string and unique;
-                                     if a user with this name has registered
-                                     before, an exception is thrown).
-        :type user_name: `str`
-        :param password: password (must be a non-empty string)
-        :type password: `str`
-        :param organisation: name of the user's organisation
-        :type organisation: `str`
-        """
-        message = self.catalog.msg_user_create(user_name, password, organisation)
-        return self._invoke_service(message)
-
     def user_change_password(self, user_name: str, password: str) -> None:
         """
         Change the user password
@@ -546,6 +531,66 @@ class Messenger(rabbitmq.RabbitDualClient):
 
         return fflabc.Response(msg['notification'], model)
 
+##########################################################################
+
+
+##########################################################################
+#User Registration #######################################################
+
+def create_user(user_name: str, password: str, organisation: str = None,
+                cred_file: str = None, url: str = None, api_key: str = None) -> dict:
+    """
+    Register a new user on the platform.
+    Throws: An exception on failure
+    :param user_name: user name (must be a non-empty string and unique;
+                                 if a user with this name has registered
+                                 before, an exception is thrown).
+    :type user_name: `str`
+    :param password: password (must be a non-empty string)
+    :type password: `str`
+    :param organisation: name of the user's organisation
+    :type organisation: `str`
+    :param cred_file: path to a supplied credentials file (url and api_key)
+    :type organisation: `str`
+    :param url: if no cred_file, specify here
+    :type url: `str`
+    :param api_key: if no cred_file, specify here
+    :type api_key: `str`
+    """
+
+    if cred_file:
+        with open(cred_file) as cfg:
+            config = json.load(cfg)
+
+            url = config.get('register_url', None)
+            api_key = config.get('register_api_key', None)
+
+    if not url:
+        raise Exception("'url' must be specified")
+    if not api_key:
+        raise Exception("'api_key' must be specified")
+
+    session = requests.Session()
+    session.headers.update({'content-type': 'application/json',
+                            'musketeer-api-key': api_key})
+    params = {'username': user_name, 'org': organisation, 'password': password}
+
+    try:
+        response = session.post(url, params=params)
+        response.raise_for_status()
+
+        credentials = response.json()
+        if 'error' in credentials:
+            raise Exception(credentials['error'])
+        return credentials
+    finally:
+        session.close()
+
+##########################################################################
+
+
+##########################################################################
+#Base class for participants/aggregators##################################
 
 class BasicParticipant():
     """ Base class for an FFL general user """
@@ -598,24 +643,14 @@ class BasicParticipant():
         self.messenger.stop()
         self.messenger = None
 
+##########################################################################
+
+
+##########################################################################
+#Class for general services, task management etc.#########################
 
 class User(fflabc.AbstractUser, BasicParticipant):
     """ Class that allows a general user to avail of the FFL platform services """
-
-    def create_user(self, user_name: str, password: str, organisation: str) -> dict:
-        """
-        Register a new user on the platform.
-        Throws: An exception on failure
-        :param user_name: user name (must be a non-empty string and unique;
-                                     if a user with this name has registered
-                                     before, an exception is thrown).
-        :type user_name: `str`
-        :param password: password (must be a non-empty string)
-        :type password: `str`
-        :param organisation: name of the user's organisation
-        :type organisation: `str`
-        """
-        return self.messenger.user_create(user_name, password, organisation)
 
     def change_password(self, user_name: str, password: str) -> None:
         """
@@ -695,6 +730,11 @@ class User(fflabc.AbstractUser, BasicParticipant):
         """
         return self.messenger.user_tasks()
 
+##########################################################################
+
+
+##########################################################################
+#Class for participating in federated learning (training)#################
 
 class Participant(fflabc.AbstractParticipant, BasicParticipant):
     """ This class provides the functionality needed by the
@@ -751,6 +791,11 @@ class Participant(fflabc.AbstractParticipant, BasicParticipant):
         """
         return self.messenger.task_quit(self.task_name)
 
+##########################################################################
+
+
+##########################################################################
+#Class for aggregating federated learning contributions ##################
 
 class Aggregator(fflabc.AbstractAggregator, BasicParticipant):
     """ This class provides the functionality needed by the
