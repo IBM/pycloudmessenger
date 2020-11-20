@@ -158,21 +158,6 @@ class AbstractUser(ABC):
     """ Class that allows a general user to avail of the FFL platform services """
 
     @abstractmethod
-    def create_user(self, user_name: str, password: str, organisation: str) -> dict:
-        """
-        Register a new user on the platform.
-        Throws: An exception on failure
-        :param user_name: user name (must be a non-empty string and unique;
-                                     if a user with this name has registered
-                                     before, an exception is thrown).
-        :type user_name: `str`
-        :param password: password (must be a non-empty string)
-        :type password: `str`
-        :param organisation: name of the user's organisation
-        :type organisation: `str`
-        """
-
-    @abstractmethod
     def create_task(self, task_name: str, topology: str, definition: dict) -> dict:
         """
         Creates a task with the given definition and returns a dictionary
