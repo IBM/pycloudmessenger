@@ -220,7 +220,7 @@ class AbstractParticipant(ABC):
 
 
     @abstractmethod
-    def send(self, message: dict = None) -> None:
+    def send(self, message: dict = None, metadata: str = None) -> None:
         """
         Send a message to the aggregator and return immediately (not waiting for a reply).
         Throws: An exception on failure

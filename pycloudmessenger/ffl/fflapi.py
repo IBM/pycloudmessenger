@@ -28,6 +28,7 @@ in DRL funded by the European Union under the Horizon 2020 Program.
 from typing import NamedTuple
 import json
 import logging
+import tenacity
 import requests
 import pycloudmessenger.utils as utils
 import pycloudmessenger.rabbitmq as rabbitmq
@@ -276,14 +277,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         except:
             raise fflabc.DispatchException('General Update Error') from err
 
-        # Now obtain the download location/keys
-        if task_name:
-            message = self.catalog.msg_bin_download_object(key)
-        else:
-            message = self.catalog.msg_bin_downloader(key)
-
-        download_info = self._invoke_service(message)
-        wrapper = ModelWrapper.wrap({'url': download_info, 'key': key})
+        wrapper = ModelWrapper.wrap({'key': key})
         return wrapper.wrapping
 
     # Public methods
@@ -320,6 +314,15 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_user_assignments()
         return self._invoke_service(message)
 
+    def task_assign_value(self, task_name: str, participant: str, contribution: dict, reward: dict = None) -> dict:
+        """
+        Returns the details of the participant's task assignment.
+        :return: details of the task assignment
+        :rtype: `dict`
+        """
+        message = self.catalog.msg_task_assignment_value(task_name, participant, contribution, reward)
+        self._send(message)
+
     def task_assignment_info(self, task_name: str) -> dict:
         """
         Returns the details of the participant's task assignment.
@@ -344,7 +347,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self._invoke_service(message)
         return message[0]
 
-    def task_assignment_update(self, task_name: str, model: dict = None) -> None:
+    def task_assignment_update(self, task_name: str, model: dict = None, metadata: str = None) -> None:
         """
         Sends an update with the respect to the given task assignment.
         Throws: An exception on failure
@@ -357,7 +360,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         model_message = self._dispatch_model(model=model)
 
         message = self.catalog.msg_task_assignment_update(
-                        task_name, model=model_message)
+                        task_name, model=model_message, metadata=metadata)
         self._send(message)
 
     def task_assignments(self, task_name: str) -> list:
@@ -625,6 +628,9 @@ class BasicParticipant():
         """
         self.close()
 
+    @tenacity.retry(wait=tenacity.wait_random(min=1, max=2),
+                    stop=tenacity.stop_after_delay(5),
+                    reraise=True)
     def connect(self):
         """
         Connect to the messaging system.
@@ -761,14 +767,14 @@ class Participant(fflabc.AbstractParticipant, BasicParticipant):
         self.queue = result['queue']
         messenger.stop()
 
-    def send(self, message: dict = None) -> None:
+    def send(self, message: dict = None, metadata: str = None) -> None:
         """
         Send a message to the aggregator and return immediately (not waiting for a reply).
         Throws: An exception on failure
         :param message: message to be sent (needs to be serializable)
         :type message: `dict`
         """
-        self.messenger.task_assignment_update(self.task_name, message)
+        self.messenger.task_assignment_update(self.task_name, message, metadata)
 
     def receive(self, timeout: int = 0) -> fflabc.Response:
         """
@@ -901,3 +907,11 @@ class Aggregator(fflabc.AbstractAggregator, BasicParticipant):
         Throws: An exception on failure
         """
         self.messenger.task_stop(self.task_name, model)
+
+    def assign_value(self, participant: str, contribution: dict, reward: dict = None) -> None:
+        """
+        As a task creator, stop the given task.
+        The status of the task will be changed to 'COMPLETE'.
+        Throws: An exception on failure
+        """
+        self.messenger.task_assign_value(self.task_name, participant, contribution, reward)
