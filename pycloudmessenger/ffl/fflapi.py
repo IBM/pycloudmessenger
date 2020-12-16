@@ -37,6 +37,7 @@ import pycloudmessenger.ffl.message_catalog as catalog
 import pycloudmessenger.ffl.abstractions as fflabc
 
 logging.getLogger("pika").setLevel(logging.CRITICAL)
+LOGGER = logging.getLogger(__package__)
 
 
 class ModelWrapper(NamedTuple):
@@ -142,9 +143,6 @@ class Messenger(rabbitmq.RabbitDualClient):
             self.command_queue = super().mktemp_queue()
         else:
             self.command_queue = self.subscriber.sub_queue
-
-        # List of messages/models downloaded
-        self.model_files = []
 
     def __enter__(self):
         """
@@ -356,7 +354,6 @@ class Messenger(rabbitmq.RabbitDualClient):
         :param model: update to be sent
         :type model: `dict`
         """
-        self.model_files.clear()
         model_message = self._dispatch_model(model=model)
 
         message = self.catalog.msg_task_assignment_update(
@@ -457,7 +454,6 @@ class Messenger(rabbitmq.RabbitDualClient):
         :param model: model to be sent as part of the message
         :type model: `dict`
         """
-        self.model_files.clear()
         model_message = self._dispatch_model(model=model)
         message = self.catalog.msg_task_start(task_name, model_message, participant, topology)
         self._send(message)
@@ -523,11 +519,8 @@ class Messenger(rabbitmq.RabbitDualClient):
                 #Download from bin store
                 if self.context.download_models():
                     with rabbitmq.RabbitHeartbeat([self.subscriber, self.publisher]):
-                        self.model_files.append(utils.FileDownloader(url))
-
-                        with open(self.model_files[-1].name(), 'rb') as model_file:
-                            buff = model_file.read()
-                            model = self.context.model_serializer().deserialize(buff)
+                        buff = requests.get(url)
+                        model = self.context.model_serializer().deserialize(buff.content)
                 else:
                     #Let user decide what to do
                     model = model.wrapping
