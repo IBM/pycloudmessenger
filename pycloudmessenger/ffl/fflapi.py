@@ -292,14 +292,14 @@ class Messenger(rabbitmq.RabbitDualClient):
             return None
 
         model = ModelWrapper.unwrap(location, self.context.model_serializer())
-        xsum = model.wrapping['xsum']
-        if not xsum:
-            raise fflabc.MalformedResponseException(f"Malformed wrapping (checksum): {model.wrapping}")
-
         if model.blob:
             #Embedded model
             model = model.blob
         else:
+            xsum = model.wrapping['xsum']
+            if not xsum:
+                raise fflabc.MalformedResponseException(f"Malformed wrapping (xsum): {model.wrapping}")
+
             #Download from bin store
             url = model.wrapping.get('url', None)
             if not url:
