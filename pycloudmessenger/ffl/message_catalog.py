@@ -145,3 +145,13 @@ class MessageCatalog():
         template, args = self._msg_template()
         args.append({'cmd': 'task_assignment_value', 'params': [task_name, participant, contribution, reward]})
         return template
+
+    def msg_model_listing(self) -> dict:
+        template, args = self._msg_template()
+        args.append({'cmd': 'model_listing'})
+        return template
+
+    def msg_model_info(self, task_name: str) -> dict:
+        template, args = self._msg_template()
+        args.append({'cmd': 'model_info', 'params': [task_name]})
+        return template

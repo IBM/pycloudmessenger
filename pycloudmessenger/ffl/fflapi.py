@@ -27,6 +27,7 @@ in DRL funded by the European Union under the Horizon 2020 Program.
 
 from typing import NamedTuple
 import json
+import hashlib
 import logging
 import tenacity
 import requests
@@ -65,6 +66,12 @@ class ModelWrapper(NamedTuple):
                 blob = encoder.deserialize(model['model'])
         return ModelWrapper(model, blob)
 
+    def xsum(self, blob: str = None) -> str:
+        if not blob:
+            blob = self.blob
+        if isinstance(blob, str):
+            blob = blob.encode()
+        return hashlib.sha512(blob).hexdigest()
 
 class Context(rabbitmq.RabbitContext, fflabc.AbstractContext):
     """
@@ -275,8 +282,45 @@ class Messenger(rabbitmq.RabbitDualClient):
         except:
             raise fflabc.DispatchException('General Update Error') from err
 
-        wrapper = ModelWrapper.wrap({'key': key})
+        #Now add the checksum to the inline message
+        xsum = wrapper.xsum()
+        wrapper = ModelWrapper.wrap({'key': key, 'xsum': xsum})
         return wrapper.wrapping
+
+    def _download_model(self, location: dict):
+        if not location:
+            return None
+
+        model = ModelWrapper.unwrap(location, self.context.model_serializer())
+        xsum = model.wrapping['xsum']
+        if not xsum:
+            raise fflabc.MalformedResponseException(f"Malformed wrapping (checksum): {model.wrapping}")
+
+        if model.blob:
+            #Embedded model
+            model = model.blob
+        else:
+            #Download from bin store
+            url = model.wrapping.get('url', None)
+            if not url:
+                raise fflabc.MalformedResponseException(f"Malformed wrapping: {model.wrapping}")
+
+            #Download from bin store
+            if self.context.download_models():
+                with rabbitmq.RabbitHeartbeat([self.subscriber, self.publisher]):
+                    buff = requests.get(url)
+
+                    #Now compare checksums
+                    xsum2 = model.xsum(buff.content)
+                    if xsum != xsum2:
+                        raise fflabc.MalformedResponseException(f"Checksum mismatch!")
+
+                    model = self.context.model_serializer().deserialize(buff.content)
+            else:
+                #Let user decide what to do
+                model = model.wrapping
+
+        return model
 
     # Public methods
 
@@ -310,6 +354,32 @@ class Messenger(rabbitmq.RabbitDualClient):
         :rtype: `list`
         """
         message = self.catalog.msg_user_assignments()
+        return self._invoke_service(message)
+
+    def model_info(self, task_name: str) -> dict:
+        """
+        Returns model info.
+        Throws: An exception on failure
+        :return: dict of model info
+        :rtype: `dict`
+        """
+        message = self.catalog.msg_model_info(task_name)
+        msg = self._invoke_service(message)
+
+        if not msg or len(msg) != 1:
+            raise fflabc.TaskException("Access to model denied.")
+
+        model = self._download_model(msg[0])
+        return model
+
+    def model_listing(self) -> dict:
+        """
+        Returns a list with all the available trained models.
+        Throws: An exception on failure
+        :return: list of all the available models
+        :rtype: `list`
+        """
+        message = self.catalog.msg_model_listing()
         return self._invoke_service(message)
 
     def task_assign_value(self, task_name: str, participant: str, contribution: dict, reward: dict = None) -> dict:
@@ -502,29 +572,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         if 'params' not in msg:
             raise fflabc.BadNotificationException(f"Malformed payload: {msg}")
 
-        model = None
-
-        if msg['params']:
-            model = ModelWrapper.unwrap(msg['params'], self.context.model_serializer())
-
-            if model.blob:
-                #Embedded model
-                model = model.blob
-            else:
-                #Download from bin store
-                url = model.wrapping.get('url', None)
-                if not url:
-                    raise fflabc.MalformedResponseException(f"Malformed wrapping: {model.wrapping}")
-
-                #Download from bin store
-                if self.context.download_models():
-                    with rabbitmq.RabbitHeartbeat([self.subscriber, self.publisher]):
-                        buff = requests.get(url)
-                        model = self.context.model_serializer().deserialize(buff.content)
-                else:
-                    #Let user decide what to do
-                    model = model.wrapping
-
+        model = self._download_model(msg['params'])
         return fflabc.Response(msg['notification'], model)
 
 ##########################################################################
@@ -728,6 +776,26 @@ class User(fflabc.AbstractUser, BasicParticipant):
         :rtype: `list`
         """
         return self.messenger.user_tasks()
+
+    def get_models(self) -> list:
+        """
+        Returns a list with all the available trained models.
+        Throws: An exception on failure
+        :return: list of all the available models
+        :rtype: `list`
+        """
+        return self.messenger.model_listing()
+
+    def get_model(self, task_name: str) -> list:
+        """
+        Returns a list with all the available trained models.
+        Throws: An exception on failure
+        :return: list of all the available models
+        :rtype: `list`
+        """
+        return self.messenger.model_info(task_name)
+
+
 
 ##########################################################################
 

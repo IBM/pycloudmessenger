@@ -213,6 +213,24 @@ class AbstractUser(ABC):
         :rtype: `list`
         """
 
+    @abstractmethod
+    def get_models(self) -> list:
+        """
+        Returns a list with all the available trained models.
+        Throws: An exception on failure
+        :return: list of all the available models
+        :rtype: `list`
+        """
+
+    @abstractmethod
+    def get_model(self, task_name: str) -> dict:
+        """
+        Returns model info
+        Throws: An exception on failure
+        :return: dict of model info
+        :rtype: `dict`
+        """
+
 
 class AbstractParticipant(ABC):
     """ This class provides the functionality needed by the
