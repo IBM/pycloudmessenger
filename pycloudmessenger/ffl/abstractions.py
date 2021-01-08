@@ -213,6 +213,24 @@ class AbstractUser(ABC):
         :rtype: `list`
         """
 
+    @abstractmethod
+    def get_models(self) -> list:
+        """
+        Returns a list with all the available trained models.
+        Throws: An exception on failure
+        :return: list of all the available models
+        :rtype: `list`
+        """
+
+    @abstractmethod
+    def get_model(self, task_name: str) -> dict:
+        """
+        Returns model info
+        Throws: An exception on failure
+        :return: dict of model info
+        :rtype: `dict`
+        """
+
 
 class AbstractParticipant(ABC):
     """ This class provides the functionality needed by the
@@ -220,7 +238,7 @@ class AbstractParticipant(ABC):
 
 
     @abstractmethod
-    def send(self, message: dict = None) -> None:
+    def send(self, message: dict = None, metadata: str = None) -> None:
         """
         Send a message to the aggregator and return immediately (not waiting for a reply).
         Throws: An exception on failure

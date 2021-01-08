@@ -27,7 +27,9 @@ in DRL funded by the European Union under the Horizon 2020 Program.
 
 from typing import NamedTuple
 import json
+import hashlib
 import logging
+import tenacity
 import requests
 import pycloudmessenger.utils as utils
 import pycloudmessenger.rabbitmq as rabbitmq
@@ -36,6 +38,7 @@ import pycloudmessenger.ffl.message_catalog as catalog
 import pycloudmessenger.ffl.abstractions as fflabc
 
 logging.getLogger("pika").setLevel(logging.CRITICAL)
+LOGGER = logging.getLogger(__package__)
 
 
 class ModelWrapper(NamedTuple):
@@ -63,6 +66,12 @@ class ModelWrapper(NamedTuple):
                 blob = encoder.deserialize(model['model'])
         return ModelWrapper(model, blob)
 
+    def xsum(self, blob: str = None) -> str:
+        if not blob:
+            blob = self.blob
+        if isinstance(blob, str):
+            blob = blob.encode()
+        return hashlib.sha512(blob).hexdigest()
 
 class Context(rabbitmq.RabbitContext, fflabc.AbstractContext):
     """
@@ -141,9 +150,6 @@ class Messenger(rabbitmq.RabbitDualClient):
             self.command_queue = super().mktemp_queue()
         else:
             self.command_queue = self.subscriber.sub_queue
-
-        # List of messages/models downloaded
-        self.model_files = []
 
     def __enter__(self):
         """
@@ -276,15 +282,45 @@ class Messenger(rabbitmq.RabbitDualClient):
         except:
             raise fflabc.DispatchException('General Update Error') from err
 
-        # Now obtain the download location/keys
-        if task_name:
-            message = self.catalog.msg_bin_download_object(key)
-        else:
-            message = self.catalog.msg_bin_downloader(key)
-
-        download_info = self._invoke_service(message)
-        wrapper = ModelWrapper.wrap({'url': download_info, 'key': key})
+        #Now add the checksum to the inline message
+        xsum = wrapper.xsum()
+        wrapper = ModelWrapper.wrap({'key': key, 'xsum': xsum})
         return wrapper.wrapping
+
+    def _download_model(self, location: dict):
+        if not location:
+            return None
+
+        model = ModelWrapper.unwrap(location, self.context.model_serializer())
+        xsum = model.wrapping['xsum']
+        if not xsum:
+            raise fflabc.MalformedResponseException(f"Malformed wrapping (checksum): {model.wrapping}")
+
+        if model.blob:
+            #Embedded model
+            model = model.blob
+        else:
+            #Download from bin store
+            url = model.wrapping.get('url', None)
+            if not url:
+                raise fflabc.MalformedResponseException(f"Malformed wrapping: {model.wrapping}")
+
+            #Download from bin store
+            if self.context.download_models():
+                with rabbitmq.RabbitHeartbeat([self.subscriber, self.publisher]):
+                    buff = requests.get(url)
+
+                    #Now compare checksums
+                    xsum2 = model.xsum(buff.content)
+                    if xsum != xsum2:
+                        raise fflabc.MalformedResponseException(f"Checksum mismatch!")
+
+                    model = self.context.model_serializer().deserialize(buff.content)
+            else:
+                #Let user decide what to do
+                model = model.wrapping
+
+        return model
 
     # Public methods
 
@@ -320,6 +356,41 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_user_assignments()
         return self._invoke_service(message)
 
+    def model_info(self, task_name: str) -> dict:
+        """
+        Returns model info.
+        Throws: An exception on failure
+        :return: dict of model info
+        :rtype: `dict`
+        """
+        message = self.catalog.msg_model_info(task_name)
+        msg = self._invoke_service(message)
+
+        if not msg or len(msg) != 1:
+            raise fflabc.TaskException("Access to model denied.")
+
+        model = self._download_model(msg[0])
+        return model
+
+    def model_listing(self) -> dict:
+        """
+        Returns a list with all the available trained models.
+        Throws: An exception on failure
+        :return: list of all the available models
+        :rtype: `list`
+        """
+        message = self.catalog.msg_model_listing()
+        return self._invoke_service(message)
+
+    def task_assign_value(self, task_name: str, participant: str, contribution: dict, reward: dict = None) -> dict:
+        """
+        Returns the details of the participant's task assignment.
+        :return: details of the task assignment
+        :rtype: `dict`
+        """
+        message = self.catalog.msg_task_assignment_value(task_name, participant, contribution, reward)
+        self._send(message)
+
     def task_assignment_info(self, task_name: str) -> dict:
         """
         Returns the details of the participant's task assignment.
@@ -344,7 +415,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self._invoke_service(message)
         return message[0]
 
-    def task_assignment_update(self, task_name: str, model: dict = None) -> None:
+    def task_assignment_update(self, task_name: str, model: dict = None, metadata: str = None) -> None:
         """
         Sends an update with the respect to the given task assignment.
         Throws: An exception on failure
@@ -353,11 +424,10 @@ class Messenger(rabbitmq.RabbitDualClient):
         :param model: update to be sent
         :type model: `dict`
         """
-        self.model_files.clear()
         model_message = self._dispatch_model(model=model)
 
         message = self.catalog.msg_task_assignment_update(
-                        task_name, model=model_message)
+                        task_name, model=model_message, metadata=metadata)
         self._send(message)
 
     def task_assignments(self, task_name: str) -> list:
@@ -454,7 +524,6 @@ class Messenger(rabbitmq.RabbitDualClient):
         :param model: model to be sent as part of the message
         :type model: `dict`
         """
-        self.model_files.clear()
         model_message = self._dispatch_model(model=model)
         message = self.catalog.msg_task_start(task_name, model_message, participant, topology)
         self._send(message)
@@ -503,32 +572,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         if 'params' not in msg:
             raise fflabc.BadNotificationException(f"Malformed payload: {msg}")
 
-        model = None
-
-        if msg['params']:
-            model = ModelWrapper.unwrap(msg['params'], self.context.model_serializer())
-
-            if model.blob:
-                #Embedded model
-                model = model.blob
-            else:
-                #Download from bin store
-                url = model.wrapping.get('url', None)
-                if not url:
-                    raise fflabc.MalformedResponseException(f"Malformed wrapping: {model.wrapping}")
-
-                #Download from bin store
-                if self.context.download_models():
-                    with rabbitmq.RabbitHeartbeat([self.subscriber, self.publisher]):
-                        self.model_files.append(utils.FileDownloader(url))
-
-                        with open(self.model_files[-1].name(), 'rb') as model_file:
-                            buff = model_file.read()
-                            model = self.context.model_serializer().deserialize(buff)
-                else:
-                    #Let user decide what to do
-                    model = model.wrapping
-
+        model = self._download_model(msg['params'])
         return fflabc.Response(msg['notification'], model)
 
 ##########################################################################
@@ -625,6 +669,9 @@ class BasicParticipant():
         """
         self.close()
 
+    @tenacity.retry(wait=tenacity.wait_random(min=1, max=2),
+                    stop=tenacity.stop_after_delay(5),
+                    reraise=True)
     def connect(self):
         """
         Connect to the messaging system.
@@ -730,6 +777,26 @@ class User(fflabc.AbstractUser, BasicParticipant):
         """
         return self.messenger.user_tasks()
 
+    def get_models(self) -> list:
+        """
+        Returns a list with all the available trained models.
+        Throws: An exception on failure
+        :return: list of all the available models
+        :rtype: `list`
+        """
+        return self.messenger.model_listing()
+
+    def get_model(self, task_name: str) -> list:
+        """
+        Returns a list with all the available trained models.
+        Throws: An exception on failure
+        :return: list of all the available models
+        :rtype: `list`
+        """
+        return self.messenger.model_info(task_name)
+
+
+
 ##########################################################################
 
 
@@ -761,14 +828,14 @@ class Participant(fflabc.AbstractParticipant, BasicParticipant):
         self.queue = result['queue']
         messenger.stop()
 
-    def send(self, message: dict = None) -> None:
+    def send(self, message: dict = None, metadata: str = None) -> None:
         """
         Send a message to the aggregator and return immediately (not waiting for a reply).
         Throws: An exception on failure
         :param message: message to be sent (needs to be serializable)
         :type message: `dict`
         """
-        self.messenger.task_assignment_update(self.task_name, message)
+        self.messenger.task_assignment_update(self.task_name, message, metadata)
 
     def receive(self, timeout: int = 0) -> fflabc.Response:
         """
@@ -901,3 +968,11 @@ class Aggregator(fflabc.AbstractAggregator, BasicParticipant):
         Throws: An exception on failure
         """
         self.messenger.task_stop(self.task_name, model)
+
+    def assign_value(self, participant: str, contribution: dict, reward: dict = None) -> None:
+        """
+        As a task creator, stop the given task.
+        The status of the task will be changed to 'COMPLETE'.
+        Throws: An exception on failure
+        """
+        self.messenger.task_assign_value(self.task_name, participant, contribution, reward)
