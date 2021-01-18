@@ -155,3 +155,23 @@ class MessageCatalog():
         template, args = self._msg_template()
         args.append({'cmd': 'model_info', 'params': [task_name]})
         return template
+
+    def msg_model_delete(self, task_name: str):
+        '''
+        Formats a message for requesting a model deletion for a task
+        Throws: An exception on failure
+        Returns: None
+        '''
+        template, args = self._msg_template()
+        args.append({'cmd':'model_delete', 'params': [task_name]})
+        return template
+
+    def msg_model_lineage(self, task_name: str) -> dict:
+        '''
+        Formats a message for requesting model lineage for a task
+        Throws: An exception on failure
+        Returns: dict with model lineage
+        '''
+        template, args = self._msg_template()
+        args.append({'cmd':'model_lineage', 'params': [task_name]})
+        return template

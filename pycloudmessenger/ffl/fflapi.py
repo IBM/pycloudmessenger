@@ -356,6 +356,24 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_user_assignments()
         return self._invoke_service(message)
 
+    def model_delete(self, task_name: str, timeout: int = 0):
+        '''
+        Requests a model deletion
+        Throws: An exception on failure
+        Returns: None
+        '''
+        message = self.catalog.msg_model_delete(task_name)
+        return self._invoke_service(message, timeout)
+
+    def model_lineage(self, task_name: str, timeout: int = 0) -> list:
+        '''
+        Requests the model lineage for task 'task_name'
+        Throws: An exception on failure
+        Returns: list
+        '''
+        message = self.catalog.msg_model_lineage(task_name)
+        return self._invoke_service(message, timeout)
+
     def model_info(self, task_name: str) -> dict:
         """
         Returns model info.
@@ -794,6 +812,23 @@ class User(fflabc.AbstractUser, BasicParticipant):
         :rtype: `list`
         """
         return self.messenger.model_info(task_name)
+
+    def model_lineage(self, task_name: str) -> list:
+        """
+        Returns a list with model lineage
+        Throws: An exception on failure
+        :return: list of all the available models
+        :rtype: `list`
+        """
+        return self.messenger.model_lineage(task_name)
+
+    def delete_model(self, task_name: str):
+        """
+        Deletes a model for given task
+        Throws: An exception on failure
+        :return: nothing
+        """
+        return self.messenger.model_delete(task_name)
 
 
 
