@@ -68,6 +68,15 @@ def main():
             LOGGER.info("Number of Time Series Values: %d", values)
 
         with castor:
+            #Store a new time series
+            sensor = 'castor-test-101'
+            LOGGER.info("Storing time series for sensor ID '%s'...", sensor)
+            values = [ {'ts_id': sensor,'observed_timestamp': '2021-04-15T11:07:00+00:00', 'value': 76.2 } ]
+            message = castor.store_time_series(values)
+            reply = castor.invoke_service(message)
+            LOGGER.info(reply)
+
+        with castor:
             if cmdline.register_model:
                 #Register external model
                 LOGGER.info("Registering model...")
