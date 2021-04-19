@@ -1,0 +1,12 @@
+{
+  "sensor_id_idx"     : 0,
+  "timestamp_idx"     : 1,
+  "timestamp_format"  : "%Y-%m-%d %H:%M:%S",
+  "timestamp_timezone": "Europe/Zurich",
+  "value_column_names": [
+    "TEMPERATURE"
+  ],
+  "value_column_idxs": [
+    2
+  ]
+}
