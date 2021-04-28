@@ -44,9 +44,9 @@ def logger(verbose=False):
     return LOGGER
 
 class DataParser():
-    def __init__(self, castor ,flavour, max_lines, split, csv_config):
+    def __init__(self, castor, flavour, batch, max_lines, split, csv_config):
         self.castor = castor
-        self.batch = 20 ## It seems that batch = 100 throws up error so make batch fixed
+        self.batch = batch
         self.flavour = flavour  ##Why do we need this
         self.max_lines = max_lines #Is there reason to have a max number of lines?
         self.split = split
@@ -195,6 +195,8 @@ def main():
                         required=True, help='data directory')
     parser.add_argument('--pattern', action='store', dest='pattern',
                         required=True, help='file filter')
+    parser.add_argument('--batch', default=20, action='store', dest='batch',
+                        required = False, help = 'batch x messages')
     parser.add_argument('--max', action='store', dest='max_lines',
                         required=False, default=100000, help='process max lines')
     parser.add_argument('--split', action='store', dest='split',
@@ -255,7 +257,7 @@ def main():
 
             try:
                 # Now lets upload our meter data
-                parser = DataParser(castor, int(cmdline.flavour),
+                parser = DataParser(castor, int(cmdline.flavour), int(cmdline.batch),
                                     int(cmdline.max_lines), int(cmdline.split),
                                     csv_config)
                 line, count = parser.publish(fname, line)
