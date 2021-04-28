@@ -44,7 +44,7 @@ def logger(verbose=False):
     return LOGGER
 
 class DataParser():
-    def __init__(self, castor ,flavour, batch, max_lines, split, csv_config):
+    def __init__(self, castor, flavour, batch, max_lines, split, csv_config):
         self.castor = castor
         self.batch = batch
         self.flavour = flavour  ##Why do we need this
@@ -90,14 +90,14 @@ class DataParser():
             if values[self.csv_config['value_column_idxs'][0]]:
                 data.append({"ts_id"              : values[self.csv_config['sensor_id_idx']],
                              "observed_timestamp": timestamp,
-                             "value"              : float(values[self.csv_config['value_column_idxs'][0]])})
+                             "value"              : values[self.csv_config['value_column_idxs'][0]]})
         # Composite CSV file; append value_column_name to sensor_id :
         else:
             for i in range(len(self.csv_config['value_column_names'])):
                 if values[self.csv_config['value_column_idxs'][i]]:
                     data.append({"ts_id"             : values[self.csv_config['sensor_id_idx']] + '-' + self.csv_config['value_column_names'][i],
                                  "observed_timestamp": timestamp,
-                                 "value"             : float(values[self.csv_config['value_column_idxs'][i]])})
+                                 "value"             : values[self.csv_config['value_column_idxs'][i]]})
 
         self.last_processed_line = line
         return data
@@ -195,19 +195,21 @@ def main():
                         required=True, help='data directory')
     parser.add_argument('--pattern', action='store', dest='pattern',
                         required=True, help='file filter')
-    parser.add_argument('--batch', action='store', dest='batch',
-                        required=True, help='batch x messages')
+    parser.add_argument('--batch', default=20, action='store', dest='batch',
+                        required = False, help = 'batch x messages')
     parser.add_argument('--max', action='store', dest='max_lines',
                         required=False, default=100000, help='process max lines')
     parser.add_argument('--split', action='store', dest='split',
                         required=False, default=25, help='process max columns per message')
     parser.add_argument('--flavour', default=1, action='store', dest='flavour', # not currently used
                         required=False, help='file format style')               # but retain for compatibility
+    parser.add_argument('-v', '--verbose', help="increase output verbosity",
+                        required=False, default=False, action='store_true', dest='verbose')
     cmdline = parser.parse_args()
 
     state = {}
-
-    logger().info("Starting...")
+    logger(cmdline.verbose)
+    logger().info("=============================Starting==============================")
     context = castorapi.CastorContext.from_credentials_file(cmdline.credentials, cmdline.broker_user, cmdline.broker_password)
     logger().info("We expect to upload data")
     try:
@@ -224,7 +226,6 @@ def main():
         with open(cmdline.csv_config_path) as csv_config_file:
             csv_config = parse_csv_config(csv_config_file)
             logger().info("Loading CSV column config file: " + cmdline.csv_config_path)
-            logger().info('config loaded')
     except:
         logger().info("No CSV config file found; quitting...")
         quit()
@@ -232,9 +233,14 @@ def main():
     try:
         cmdline.state = os.path.abspath(cmdline.state)
         os.chdir(cmdline.dir)
+        files_to_process = fnmatch.filter(sorted(os.listdir('.'), key=sort_key), cmdline.pattern)
+        if len(files_to_process) == 0:
+            logger().info("File of pattern %s does not exist. Program will exit", cmdline.pattern)
 
-        for fname in fnmatch.filter(sorted(os.listdir('.'), key=sort_key), cmdline.pattern):
+
+        for fname in files_to_process:
             fname = os.path.join('.', fname)
+
             if os.path.isfile(fname) == 0:
                 continue
 
@@ -243,7 +249,6 @@ def main():
                 logger().info("Processing : %s...", fname)
             elif fname == state['file']:
                 logger().info("process state")
-
                 line = state['line'] #Lets try to start from the last point
                 logger().info("Processing from : %s:%d", fname, line)
             else:
