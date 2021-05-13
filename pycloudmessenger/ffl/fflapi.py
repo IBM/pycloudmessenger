@@ -61,12 +61,10 @@ class ModelWrapper(NamedTuple):
         """ Unwrap meta data """
         blob = None
         if model and 'model' in model:
-            if isinstance(model['model'], dict) and 'url' in model['model']:
+            if isinstance(model['model'], dict):
                 model = model['model']
             elif encoder:
                 blob = encoder.deserialize(model['model'])
-            else:
-                blob = model['model']
         return ModelWrapper(model, blob)
 
     def xsum(self, blob: str = None) -> str:
