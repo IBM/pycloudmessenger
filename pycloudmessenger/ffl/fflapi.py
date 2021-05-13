@@ -53,6 +53,7 @@ class ModelWrapper(NamedTuple):
             blob = encoder.serialize(model)
         else:
             blob = model
+
         return ModelWrapper({'model': blob}, blob)
 
     @classmethod
@@ -60,10 +61,12 @@ class ModelWrapper(NamedTuple):
         """ Unwrap meta data """
         blob = None
         if model and 'model' in model:
-            if isinstance(model['model'], dict):
+            if isinstance(model['model'], dict) and 'url' in model['model']:
                 model = model['model']
             elif encoder:
                 blob = encoder.deserialize(model['model'])
+            else:
+                blob = model['model']
         return ModelWrapper(model, blob)
 
     def xsum(self, blob: str = None) -> str:
@@ -85,11 +88,11 @@ class Context(rabbitmq.RabbitContext, fflabc.AbstractContext):
     def __init__(self, args: dict, user: str = None, password: str = None,
                  encoder: serializer.SerializerABC = serializer.JsonPickleSerializer,
                  user_dispatch: bool = True, download_models: bool = True,
-                 dispatch_threshold: int = 1024*1024*5):
+                 dispatch_threshold: int = 0):
         super().__init__(args, user, password, user_dispatch)
         self.args['download_models'] = download_models
         self.args['dispatch_threshold'] = dispatch_threshold
-        self.model_encoder = encoder()
+        self.model_encoder = encoder() if encoder else serializer.JsonPickleSerializer()
         self.encoder = serializer.JsonPickleSerializer()
 
     def serializer(self):
@@ -277,13 +280,14 @@ class Messenger(rabbitmq.RabbitDualClient):
                                          data=upload_info['fields'],
                                          headers=None)
                 response.raise_for_status()
-        except requests.exceptions.RequestException as err:
+        except (requests.exceptions.RequestException, Exception) as err:
             raise fflabc.DispatchException(err) from err
-        except:
-            raise fflabc.DispatchException('General Update Error') from err
 
         #Now add the checksum to the inline message
-        xsum = wrapper.xsum()
+        if isinstance(model, bytes):
+            xsum = model.xsum(model)
+        else:
+            xsum = wrapper.xsum()
         wrapper = ModelWrapper.wrap({'key': key, 'xsum': xsum})
         return wrapper.wrapping
 
@@ -309,13 +313,18 @@ class Messenger(rabbitmq.RabbitDualClient):
             if self.context.download_models():
                 with rabbitmq.RabbitHeartbeat([self.subscriber, self.publisher]):
                     buff = requests.get(url)
+                    temp = self.context.model_serializer().deserialize(buff.content)
+
+                    if isinstance(temp, bytes):
+                        xsum2 = model.xsum(temp)
+                    else:
+                        xsum2 = model.xsum(buff.content)
+
+                    model = temp
 
                     #Now compare checksums
-                    xsum2 = model.xsum(buff.content)
                     if xsum != xsum2:
                         raise fflabc.MalformedResponseException(f"Checksum mismatch!")
-
-                    model = self.context.model_serializer().deserialize(buff.content)
             else:
                 #Let user decide what to do
                 model = model.wrapping
