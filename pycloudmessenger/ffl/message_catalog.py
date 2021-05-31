@@ -86,9 +86,14 @@ class MessageCatalog():
         args.append({'cmd': 'user_tasks'})
         return template
 
-    def msg_task_listing(self) -> dict:
+    def msg_task_listing(self, filtered: str = None) -> dict:
         template, args = self._msg_template()
-        args.append({'cmd': 'task_listing'})
+        args.append({'cmd': 'task_listing', 'params': [filtered]})
+        return template
+
+    def msg_task_delete(self, task_name: str) -> dict:
+        template, args = self._msg_template()
+        args.append({'cmd': 'task_delete', 'params': [task_name]})
         return template
 
     def msg_task_create(self, task_name: str, topology: str, definition: dict) -> dict:

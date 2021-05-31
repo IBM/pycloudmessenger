@@ -467,14 +467,27 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_task_assignments(task_name)
         return self._invoke_service(message)
 
-    def task_listing(self) -> dict:
+    def task_listing(self, filtered: str = None) -> dict:
         """
         Returns a list with all the available tasks.
         Throws: An exception on failure
         :return: list of all the available tasks
         :rtype: `list`
         """
-        message = self.catalog.msg_task_listing()
+        message = self.catalog.msg_task_listing(filtered)
+        return self._invoke_service(message)
+
+    def task_delete(self, task_name: str) -> dict:
+        """
+        Creates a task with the given definition and returns a dictionary with the
+        details of the created tasks.
+        Throws: An exception on failure
+        :param task_name: name of the task
+        :type task_name: `str`
+        :return: details of the deleted task
+        :rtype: `dict`
+        """
+        message = self.catalog.msg_task_delete(task_name)
         return self._invoke_service(message)
 
     def task_create(self, task_name: str, topology: str, definition: dict) -> dict:
@@ -645,7 +658,7 @@ def create_user(user_name: str, password: str, organisation: str = None,
     params = {'username': user_name, 'org': organisation, 'password': password}
 
     try:
-        response = session.post(url, params=params)
+        response = session.post(url, params=params, timeout=60)
         response.raise_for_status()
 
         credentials = response.json()
@@ -737,6 +750,15 @@ class User(fflabc.AbstractUser, BasicParticipant):
         """
         return self.messenger.user_change_password(user_name, password)
 
+    def delete_task(self, task_name: str) -> dict:
+        """
+        Deletes a task with the given task name
+        Throws: An exception on failure
+        :param task_name: name of the task to create
+        :type task_name: `str`
+        """
+        return self.messenger.task_delete(task_name)
+
     def create_task(self, task_name: str, topology: str, definition: dict) -> dict:
         """
         Creates a task with the given definition and returns a dictionary
@@ -775,14 +797,14 @@ class User(fflabc.AbstractUser, BasicParticipant):
         """
         return self.messenger.task_info(task_name)
 
-    def get_tasks(self) -> list:
+    def get_tasks(self, filtered: str = None) -> list:
         """
         Returns a list with all the available tasks.
         Throws: An exception on failure
         :return: list of all the available tasks
         :rtype: `list`
         """
-        return self.messenger.task_listing()
+        return self.messenger.task_listing(filtered)
 
     def get_joined_tasks(self) -> list:
         """
