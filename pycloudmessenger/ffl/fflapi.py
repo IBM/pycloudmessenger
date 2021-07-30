@@ -613,6 +613,15 @@ class Messenger(rabbitmq.RabbitDualClient):
         model = self._download_model(msg['params'])
         return fflabc.Response(msg['notification'], model)
 
+    def user_deregister(self, timeout: int = 0) -> dict:
+        '''
+        Deletes a user from the plaform
+        Throws: An exception on failure
+        Returns: TODO
+        '''
+        message = self.catalog.msg_user_deregister()
+        self._send(message)
+
 ##########################################################################
 
 
