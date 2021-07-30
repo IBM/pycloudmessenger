@@ -746,6 +746,9 @@ class BasicParticipant():
 class User(fflabc.AbstractUser, BasicParticipant):
     """ Class that allows a general user to avail of the FFL platform services """
 
+    def deregister(self) -> None:
+        return self.messenger.user_deregister()
+
     def change_password(self, user_name: str, password: str) -> None:
         """
         Change user password
