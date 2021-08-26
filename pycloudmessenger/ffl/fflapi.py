@@ -31,11 +31,13 @@ import hashlib
 import logging
 import tenacity
 import requests
-import pycloudmessenger.utils as utils
-import pycloudmessenger.rabbitmq as rabbitmq
-import pycloudmessenger.serializer as serializer
-import pycloudmessenger.ffl.message_catalog as catalog
-import pycloudmessenger.ffl.abstractions as fflabc
+from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
+from clint.textui.progress import Bar as ProgressBar
+from pycloudmessenger import utils
+from pycloudmessenger import rabbitmq
+from pycloudmessenger import serializer
+from pycloudmessenger.ffl import message_catalog as catalog
+from pycloudmessenger.ffl import abstractions as fflabc
 
 logging.getLogger("pika").setLevel(logging.CRITICAL)
 LOGGER = logging.getLogger(__package__)
@@ -239,6 +241,27 @@ class Messenger(rabbitmq.RabbitDualClient):
         results = result['calls'][0]['count']  # calls[0] will always succeed
         return result['calls'][0]['data'] if results else []
 
+    def _post_big_model(self, blob: str, upload_info: dict):
+        upload_info['fields']['file'] = blob
+        encoder = MultipartEncoder(fields=upload_info['fields'])
+
+        prog_bar = ProgressBar(expected_size=len(blob), filled_char='=')
+
+        def callback(monitor):
+            prog_bar.show(monitor.bytes_read)
+
+        monitor = MultipartEncoderMonitor(encoder, callback)
+        response = requests.post(upload_info['url'], data=monitor,
+                                    headers={'Content-Type': monitor.content_type})
+        response.raise_for_status()
+
+    def _post_model(self, blob: str, upload_info: dict):
+        response = requests.post(upload_info['url'],
+                                   files={'file': blob},
+                                   data=upload_info['fields'],
+                                   headers=None)
+        response.raise_for_status()
+
     def _dispatch_model(self, task_name: str = None, model: dict = None) -> dict:
         """
         Dispatch a model and determine its download location.
@@ -273,11 +296,11 @@ class Messenger(rabbitmq.RabbitDualClient):
         try:
             with rabbitmq.RabbitHeartbeat([self.subscriber, self.publisher]):
                 # And then perform the upload
-                response = requests.post(upload_info['url'],
-                                         files={'file': wrapper.blob},
-                                         data=upload_info['fields'],
-                                         headers=None)
-                response.raise_for_status()
+                fifty_meg = (1024 ** 2) * 50
+                if len(wrapper.blob) > fifty_meg:
+                    self._post_big_model(wrapper.blob, upload_info)
+                else:
+                    self._post_model(wrapper.blob, upload_info)
         except (requests.exceptions.RequestException, Exception) as err:
             raise fflabc.DispatchException(err) from err
 

@@ -196,7 +196,7 @@ class AbstractUser(ABC):
         """
 
     @abstractmethod
-    def get_tasks(self) -> list:
+    def get_tasks(self, filtered: str) -> list:
         """
         Returns a list with all the available tasks.
         Throws: An exception on failure
