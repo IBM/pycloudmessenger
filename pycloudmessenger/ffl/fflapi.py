@@ -88,10 +88,11 @@ class Context(rabbitmq.RabbitContext, fflabc.AbstractContext):
     def __init__(self, args: dict, user: str = None, password: str = None,
                  encoder: serializer.SerializerABC = serializer.JsonPickleSerializer,
                  user_dispatch: bool = True, download_models: bool = True,
-                 dispatch_threshold: int = 0):
+                 dispatch_threshold: int = 0, model_threshold: int = (1024 ** 2) * 50):
         super().__init__(args, user, password, user_dispatch)
         self.args['download_models'] = download_models
         self.args['dispatch_threshold'] = dispatch_threshold
+        self.args['model_threshold'] = model_threshold
         self.model_encoder = encoder() if encoder else serializer.JsonPickleSerializer()
         self.encoder = serializer.JsonPickleSerializer()
 
@@ -111,6 +112,9 @@ class Context(rabbitmq.RabbitContext, fflabc.AbstractContext):
         """ Return setting default to None"""
         return self.args.get('dispatch_threshold', None)
 
+    def model_threshold(self):
+        """ Return setting default to None"""
+        return self.args.get('model_threshold', None)
 
 class TimedOutException(rabbitmq.RabbitTimedOutException):
     """Over-ride exception"""
@@ -296,8 +300,7 @@ class Messenger(rabbitmq.RabbitDualClient):
         try:
             with rabbitmq.RabbitHeartbeat([self.subscriber, self.publisher]):
                 # And then perform the upload
-                fifty_meg = (1024 ** 2) * 50
-                if len(wrapper.blob) > fifty_meg:
+                if len(wrapper.blob) > self.context.model_threshold():
                     self._post_big_model(wrapper.blob, upload_info)
                 else:
                     self._post_model(wrapper.blob, upload_info)
