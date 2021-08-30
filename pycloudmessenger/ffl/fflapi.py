@@ -31,11 +31,13 @@ import hashlib
 import logging
 import tenacity
 import requests
-import pycloudmessenger.utils as utils
-import pycloudmessenger.rabbitmq as rabbitmq
-import pycloudmessenger.serializer as serializer
-import pycloudmessenger.ffl.message_catalog as catalog
-import pycloudmessenger.ffl.abstractions as fflabc
+from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
+from clint.textui.progress import Bar as ProgressBar
+from pycloudmessenger import utils
+from pycloudmessenger import rabbitmq
+from pycloudmessenger import serializer
+from pycloudmessenger.ffl import message_catalog as catalog
+from pycloudmessenger.ffl import abstractions as fflabc
 
 logging.getLogger("pika").setLevel(logging.CRITICAL)
 LOGGER = logging.getLogger(__package__)
@@ -86,10 +88,11 @@ class Context(rabbitmq.RabbitContext, fflabc.AbstractContext):
     def __init__(self, args: dict, user: str = None, password: str = None,
                  encoder: serializer.SerializerABC = serializer.JsonPickleSerializer,
                  user_dispatch: bool = True, download_models: bool = True,
-                 dispatch_threshold: int = 0):
+                 dispatch_threshold: int = 0, model_threshold: int = (1024 ** 2) * 50):
         super().__init__(args, user, password, user_dispatch)
         self.args['download_models'] = download_models
         self.args['dispatch_threshold'] = dispatch_threshold
+        self.args['model_threshold'] = model_threshold
         self.model_encoder = encoder() if encoder else serializer.JsonPickleSerializer()
         self.encoder = serializer.JsonPickleSerializer()
 
@@ -109,6 +112,9 @@ class Context(rabbitmq.RabbitContext, fflabc.AbstractContext):
         """ Return setting default to None"""
         return self.args.get('dispatch_threshold', None)
 
+    def model_threshold(self):
+        """ Return setting default to None"""
+        return self.args.get('model_threshold', None)
 
 class TimedOutException(rabbitmq.RabbitTimedOutException):
     """Over-ride exception"""
@@ -239,6 +245,27 @@ class Messenger(rabbitmq.RabbitDualClient):
         results = result['calls'][0]['count']  # calls[0] will always succeed
         return result['calls'][0]['data'] if results else []
 
+    def _post_big_model(self, blob: str, upload_info: dict):
+        upload_info['fields']['file'] = blob
+        encoder = MultipartEncoder(fields=upload_info['fields'])
+
+        prog_bar = ProgressBar(expected_size=len(blob), filled_char='=')
+
+        def callback(monitor):
+            prog_bar.show(monitor.bytes_read)
+
+        monitor = MultipartEncoderMonitor(encoder, callback)
+        response = requests.post(upload_info['url'], data=monitor,
+                                    headers={'Content-Type': monitor.content_type})
+        response.raise_for_status()
+
+    def _post_model(self, blob: str, upload_info: dict):
+        response = requests.post(upload_info['url'],
+                                   files={'file': blob},
+                                   data=upload_info['fields'],
+                                   headers=None)
+        response.raise_for_status()
+
     def _dispatch_model(self, task_name: str = None, model: dict = None) -> dict:
         """
         Dispatch a model and determine its download location.
@@ -273,11 +300,10 @@ class Messenger(rabbitmq.RabbitDualClient):
         try:
             with rabbitmq.RabbitHeartbeat([self.subscriber, self.publisher]):
                 # And then perform the upload
-                response = requests.post(upload_info['url'],
-                                         files={'file': wrapper.blob},
-                                         data=upload_info['fields'],
-                                         headers=None)
-                response.raise_for_status()
+                if len(wrapper.blob) > self.context.model_threshold():
+                    self._post_big_model(wrapper.blob, upload_info)
+                else:
+                    self._post_model(wrapper.blob, upload_info)
         except (requests.exceptions.RequestException, Exception) as err:
             raise fflabc.DispatchException(err) from err
 
@@ -467,14 +493,27 @@ class Messenger(rabbitmq.RabbitDualClient):
         message = self.catalog.msg_task_assignments(task_name)
         return self._invoke_service(message)
 
-    def task_listing(self) -> dict:
+    def task_listing(self, filtered: str = None) -> dict:
         """
         Returns a list with all the available tasks.
         Throws: An exception on failure
         :return: list of all the available tasks
         :rtype: `list`
         """
-        message = self.catalog.msg_task_listing()
+        message = self.catalog.msg_task_listing(filtered)
+        return self._invoke_service(message)
+
+    def task_delete(self, task_name: str) -> dict:
+        """
+        Creates a task with the given definition and returns a dictionary with the
+        details of the created tasks.
+        Throws: An exception on failure
+        :param task_name: name of the task
+        :type task_name: `str`
+        :return: details of the deleted task
+        :rtype: `dict`
+        """
+        message = self.catalog.msg_task_delete(task_name)
         return self._invoke_service(message)
 
     def task_create(self, task_name: str, topology: str, definition: dict) -> dict:
@@ -600,6 +639,15 @@ class Messenger(rabbitmq.RabbitDualClient):
         model = self._download_model(msg['params'])
         return fflabc.Response(msg['notification'], model)
 
+    def user_deregister(self, timeout: int = 0) -> dict:
+        '''
+        Deletes a user from the plaform
+        Throws: An exception on failure
+        Returns: TODO
+        '''
+        message = self.catalog.msg_user_deregister()
+        self._send(message)
+
 ##########################################################################
 
 
@@ -645,7 +693,7 @@ def create_user(user_name: str, password: str, organisation: str = None,
     params = {'username': user_name, 'org': organisation, 'password': password}
 
     try:
-        response = session.post(url, params=params)
+        response = session.post(url, params=params, timeout=60)
         response.raise_for_status()
 
         credentials = response.json()
@@ -724,6 +772,9 @@ class BasicParticipant():
 class User(fflabc.AbstractUser, BasicParticipant):
     """ Class that allows a general user to avail of the FFL platform services """
 
+    def deregister(self) -> None:
+        return self.messenger.user_deregister()
+
     def change_password(self, user_name: str, password: str) -> None:
         """
         Change user password
@@ -736,6 +787,15 @@ class User(fflabc.AbstractUser, BasicParticipant):
         :type password: `str`
         """
         return self.messenger.user_change_password(user_name, password)
+
+    def delete_task(self, task_name: str) -> dict:
+        """
+        Deletes a task with the given task name
+        Throws: An exception on failure
+        :param task_name: name of the task to create
+        :type task_name: `str`
+        """
+        return self.messenger.task_delete(task_name)
 
     def create_task(self, task_name: str, topology: str, definition: dict) -> dict:
         """
@@ -775,14 +835,14 @@ class User(fflabc.AbstractUser, BasicParticipant):
         """
         return self.messenger.task_info(task_name)
 
-    def get_tasks(self) -> list:
+    def get_tasks(self, filtered: str = None) -> list:
         """
         Returns a list with all the available tasks.
         Throws: An exception on failure
         :return: list of all the available tasks
         :rtype: `list`
         """
-        return self.messenger.task_listing()
+        return self.messenger.task_listing(filtered)
 
     def get_joined_tasks(self) -> list:
         """
