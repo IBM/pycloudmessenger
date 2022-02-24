@@ -46,7 +46,6 @@ LOGGER = logging.getLogger(__package__)
 logging.getLogger("pika").setLevel(logging.CRITICAL)
 
 @pytest.mark.usefixtures("credentials","feed_queue","reply_queue")
-#@pytest.mark.usefixtures("credentials")
 class MessengerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -83,7 +82,7 @@ class MessengerTests(unittest.TestCase):
 
     #@unittest.skip("temporarily skipping")
     def test_timeout(self):
-        context = rabbitmq.RabbitContext.from_credentials_file(self.credentials)
+        context = rabbitmq.RabbitContext(self.credentials)
 
         with rabbitmq.RabbitClient(context) as client:
             client.start(publish=rabbitmq.RabbitQueue(context.feeds(), purge=True, durable=True),
@@ -93,7 +92,7 @@ class MessengerTests(unittest.TestCase):
 
     #@unittest.skip("temporarily skipping")
     def test_round_trip(self):
-        context = rabbitmq.RabbitContext.from_credentials_file(self.credentials)
+        context = rabbitmq.RabbitContext(self.credentials)
 
         with rabbitmq.RabbitClient(context) as client:
             client.start(publish=rabbitmq.RabbitQueue(context.feeds(), purge=True, durable=True),
@@ -121,8 +120,8 @@ class MessengerTests(unittest.TestCase):
 
 
     #@unittest.skip("temporarily skipping")
-    def test_round_trip(self):
-        context = rabbitmq.RabbitContext.from_credentials_file(self.credentials)
+    def test_round_trip2(self):
+        context = rabbitmq.RabbitContext(self.credentials)
 
         with rabbitmq.RabbitDualClient(context) as client:
             client.start_subscriber(queue=rabbitmq.RabbitQueue(context.replies(), durable=True))
@@ -137,7 +136,7 @@ class MessengerTests(unittest.TestCase):
 
     #@unittest.skip("temporarily skipping")
     def test_round_trip_no_declare(self):
-        context = rabbitmq.RabbitContext.from_credentials_file(self.credentials)
+        context = rabbitmq.RabbitContext(self.credentials)
 
         with rabbitmq.RabbitDualClient(context) as client:
             subscribe = rabbitmq.RabbitQueue() #Force generation of temp exclusive queue
