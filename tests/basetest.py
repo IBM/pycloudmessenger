@@ -53,7 +53,6 @@ class BaseTest(unittest.TestCase):
         self.password = 'users_password%'
         self.task = 'UNIT-TEST-TASK-1'
 
-        LOGGER.info(self.credentials)
         self.reg_url = self.credentials.get('register_url', None)
         self.reg_api_key = self.credentials.get('register_api_key', None)
 
@@ -70,7 +69,7 @@ class BaseTest(unittest.TestCase):
         #with suppress(Exception):
         result = fflapi.create_user(self.aggregator, self.password, 'ibm', url=self.reg_url, api_key=self.reg_api_key)
         self.assertTrue('connection' in result)
-        LOGGER.info(result['connection'])
+        #LOGGER.info(result['connection'])
         self.credentials.update(result['connection'])
 
         self.aggr_ctx = fflabc.Factory.context('cloud', self.credentials, self.aggregator, self.password, dispatch_threshold = 0)

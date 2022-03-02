@@ -7,7 +7,7 @@
 pycloudmessenger
 ========================
 
-The purpose of this project is to provide sample code for interacting with various messaging based cloud platforms provided by IBM Research Ireland.
+The purpose of this project is to provide sample code for interacting with various messaging based cloud platforms provided by IBM Research Europe - Dublin.
 
 
 Prerequisites
@@ -40,15 +40,18 @@ Sample code for basic messaging as well as federated learning and castor are con
 
 .. code-block:: bash
 
-	# The federated learning sample
-	creds=credentials.json make ffl
+	# The federated learning sample (online, requires cloud credentials)
+
+	python -m examples.ffl.register --credentials=<CLOUDCREDENTIALS> --user=<USER> --password=<PASSWORD> > credentials.json
+	python -m examples.ffl.sample --credentials=credentials.json
+	python -m examples.ffl.deregister --credentials=credentials.json
 
 .. code-block:: bash
 
 	# The castor sample
 	creds=credentials.json make castor
 
-**Note:** For live platforms, **credentials.json** must be available. Please request from the IBM team.
+**Note:** For online platforms, **<CLOUDCREDENTIALS>** must be available. Please request from the IBM team.
 
 
 References 
