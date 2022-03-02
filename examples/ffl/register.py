@@ -42,19 +42,14 @@ LOGGER = logging.getLogger(__package__)
 def main():
     parser = argparse.ArgumentParser(description='Messaging Client')
     parser.add_argument('--credentials', required=True)
+    parser.add_argument('--user', help='A new user account')
+    parser.add_argument('--password', help='Password for new user account')
+    parser.add_argument('--org', required=False, default='Musketeer', help='User organisation')
     cmdline = parser.parse_args()
 
-    LOGGER.info("Starting...")
+    creds = fflapi.create_user(cmdline.user, cmdline.password, cmdline.org, cmdline.credentials)
+    print(json.dumps(creds['connection'], indent=4))
 
-    ffl.Factory.register('cloud', fflapi.Context, fflapi.User, fflapi.Aggregator, fflapi.Participant)
-    context = ffl.Factory.context('cloud', cmdline.credentials)
-
-    LOGGER.info("Testing account by listing tasks...")
-    user = ffl.Factory.user(context)
-    with user:
-        result = user.get_tasks()
-        for r in result:
-            LOGGER.info(f"|{r['task_name']}|")
 
 if __name__ == '__main__':
     main()

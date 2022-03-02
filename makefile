@@ -22,9 +22,6 @@ castor: credentials depend
 rest: credentials
 	python3 -m examples.castor.sample_rest --credentials=$(creds)
 
-ffl: credentials depend
-	python3 -m examples.ffl.sample --credentials=$(creds)
-
 configure: depend
 	./rabbit.sh
 
