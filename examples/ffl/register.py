@@ -44,7 +44,7 @@ def main():
     parser.add_argument('--credentials', required=True)
     parser.add_argument('--user', help='A new user account')
     parser.add_argument('--password', help='Password for new user account')
-    parser.add_argument('--org', required=False, default='Musketeer', help='User organisation')
+    parser.add_argument('--org', required=False, default='IBM', help='User organisation')
     cmdline = parser.parse_args()
 
     creds = fflapi.create_user(cmdline.user, cmdline.password, cmdline.org, cmdline.credentials)

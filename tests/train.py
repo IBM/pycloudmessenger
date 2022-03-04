@@ -176,13 +176,10 @@ class TrainTests(basetest.BaseTest):
         with aggr:
             result = aggr.receive(timeout)
             LOGGER.debug(f"Aggregator received: {result.content}")
-            #LOGGER.info(f"Aggregator received: {result.notification}")
             participant = result.notification['participant']
 
             if wanted is fflabc.Notification.participant_updated:
                 expected_model = {'the_model' : str(worker_id) * model_size()}
-                #LOGGER.info(f"Aggregator expecting: {expected_model}")
-                #LOGGER.info(f"Received: {result.content}")
                 self.assertTrue(expected_model == result.content)
 
             self.assertTrue('type' in result.notification)
@@ -207,11 +204,8 @@ class TrainTests(basetest.BaseTest):
         #Worker enters listening mode and waits for notifications
         with worker:
             result = worker.receive(timeout)
-            #LOGGER.debug(f"Worker received: {result.content}")
             LOGGER.debug(result.notification)
             expected_model = {'the_model' : str(source_id) * model_size()}
-            #LOGGER.info(f"Worker expecting: {expected_model}")
-            #LOGGER.info(result.content)
             self.assertTrue(expected_model == result.content)
             self.assertTrue('type' in result.notification)
             self.assertTrue(fflabc.Notification.is_aggregator_started(result.notification))
