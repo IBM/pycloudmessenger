@@ -1,6 +1,7 @@
 sudo: false
 language: python
 python:
-    - "3.6"
+    - 3.6
+    - 3.9
 script:
 - creds=local.json make test
