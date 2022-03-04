@@ -48,7 +48,10 @@ def main():
     cmdline = parser.parse_args()
 
     creds = fflapi.create_user(cmdline.user, cmdline.password, cmdline.org, cmdline.credentials)
-    print(json.dumps(creds['connection'], indent=4))
+    if 'body' in creds:
+        print(json.dumps(creds['body']['connection'], indent=4))
+    else:
+        print(json.dumps(creds['connection'], indent=4))
 
 
 if __name__ == '__main__':
