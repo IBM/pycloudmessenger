@@ -10,7 +10,7 @@ setup(
     packages=find_packages('.'),
     python_requires='>=3.6',
     install_requires=[
-        'pika',
+        'pika>=1.2.0',
         'requests>=2.18.4',
         'requests-toolbelt',
         'clint',
