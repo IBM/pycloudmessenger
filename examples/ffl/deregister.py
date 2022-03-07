@@ -49,12 +49,10 @@ def main():
     ffl.Factory.register('cloud', fflapi.Context, fflapi.User, fflapi.Aggregator, fflapi.Participant)
     context = ffl.Factory.context('cloud', cmdline.credentials)
 
-    LOGGER.info("Testing account by listing tasks...")
+    LOGGER.info("Deleting account...")
     user = ffl.Factory.user(context)
     with user:
-        result = user.get_tasks()
-        for r in result:
-            LOGGER.info(f"|{r['task_name']}|")
+        user.deregister()
 
 if __name__ == '__main__':
     main()

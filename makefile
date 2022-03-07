@@ -3,6 +3,7 @@
 all: test
 
 opts=--log-cli-level=DEBUG
+opts=--log-cli-level=INFO
 
 credentials:
 	test -f "$(creds)"
@@ -21,9 +22,6 @@ castor: credentials depend
 rest: credentials
 	python3 -m examples.castor.sample_rest --credentials=$(creds)
 
-ffl: credentials depend
-	python3 -m examples.ffl.sample --credentials=$(creds)
-
 configure: depend
 	./rabbit.sh
 
@@ -31,5 +29,8 @@ clean:
 	-docker rm -f $(shell docker ps -a | grep rabbit_mq | cut -d' ' -f1)
 
 test: credentials configure
-	python3 -m pytest tests/ffl/ffl.py -srx -s --credentials=$(creds) $(opts)
+	#python3 -m pytest tests/ffl/ffl.py -srx -s --credentials=$(creds) $(opts)
 	python3 -m pytest tests/basic/test_basic.py --credentials=$(creds) $(opts)
+
+train: credentials depend
+	python3 -m pytest tests/train.py --credentials=$(creds) $(opts)

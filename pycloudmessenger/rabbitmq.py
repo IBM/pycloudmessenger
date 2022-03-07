@@ -41,7 +41,6 @@ class RabbitContext():
     """
     def __init__(self, args: dict, user: str = None, password: str = None,
                  user_dispatch: bool = True):
-        self.cert_file = None
         self.args = args.copy()
         self.args['user_dispatch'] = user_dispatch
 
@@ -64,8 +63,7 @@ class RabbitContext():
             self.args['broker_cert_b64'] = self.args['cert_b64']
 
         if 'broker_cert_b64' in self.args:
-            self.cert_file = utils.Certificate(self.args['broker_cert_b64'])
-            self.args['broker_pem_path'] = self.cert_file.filename
+            self.args['broker_pem'] = utils.Certificate.pem(self.args['broker_cert_b64'])
             self.args['broker_tls'] = True
         else:
             self.args['broker_tls'] = False
@@ -147,7 +145,7 @@ class RabbitContext():
         return self.args.get('broker_vhost', None)
     def cert(self):
         """ Return cert, default to None"""
-        return self.args.get('broker_pem_path', None)
+        return self.args.get('broker_pem', None)
     def ssl(self):
         """ Return ssl, default to None"""
         return self.args.get('broker_tls', None)
@@ -211,13 +209,14 @@ class AbstractRabbitMessenger(ABC):
         self.channel = None
         self.cancel_on_close = False
         self.credentials = pika.PlainCredentials(self.context.user(), self.context.pwd())
-        self.ssl_options = {}
 
         if self.context.ssl():
-            self.ssl_options['ssl_version'] = ssl.PROTOCOL_TLSv1_2
-        if self.context.cert():
-            self.ssl_options['ca_certs'] = self.context.cert()
-            self.ssl_options['cert_reqs'] = ssl.CERT_REQUIRED
+            ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+            ctx.verify_mode = ssl.CERT_REQUIRED
+            ctx.load_verify_locations(cadata=self.context.cert() if self.context.cert() else None)
+            self.ssl_options = pika.SSLOptions(ctx)
+        else:
+            self.ssl_options = None
 
     def __enter__(self):
         return self
@@ -279,7 +278,7 @@ class AbstractRabbitMessenger(ABC):
         """
         parameters = pika.ConnectionParameters(
                         self.context.host(), self.context.port(), self.context.vhost(),
-                        self.credentials, ssl=self.context.ssl(), ssl_options=self.ssl_options,
+                        self.credentials, ssl_options=self.ssl_options,
                         connection_attempts=connection_attempts,
                         retry_delay=retry_delay)
         self.establish_connection(parameters)

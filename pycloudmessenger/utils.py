@@ -83,9 +83,15 @@ class Certificate(TempFile):
             super().__init__()
 
         #Convert the b64 cert string to a local PEM file
-        pem = base64.b64decode(b64string).decode('utf-8')
-        with open(self.filename, 'w') as pem_file:
-            pem_file.write(pem)
+        self.pem = Certificate.pem(b64string)
+
+        if filename:
+            with open(self.filename, 'w') as pem_file:
+                pem_file.write(self.pem)
+
+    @classmethod
+    def pem(cls, b64string: str):
+        return base64.b64decode(b64string).decode('utf-8')
 
 
 class Timer:

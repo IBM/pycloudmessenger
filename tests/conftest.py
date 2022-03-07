@@ -29,6 +29,7 @@ Multi-Beneficiary General Model Grant Agreement of the Program, the above limita
 """
 
 import pytest
+import json
 
 
 def pytest_addoption(parser):
@@ -40,7 +41,8 @@ def pytest_addoption(parser):
 def credentials(request):
     value = request.config.getoption('credentials')
     if request.cls:
-        request.cls.credentials = value
+        with open(value) as json_file:
+            request.cls.credentials = json.load(json_file)
     return value
 
 @pytest.fixture
