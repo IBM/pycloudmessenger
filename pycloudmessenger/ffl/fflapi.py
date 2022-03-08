@@ -697,10 +697,10 @@ def create_user(user_name: str, password: str, organisation: str = None,
         response.raise_for_status()
 
         credentials = response.json()
-		if 'body' in credentials:
-			cedentials = credentials['body']
-		if 'error' in credentials:
-			raise Exception(credentials['error'])
+        if 'body' in credentials:
+            credentials = credentials['body']
+        if 'error' in credentials:
+            raise Exception(credentials['error'])
         return credentials
     finally:
         session.close()
