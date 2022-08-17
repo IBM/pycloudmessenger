@@ -12,3 +12,5 @@ deploy:
     password: ${PYPI_API_KEY}
     on:
         branch: master
+        python: 3.9
+        skip_existing: true
