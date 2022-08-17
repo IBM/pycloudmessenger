@@ -25,12 +25,6 @@
 
 image=rabbitmq:3-management-alpine
 
-#Pull the image if not already available locally
-rabbit=`docker images -q $image`
-if [ -z "$rabbit" ]; then
-    docker pull $image
-fi
-
 #Stop existing container, if running
 container=`docker ps -a | grep rabbit_mq | cut -d' ' -f1`
 if [ -n "$container" ]; then
