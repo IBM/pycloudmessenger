@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 #author mark_purcell@ie.ibm.com
 
 """FFL protocol handler.
@@ -237,7 +237,8 @@ class Messenger(rabbitmq.RabbitDualClient):
         result = self.context.serializer().deserialize(result)
 
         if 'error' in result:
-            raise fflabc.ServerException(f"Server Error ({result['activation']}): {result['error']}")
+            activation = result['activation'] if 'activation' in result else None
+            raise fflabc.ServerException(f"Server Error ({activation}): {result['error']}")
 
         if 'calls' not in result:
             raise fflabc.MalformedResponseException(f"Malformed object: {result}")
@@ -356,6 +357,36 @@ class Messenger(rabbitmq.RabbitDualClient):
         return model
 
     # Public methods
+    def upload_blob(self, blob):
+        message = self.catalog.msg_bin_uploader()
+        upload_info = self._invoke_service(message)
+
+        if 'key' not in upload_info['fields']:
+            raise fflabc.MalformedResponseException('Update Error: Malformed URL')
+
+        key = upload_info['fields']['key']
+        temp = self.context.model_serializer().serialize(blob)
+
+        try:
+            with rabbitmq.RabbitHeartbeat([self.subscriber, self.publisher]):
+                # And then perform the upload
+                if len(temp) > self.context.model_threshold():
+                    self._post_big_model(temp, upload_info)
+                else:
+                    self._post_model(temp, upload_info)
+        except (requests.exceptions.RequestException, Exception) as err:
+            raise fflabc.DispatchException(err) from err
+
+        return {'key': key}
+
+    def download_blob(self, object_name: str):
+        message = self.catalog.msg_bin_downloader(object_name)
+        info = self._invoke_service(message)
+
+        with rabbitmq.RabbitHeartbeat([self.subscriber, self.publisher]):
+            buff = requests.get(info)
+            temp = self.context.model_serializer().deserialize(buff.content)
+            return temp
 
     def user_change_password(self, user_name: str, password: str) -> None:
         """
@@ -899,7 +930,11 @@ class User(fflabc.AbstractUser, BasicParticipant):
         """
         return self.messenger.model_delete(task_name)
 
+    def upload(self, blob):
+        return self.messenger.upload_blob(blob)
 
+    def download(self, object_name):
+        return self.messenger.download_blob(object_name)
 
 ##########################################################################
 
