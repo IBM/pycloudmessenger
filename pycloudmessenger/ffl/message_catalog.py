@@ -76,6 +76,11 @@ class MessageCatalog():
         args.append({'cmd':'user_deregister', 'params': []})
         return template
 
+    def msg_user_register(self, username: str, password: str, organisation: str) -> dict:
+        template, args = self._msg_template()
+        args.append({'cmd': 'user_register', 'params': [username, password, organisation]})
+        return template
+
     def msg_user_change_password(self, username: str, password: str) -> dict:
         template, args = self._msg_template()
         args.append({'cmd': 'user_change_pw', 'params': [username, password]})
@@ -184,4 +189,54 @@ class MessageCatalog():
         '''
         template, args = self._msg_template()
         args.append({'cmd':'model_lineage', 'params': [task_name]})
+        return template
+
+    def msg_expired_tasks(self, days: int = 1) -> dict:
+        '''
+        Formats a message for requesting termination of all expired tasks
+        Throws: An exception on failure
+        Returns: TODO
+        '''
+        template, args = self._msg_template()
+        args.append({'cmd': 'admin_expired_tasks', 'params': [days]})
+        return template
+
+    def msg_user_listing(self) -> dict:
+        '''
+        Formats a message for requesting a list of users
+        Throws: An exception on failure
+        Returns: TODO
+        '''
+        template, args = self._msg_template()
+        args.append({'cmd': 'admin_user_listing'})
+        return template
+
+    def msg_user_delete(self, pattern: str) -> dict:
+        '''
+        Formats a message for requesting user deletion
+        Throws: An exception on failure
+        Returns: TODO
+        '''
+        template, args = self._msg_template()
+        args.append({'cmd': 'admin_user_bulk_delete', 'params': [pattern]})
+        return template
+
+    def msg_quit_all_assignments(self) -> dict:
+        '''
+        Formats a message for requesting all users to leave all tasks
+        Throws: An exception on failure
+        Returns: TODO
+        '''
+        template, args = self._msg_template()
+        args.append({'cmd': 'admin_task_quit_all'})
+        return template
+
+    def msg_all_assignments(self) -> dict:
+        '''
+        Formats a message for requesting a list of all task assignments
+        Throws: An exception on failure
+        Returns: TODO
+        '''
+        template, args = self._msg_template()
+        args.append({'cmd': 'admin_all_assignments'})
         return template
