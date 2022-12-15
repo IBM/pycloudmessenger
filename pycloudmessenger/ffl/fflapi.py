@@ -33,7 +33,6 @@ import tenacity
 import requests
 from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
 from clint.textui.progress import Bar as ProgressBar
-from pycloudmessenger import utils
 from pycloudmessenger import rabbitmq
 from pycloudmessenger import serializer
 from pycloudmessenger.ffl import message_catalog as catalog
@@ -677,7 +676,61 @@ class Messenger(rabbitmq.RabbitDualClient):
         Returns: TODO
         '''
         message = self.catalog.msg_user_deregister()
-        self._send(message)
+        self._send(message, timeout)
+
+    def user_register(self, user_name: str, password: str, organisation: str, timeout: int = 0) -> dict:
+        '''
+        Registers a user - can only use if messaging based registration is enabled
+        Throws: An exception on failure
+        Returns: TODO
+        '''
+        message = self.catalog.msg_user_register(user_name, password, organisation)
+        return self._invoke_service(message, timeout)
+
+    def user_delete(self, pattern: str = None, timeout: int = 0) -> dict:
+        '''
+        Deletes a user from the plaform - elevated privilege
+        Throws: An exception on failure
+        Returns: TODO
+        '''
+        message = self.catalog.msg_user_delete(pattern)
+        return self._invoke_service(message, timeout)
+
+    def quit_expired_tasks(self, days: int = 1, timeout: int = 0) -> dict:
+        '''
+        Requests that all expired tasks are terminated - elevated privilege
+        Throws: An exception on failure
+        Returns: TODO
+        '''
+        message = self.catalog.msg_expired_tasks(days)
+        return self._invoke_service(message, timeout)
+
+    def user_listing(self, timeout: int = 0) -> dict:
+        '''
+        Requests user listing - elevated privilege
+        Throws: An exception on failure
+        Returns: TODO
+        '''
+        message = self.catalog.msg_user_listing()
+        return self._invoke_service(message, timeout)
+
+    def quit_all_assignments(self, timeout: int = 0) -> dict:
+        '''
+        Requests all assignments for all tasks/users - elevated privilege
+        Throws: An exception on failure
+        Returns: TODO
+        '''
+        message = self.catalog.msg_quit_all_assignments()
+        return self._invoke_service(message, timeout)
+
+    def all_assignments(self, timeout: int = 0) -> dict:
+        '''
+        Requests all assignments for all tasks/users - elevated privilege
+        Throws: An exception on failure
+        Returns: TODO
+        '''
+        message = self.catalog.msg_all_assignments()
+        return self._invoke_service(message, timeout)
 
 ##########################################################################
 
@@ -805,8 +858,29 @@ class BasicParticipant():
 class User(fflabc.AbstractUser, BasicParticipant):
     """ Class that allows a general user to avail of the FFL platform services """
 
+    def user_delete(self, pattern: str = None) -> dict:
+        '''
+        Deletes users matching "pattern"
+        Throws: An exception on failure
+        Returns: TODO
+        '''
+        return self.messenger.user_delete(pattern)
+
     def deregister(self) -> None:
+        '''
+        Delete the current user
+        Throws: An exception on failure
+        Returns: TODO
+        '''
         return self.messenger.user_deregister()
+
+    def register(self, user_name: str, password: str, organisation: str) -> dict:
+        '''
+        Registers a user
+        Throws: An exception on failure
+        Returns: TODO
+        '''
+        return self.messenger.user_register(user_name, password, organisation)
 
     def change_password(self, user_name: str, password: str) -> None:
         """
@@ -931,10 +1005,52 @@ class User(fflabc.AbstractUser, BasicParticipant):
         return self.messenger.model_delete(task_name)
 
     def upload(self, blob):
+        '''
+        Requests that blob is uploaded
+        Throws: An exception on failure
+        Returns: TODO
+        '''
         return self.messenger.upload_blob(blob)
 
     def download(self, object_name):
+        '''
+        Requests that object_name is downloaded
+        Throws: An exception on failure
+        Returns: TODO
+        '''
         return self.messenger.download_blob(object_name)
+
+    def quit_expired_tasks(self, days: int = 1) -> dict:
+        '''
+        Requests that all expired tasks are terminated - elevated privilege
+        Throws: An exception on failure
+        Returns: TODO
+        '''
+        return self.messenger.quit_expired_tasks(days)
+
+    def user_listing(self) -> dict:
+        '''
+        Requests user listing - elevated privilege
+        Throws: An exception on failure
+        Returns: TODO
+        '''
+        return self.messenger.user_listing()
+
+    def quit_all_assignments(self) -> dict:
+        '''
+        Requests all assignments for all tasks/users - elevated privilege
+        Throws: An exception on failure
+        Returns: TODO
+        '''
+        return self.messenger.quit_all_assignments()
+
+    def all_assignments(self) -> dict:
+        '''
+        Requests all assignments for all tasks/users - elevated privilege
+        Throws: An exception on failure
+        Returns: TODO
+        '''
+        return self.messenger.all_assignments()
 
 ##########################################################################
 
